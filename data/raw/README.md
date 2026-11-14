@@ -102,3 +102,28 @@ python pipeline/05_biology_ncbi.py --type halophile --max-records 200
 ```
 
 Esa prueba baja un solo lote. Es una corrida parcial: queda marcada en el manifiesto y la siguiente corrida completa la reemplaza. Después, `python pipeline/05_biology_ncbi.py` baja los 6 tipos (hasta 5.000 registros cada uno; unos minutos). Plan B sin red: `--manual` lee `config/bio_manual.csv` (columnas `lat,lon,extremophile_type,source`). Escribe `data/processed/bio_samples.parquet` y `data/interim/biology.parquet`; el manifiesto dice, por tipo, cuántos hay en NCBI, cuántos se bajaron, cuántos traen coordenadas y cuántos caen en tierra.
+
+## Luna y Marte (TAI-05, borrador de Alan: pendiente de decidir con Santino)
+
+Relevamiento del 14 de noviembre de 2026. Los enlaces de elevación se comprobaron con una petición de cabeceras (existen, tamaño real) y se leyeron sus metadatos. La columna "Propuesta" es una **sugerencia**: la decisión de qué variable se mide y cuál se toma de la literatura la toman Santino y Alan juntos.
+
+| Variable | Objetivo | Producto | Formato y proyección | Tamaño | Enlace | Propuesta |
+| --- | --- | --- | --- | --- | --- | --- |
+| slope_deg, roughness_m | Luna, polo sur | LOLA `LDEM_80S_80MPP_ADJ.TIF` (LRO), 80 m por píxel, de 80° S al polo | GeoTIFF float32 en metros, estereográfica polar sur (esfera de 1 737 400 m), 7600 × 7600 | 181 MiB (189 MB) | [LDEM_80S_80MPP_ADJ.TIF](https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_80MPP_ADJ.TIF); página del producto: [PGDA 90](https://pgda.gsfc.nasa.gov/products/90) | measured (paso 07) |
+| slope_deg (control) | Luna, polo sur | LOLA `LDSM_80S_80MPP_ADJ.TIF`, pendiente ya calculada | igual que el anterior | 231 MiB (242 MB) | [LDSM_80S_80MPP_ADJ.TIF](https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDSM_80S_80MPP_ADJ.TIF) | opcional, solo para comparar con la pendiente propia |
+| tmin_c, trange_c | Luna, polo sur | Diviner, producto de recursos polares `DLRE_PRP_SOUTH.TAB` (temperatura media y máxima anual por triángulo; 2 880 000 triángulos) o acumulado polar PCP (240 m, por hora local) | tabla ASCII (PRP) o binarios por bin horario (PCP) | por confirmar | [ayuda de ODE sobre PRP](https://ode.rsl.wustl.edu/moon/pagehelp/Content/Missions_Instruments/LRO/DIVINER/PRP.htm); la ruta exacta del archivo en PDS **no está confirmada** (la ruta que se probó dio 404) | literature, salvo que leerlo lleve menos de una hora. El PRP trae media y máxima anual, no el mínimo ni el rango: para `tmin_c` y `trange_c` haría falta el PCP |
+| precip_mm | Luna y Marte | sin lluvia | n/a | n/a | n/a | definition: 0 |
+| ice_frac | Luna y Marte | `has_ice` (Luna: sí; Jezero: no), con la fuente que cargue Santino | n/a | n/a | n/a | definition |
+| slope_deg, roughness_m | Marte, Jezero | MOLA, mosaico global de 463 m (USGS Astrogeology) | GeoTIFF int16 en metros, equirectangular, esfera de 3 396 190 m, longitud de -180 a 180 (media de 59 276 m por grado), nodata -32768 | 2,0 GiB (2 125 771 142 bytes); se lee solo la ventana por HTTP, no hace falta bajarlo | [Mars_MGS_MOLA_DEM_mosaic_global_463m.tif](https://planetarymaps.usgs.gov/mosaic/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif) | measured (paso 07) |
+| tmin_c, trange_c | Marte, Jezero | MEDA (Perseverance), archivo EDR y RDR en el nodo de Atmósferas de PDS | CSV por sol | por confirmar | [doi:10.17189/1522849](https://doi.org/10.17189/1522849) | literature con su cita, salvo que se lea MEDA antes de la hora 10 |
+
+### Recortes
+
+- **Luna, polo sur:** al sur de 85° S, un círculo de unos 151,7 km de radio desde el polo (colatitud de 5°). El raster de 80 m cubre hasta 80° S (colatitud de 10°, 304 km), así que contiene el recorte entero.
+- **Jezero:** centro en 18,38° N y 77,58° E según las fuentes consultadas ([JPL](https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/landing_site) y [The Planetary Society](https://planetary.org/articles/jezero-landing-site-mars-2020-rover)); el diámetro del cráter es de unos 45 km (hay fuentes que dicen 49 km). El recorte del diseño (17,9 a 18,9° N y 77,0 a 78,0° E) lo contiene con margen: con 45 km de diámetro el cráter ocupa de 18,0 a 18,8° N y de 77,2 a 78,0° E. **Falta la comprobación visual en Mars Trek** (criterio del ticket), que queda para Santino o para los dos.
+- **Control hecho con datos reales:** la ventana de MOLA de ese recorte tiene 128 × 128 píxeles con elevaciones de -2888 a -1465 m, o sea, se ve el relieve de un cráter (la longitud no está corrida 180°). A 1 km da una pendiente media de 2,3° y una rugosidad media de 53 m.
+- **Temperatura de Marte:** una página de NASA da la temperatura de la superficie en Jezero entre unos -83 °C antes del amanecer y 5 °C al mediodía. Es solo un candidato: la cita y los valores finales los carga Santino.
+
+### Paso 07: cómo se corre
+
+`python pipeline/07_targets.py` lee `config/targets_base.json` (Santino), `earth_stats` del manifiesto (lo escribe el paso 06) y los dos DEM de elevación. Pone la regla de cada variable con `tai.rules.choose_rule` (TAI-18). Para la Luna hay que bajar el LDEM de 80 m a `data/raw/07_targets/` (189 MB); el de Marte se lee por HTTP si no está en esa carpeta.
