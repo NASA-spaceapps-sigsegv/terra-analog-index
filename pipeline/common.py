@@ -438,3 +438,84 @@ def raster_to_cells(
         index=pd.Index(ids, name="cell_id"),
         name=data.name,
     )
+
+
+# --- Terrain (design 4.1, TAI-12; reused by TAI-16 for the Moon and Mars) ----
+
+
+def slope_from_dem(dem, dx_m, dy_m) -> np.ndarray:
+    """Slope in degrees by central finite differences on an elevation grid.
+
+    dem: 2-D elevation in meters, rows along y and columns along x. NaN marks
+        missing pixels; a missing neighbor makes the slope missing too.
+    dx_m: spacing between columns in meters. A scalar for projected grids
+        (Moon and Mars crops at 1 km) or one value per row for lat/lon grids,
+        where the east-west step shrinks with cos(latitude).
+    dy_m: spacing between rows in meters (scalar).
+
+    Edge pixels use one-sided differences. Same body-agnostic definition on
+    the three bodies, so the numbers are comparable.
+    """
+    z = np.asarray(dem, dtype=np.float64)
+    if z.ndim != 2:
+        raise ValueError(f"dem must be 2-D, got shape {z.shape}")
+    dx = np.asarray(dx_m, dtype=np.float64)
+    if dx.ndim == 1:
+        if dx.size != z.shape[0]:
+            raise ValueError(f"dx_m has {dx.size} values for {z.shape[0]} rows")
+        dx = dx[:, None]
+    elif dx.ndim != 0:
+        raise ValueError("dx_m must be a scalar or one value per row")
+    if np.any(dx <= 0) or dy_m <= 0:
+        raise ValueError("pixel spacing must be > 0")
+    if min(z.shape) < 2:
+        return np.full(z.shape, np.nan)
+    dz_dy, dz_dx = np.gradient(z)
+    grad = np.hypot(dz_dx / dx, dz_dy / float(dy_m))
+    grad[~np.isfinite(z)] = np.nan  # central differences skip the pixel itself
+    return np.degrees(np.arctan(grad))
+
+
+def _box_sum(a: np.ndarray, window: int) -> np.ndarray:
+    """Sum over a centered window x window box; outside the array counts as 0."""
+    h = window // 2
+    rows, cols = a.shape
+    p = np.pad(a, h)
+    by_rows = sum(p[i : i + rows, :] for i in range(window))
+    return sum(by_rows[:, j : j + cols] for j in range(window))
+
+
+def local_roughness(dem, window: int | None = None, min_valid: int | None = None) -> np.ndarray:
+    """Standard deviation of elevation in a moving window (design 4.1).
+
+    dem: 2-D elevation in meters at the base resolution (1 km by default),
+        NaN for missing pixels.
+    window: odd side of the square window in pixels (ROUGHNESS_WINDOW_PX).
+    min_valid: valid pixels the window needs; default more than half of it.
+        Pixels beyond the array edge count as missing, so callers that need
+        continuity (e.g. across the antimeridian) pad the array first.
+
+    Population std (ddof=0). A pixel that is itself missing stays missing.
+    """
+    from tai.constants import ROUGHNESS_WINDOW_PX
+
+    window = ROUGHNESS_WINDOW_PX if window is None else int(window)
+    if window < 3 or window % 2 == 0:
+        raise ValueError("window must be an odd integer >= 3")
+    if min_valid is None:
+        min_valid = window * window // 2 + 1
+    z = np.asarray(dem, dtype=np.float64)
+    if z.ndim != 2:
+        raise ValueError(f"dem must be 2-D, got shape {z.shape}")
+    valid = np.isfinite(z)
+    # Center on the mean so sum(z^2) - sum(z)^2/n does not lose precision.
+    ref = float(z[valid].mean()) if valid.any() else 0.0
+    d = np.where(valid, z - ref, 0.0)
+    n = _box_sum(valid.astype(np.float64), window)
+    s1 = _box_sum(d, window)
+    s2 = _box_sum(d * d, window)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        var = (s2 - s1 * s1 / n) / n
+    out = np.sqrt(np.clip(var, 0.0, None))
+    out[(n < min_valid) | ~valid] = np.nan
+    return out

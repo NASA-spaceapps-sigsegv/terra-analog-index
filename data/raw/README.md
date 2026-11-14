@@ -2,6 +2,8 @@
 
 Las descargas viven en `data/raw/<paso>/` y no se versionan. Este archivo sí: dice qué bajar, de dónde y cuánto pesa.
 
+Todo lo que tiene descarga directa se baja con `make data` desde la raíz (o por paso: `make data-grid`, `make data-terrain`). Los comandos `curl` de abajo son el equivalente a mano.
+
 Los nombres de producto son los del Documento de diseño (sección 4.2) y **están sin verificar** hasta que TAI-04 (Tierra) y TAI-05 (Luna y Marte) completen las tablas.
 
 ## Tierra (TAI-04)
@@ -10,7 +12,7 @@ Los nombres de producto son los del Documento de diseño (sección 4.2) y **est�
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Polígonos de tierra | 01_grid | Natural Earth `ne_50m_land` | 5.2.0-pre (espejo de GitHub) | 1:50m (vectorial) | shp o geojson | sí (Antártida y Groenlandia) | 1,6 MB | [naturalearthdata.com](https://www.naturalearthdata.com/downloads/50m-physical-vectors/) | Confirmado (TAI-11) |
 | Países (nombre en español) | 01_grid | Natural Earth `ne_50m_admin_0_countries`, campo `NAME_ES` | 5.2.0-pre (espejo de GitHub) | 1:50m (vectorial) | shp o geojson | sí | 3,1 MB | [naturalearthdata.com](https://www.naturalearthdata.com/downloads/50m-cultural-vectors/) | Confirmado (TAI-11) |
-| Elevación | 02_terrain | | | ~1 km | | | | | |
+| Elevación | 02_terrain | ETOPO 2022 `ETOPO_2022_v1_30s_N90W180_surface` | v1 | 30" (~0,93 km) | netCDF | sí (Antártida incluida; fondo marino se descarta con la máscara de tierra) | 1,64 GB | [NOAA NCEI](https://www.ncei.noaa.gov/products/etopo-global-relief-model) | Elegido para TAI-12: global y de dominio público. Alternativa: GMTED2010 mn30 |
 | Temperatura superficial (día y noche) | 03_temperature | MOD11C3 (a confirmar) | | 0,05° | | | | | |
 | Precipitación | 04_water_ice | IMERG mensual (a confirmar) | | | | | | | |
 | Nieve | 04_water_ice | | | | | | | | |
@@ -33,6 +35,19 @@ curl -L -o data/raw/01_grid/ne_50m_admin_0_countries.geojson https://raw.githubu
 ```
 
 Después: `python pipeline/01_grid.py`. Escribe `data/processed/grid.parquet` y `data/interim/land_mask.nc` (la máscara a 0,05° que usan los pasos 02 a 04).
+
+### Paso 02: modelo de elevación
+
+Un solo archivo en `data/raw/02_terrain/`, en latitud y longitud (`.nc`, `.tif`, `.tiff` o `.vrt`). Si el producto viene en mosaicos, unirlos antes con `gdalbuildvrt data/raw/02_terrain/dem.vrt mosaicos/*.tif`.
+
+```bash
+mkdir -p data/raw/02_terrain
+```
+```bash
+curl -L -o data/raw/02_terrain/ETOPO_2022_v1_30s_N90W180_surface.nc https://www.ngdc.noaa.gov/thredds/fileServer/global/ETOPO2022/30s/30s_surface_elev_netcdf/ETOPO_2022_v1_30s_N90W180_surface.nc
+```
+
+Después: `python pipeline/02_terrain.py` (requiere haber corrido el paso 01). Escribe `data/interim/terrain.parquet`. Para probar rápido una región: `--bbox -35 -15 -75 -60`.
 
 ## Luna y Marte (TAI-05)
 
