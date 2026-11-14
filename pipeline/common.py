@@ -22,6 +22,7 @@ from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 # --- Paths -------------------------------------------------------------------
@@ -280,3 +281,134 @@ def write_step_manifest(entry: dict, grid: dict | None = None, path: Path = MANI
     manifest["steps"] = sorted(steps, key=lambda s: s["step"])
     Manifest.model_validate(manifest)
     atomic_write_json(manifest, path)
+
+
+# --- Output validation (design 6.2) ------------------------------------------
+
+
+def validate_output(
+    df: pd.DataFrame,
+    grid_ids: Iterable[int] | None = None,
+    schema: str | None = None,
+) -> None:
+    """Raise OutputValidationError listing every problem found.
+
+    Checks the valid ranges of design 3.3 for any column present, cell_id
+    uniqueness (when there is no other key), that every cell_id exists in
+    the grid, and optionally the column contract in tai.schemas.
+    """
+    from tai.constants import VALID_RANGES
+    from tai import schemas
+
+    problems: list[str] = []
+    for col, (lo, hi) in VALID_RANGES.items():
+        if col not in df.columns:
+            continue
+        s = df[col].dropna()
+        if lo is not None and (s < lo).any():
+            problems.append(f"{col}: {int((s < lo).sum())} values below {lo} (min {s.min()})")
+        if hi is not None and (s > hi).any():
+            problems.append(f"{col}: {int((s > hi).sum())} values above {hi} (max {s.max()})")
+    if "area_km2" in df.columns and (df["area_km2"] <= 0).any():
+        problems.append("area_km2: values must be > 0")
+    if "cell_id" in df.columns:
+        multi_key = schema is not None and len(schemas.PRIMARY_KEYS[schema]) > 1
+        if not multi_key and df["cell_id"].duplicated().any():
+            problems.append(f"cell_id: {int(df['cell_id'].duplicated().sum())} duplicates")
+        if grid_ids is not None:
+            unknown = ~df["cell_id"].isin(pd.Index(grid_ids))
+            if unknown.any():
+                problems.append(f"cell_id: {int(unknown.sum())} not in the grid")
+    if schema is not None:
+        problems += schemas.check_schema(df, schema)
+    if problems:
+        raise OutputValidationError("; ".join(problems))
+
+
+def run(main) -> None:
+    """Call main() and exit with the codes of design 6.2."""
+    log = logging.getLogger("pipeline")
+    try:
+        main()
+    except MissingInputError as e:
+        log.error(str(e))
+        sys.exit(EXIT_MISSING_INPUT)
+    except OutputValidationError as e:
+        log.error("output failed validation, nothing written: %s", e)
+        sys.exit(EXIT_INVALID_OUTPUT)
+    sys.exit(EXIT_OK)
+
+
+# --- Raster to cells (design 6.3) --------------------------------------------
+
+_LAT_NAMES = ("lat", "latitude", "y")
+_LON_NAMES = ("lon", "longitude", "x")
+
+
+def _latlon_dims(data) -> tuple[str, str]:
+    lat = next((d for d in _LAT_NAMES if d in data.dims), None)
+    lon = next((d for d in _LON_NAMES if d in data.dims), None)
+    if lat is None or lon is None or data.ndim != 2:
+        raise ValueError(f"expected a 2-D raster with lat/lon dims, got {data.dims}")
+    return lat, lon
+
+
+def raster_to_cells(
+    data,
+    grid: pd.DataFrame,
+    min_valid_frac: float = 0.25,
+    mask=None,
+) -> pd.Series:
+    """Average the valid pixels of `data` inside each 1-degree cell.
+
+    data: 2-D xarray.DataArray on a regular lat/lon grid (degrees). Longitudes
+        in 0..360 are converted to -180..180. NaN marks invalid pixels.
+    grid: DataFrame with a cell_id column (grid.parquet).
+    min_valid_frac: a cell is null when valid pixels / considered pixels is
+        below this fraction.
+    mask: optional boolean array/DataArray, same shape; pixels where it is
+        False (e.g. ocean in the 0.05 deg land mask) are ignored entirely,
+        neither valid nor invalid.
+
+    Returns a float32 Series indexed by cell_id, in grid order. Pixels are
+    assigned by their center, so the raster may be a latitude band (TAI-12
+    processes the planet in bands); cut bands at whole degrees.
+    """
+    from tai.constants import N_CELLS_GLOBAL, N_LAT, N_LON
+
+    lat_name, lon_name = _latlon_dims(data)
+    data = data.transpose(lat_name, lon_name)
+    lat = np.asarray(data[lat_name].values, dtype=np.float64)
+    lon = np.asarray(data[lon_name].values, dtype=np.float64)
+    lon = np.where(lon > 180.0, lon - 360.0, lon)
+
+    lat_idx = np.clip(np.floor(lat + 90.0), 0, N_LAT - 1).astype(np.int64)
+    lon_idx = np.clip(np.floor(lon + 180.0), 0, N_LON - 1).astype(np.int64)
+    cell = lat_idx[:, None] * N_LON + lon_idx[None, :]
+
+    values = np.asarray(data.values, dtype=np.float64)
+    considered = np.ones(values.shape, dtype=bool)
+    if mask is not None:
+        if hasattr(mask, "dims"):
+            mask = mask.transpose(*[d for d in (lat_name, lon_name) if d in mask.dims]).values
+        considered = np.asarray(mask, dtype=bool)
+        if considered.shape != values.shape:
+            raise ValueError(f"mask shape {considered.shape} != data shape {values.shape}")
+    valid = considered & np.isfinite(values)
+
+    n_total = np.bincount(cell[considered], minlength=N_CELLS_GLOBAL)
+    n_valid = np.bincount(cell[valid], minlength=N_CELLS_GLOBAL)
+    sums = np.bincount(cell[valid], weights=values[valid], minlength=N_CELLS_GLOBAL)
+
+    with np.errstate(invalid="ignore", divide="ignore"):
+        mean = sums / n_valid
+        frac = n_valid / n_total
+    ok = (n_valid > 0) & (frac >= min_valid_frac)
+    result = np.where(ok, mean, np.nan)
+
+    ids = grid["cell_id"].to_numpy()
+    return pd.Series(
+        result[ids].astype(np.float32),
+        index=pd.Index(ids, name="cell_id"),
+        name=data.name,
+    )
