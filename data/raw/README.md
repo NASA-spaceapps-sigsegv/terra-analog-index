@@ -90,3 +90,15 @@ Recorte de Jezero a confirmar con Mars Trek (supuesto A2): latitud 17,9 a 18,9 N
 ## NCBI BioSample (paso 05)
 
 No se descarga a mano: el paso 05 guarda cada lote crudo en `data/raw/05_biology/<tipo>_<inicio>.xml`.
+
+### Paso 05: NCBI BioSample (TAI-15)
+
+No hay archivos que bajar a mano: el paso consulta NCBI con los términos de `config/bio_terms.json` y guarda cada lote crudo en `data/raw/05_biology/<tipo>_<inicio>.xml` (no se versiona). Si se corta, se vuelve a correr y solo pide los lotes que faltan.
+
+Variables de entorno (en un `.env` local o en la terminal; nunca en el repositorio): `NCBI_EMAIL` (obligatoria) y `NCBI_API_KEY` (opcional: 10 pedidos por segundo en vez de 3).
+
+```bash
+python pipeline/05_biology_ncbi.py --type halophile --max-records 200
+```
+
+Esa prueba baja un solo lote. Es una corrida parcial: queda marcada en el manifiesto y la siguiente corrida completa la reemplaza. Después, `python pipeline/05_biology_ncbi.py` baja los 6 tipos (hasta 5.000 registros cada uno; unos minutos). Plan B sin red: `--manual` lee `config/bio_manual.csv` (columnas `lat,lon,extremophile_type,source`). Escribe `data/processed/bio_samples.parquet` y `data/interim/biology.parquet`; el manifiesto dice, por tipo, cuántos hay en NCBI, cuántos se bajaron, cuántos traen coordenadas y cuántos caen en tierra.
