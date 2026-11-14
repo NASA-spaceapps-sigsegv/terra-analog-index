@@ -6,6 +6,7 @@ Writes: data/processed/grid.parquet, data/interim/land_mask.nc
 """
 
 import sys
+import time
 from pathlib import Path
 
 # Steps run as `python pipeline/NN_step.py`; put the repo root on the path.
@@ -19,14 +20,26 @@ from pipeline.common import (  # noqa: E402
     GRID_PATH,
     LAND_MASK_PATH,
     RAW,
+    ROOT,
     MissingInputError,
+    atomic_write_netcdf,
+    atomic_write_parquet,
+    bbox_mask,
+    bbox_note,
+    column_stats,
+    file_size_mb,
+    is_up_to_date,
+    last_run_partial,
     make_parser,
     raster_to_cells,
     run,
     setup_logging,
+    step_entry,
+    validate_output,
+    write_step_manifest,
 )
 from tai import geo  # noqa: E402
-from tai.constants import LAND_FRAC_MIN, N_CELLS_GLOBAL  # noqa: E402
+from tai.constants import GRID_RES_DEG, LAND_FRAC_MIN, N_CELLS_GLOBAL  # noqa: E402
 
 STEP = "01_grid"
 RAW_DIR = RAW / STEP
@@ -36,6 +49,7 @@ VECTOR_SUFFIXES = (".shp", ".geojson", ".gpkg", ".zip")
 MASK_RES_DEG = 0.05
 COUNTRY_NAME_FIELDS = ("NAME_ES", "NAME")
 OUTPUTS = [GRID_PATH, LAND_MASK_PATH]
+EXPECTED_CELLS = (15_000, 25_000)  # TAI-11 acceptance range
 
 
 def find_vector(basename: str, folder: Path = RAW_DIR) -> Path:
@@ -227,11 +241,87 @@ def assign_country(grid: pd.DataFrame, countries_gdf, res: float = MASK_RES_DEG)
     return out, counts
 
 
+def _input_entry(name: str, product: str, url: str, path: Path) -> dict:
+    return {
+        "name": name,
+        "product": product,
+        "portal": "Natural Earth",
+        "url": url,
+        "files": 1,
+        "size_mb": file_size_mb(path),
+        "license_note": "Dominio público",
+    }
+
+
 def main() -> None:
     args = make_parser(STEP, __doc__.splitlines()[0]).parse_args()
     log = setup_logging(STEP)
-    log.info("args: force=%s bbox=%s", args.force, args.bbox)
-    raise NotImplementedError("TAI-11: build the grid and land mask")
+    started = time.monotonic()
+
+    land_path = find_vector(LAND_BASENAME)
+    countries_path = find_vector(COUNTRIES_BASENAME)
+    code = [Path(__file__), ROOT / "pipeline" / "common.py", ROOT / "tai" / "geo.py", ROOT / "tai" / "constants.py"]
+    if (
+        not args.force
+        and not args.bbox
+        and is_up_to_date(OUTPUTS, [land_path, countries_path, *code])
+        and not last_run_partial(STEP)
+    ):
+        log.info("al día")
+        return
+
+    log.info("reading %s", land_path.name)
+    mask = rasterize_land(read_vector(land_path))
+    log.info("land mask %s at %s deg: %d land pixels", mask.shape, MASK_RES_DEG, int(mask.sum()))
+
+    grid = build_grid(land_fraction(mask))
+    log.info("grid: %d cells with land_frac >= %s", len(grid), LAND_FRAC_MIN)
+
+    log.info("reading %s", countries_path.name)
+    grid, counts = assign_country(grid, read_vector(countries_path))
+    log.info("country by center %d, by majority %d, none %d", counts["center"], counts["majority"], counts["none"])
+
+    notes = [
+        f"{len(grid)} celdas con land_frac >= {LAND_FRAC_MIN}",
+        f"país por el centro: {counts['center']}; por mayoría de píxeles: {counts['majority']}; "
+        f"sin país: {counts['none']}",
+    ]
+    if args.bbox:
+        grid = grid[bbox_mask(grid["lat"], grid["lon"], args.bbox).to_numpy()].reset_index(drop=True)
+        notes.append(bbox_note(args.bbox))
+        log.warning("--bbox: keeping only %d cells; rerun without --bbox for the real grid", len(grid))
+    elif not EXPECTED_CELLS[0] <= len(grid) <= EXPECTED_CELLS[1]:
+        log.warning("cell count %d outside the expected %s", len(grid), EXPECTED_CELLS)
+
+    validate_output(grid, schema="grid")
+
+    atomic_write_netcdf(mask, LAND_MASK_PATH, encoding={"land": {"zlib": True, "complevel": 4}})
+    atomic_write_parquet(grid, GRID_PATH)
+    write_step_manifest(
+        step_entry(
+            STEP,
+            started,
+            inputs=[
+                _input_entry(
+                    "Natural Earth, tierra 1:50m",
+                    LAND_BASENAME,
+                    "https://www.naturalearthdata.com/downloads/50m-physical-vectors/",
+                    land_path,
+                ),
+                _input_entry(
+                    "Natural Earth, países 1:50m",
+                    COUNTRIES_BASENAME,
+                    "https://www.naturalearthdata.com/downloads/50m-cultural-vectors/",
+                    countries_path,
+                ),
+            ],
+            outputs=[(GRID_PATH, len(grid)), (LAND_MASK_PATH, int(mask.size))],
+            columns=column_stats(grid, ["lat", "lon", "area_km2", "land_frac", "country"]),
+            notes=notes,
+        ),
+        grid={"res_deg": GRID_RES_DEG, "n_cells": len(grid), "land_frac_min": LAND_FRAC_MIN},
+    )
+    log.info("wrote %s (%d cells) and %s", GRID_PATH.name, len(grid), LAND_MASK_PATH.name)
 
 
 if __name__ == "__main__":
