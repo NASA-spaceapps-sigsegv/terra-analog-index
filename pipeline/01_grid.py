@@ -34,6 +34,7 @@ LAND_BASENAME = "ne_50m_land"
 COUNTRIES_BASENAME = "ne_50m_admin_0_countries"
 VECTOR_SUFFIXES = (".shp", ".geojson", ".gpkg", ".zip")
 MASK_RES_DEG = 0.05
+COUNTRY_NAME_FIELDS = ("NAME_ES", "NAME")
 OUTPUTS = [GRID_PATH, LAND_MASK_PATH]
 
 
@@ -138,6 +139,92 @@ def build_grid(land_frac: pd.Series, min_frac: float = LAND_FRAC_MIN) -> pd.Data
             "country": pd.array([None] * len(ids), dtype="string"),
         }
     )
+
+
+def country_names(countries_gdf) -> pd.Series:
+    """Spanish name of each country (NAME_ES), falling back to NAME."""
+    names = pd.Series([None] * len(countries_gdf), index=countries_gdf.index, dtype="object")
+    for field in COUNTRY_NAME_FIELDS:
+        if field in countries_gdf.columns:
+            col = countries_gdf[field].astype("string").str.strip().replace("", pd.NA)
+            names = names.where(names.notna(), col)
+    return names.astype("string")
+
+
+def pixel_cell_ids(res: float = MASK_RES_DEG) -> np.ndarray:
+    """cell_id of every pixel of the global raster (by pixel center)."""
+    lat, lon = raster_coords(res)
+    lat_idx, lon_idx = geo.lat_lon_idx(lat, lon)
+    return lat_idx.astype(np.int64)[:, None] * 360 + lon_idx.astype(np.int64)[None, :]
+
+
+def majority_by_cell(values: np.ndarray, cells, res: float = MASK_RES_DEG) -> pd.Series:
+    """Most frequent non-zero value per cell, among the requested cells.
+
+    Ties go to the smallest value so the result is deterministic. Cells with
+    no non-zero pixel are absent from the result.
+    """
+    cells = np.asarray(cells, dtype=np.int64)
+    if cells.size == 0:
+        return pd.Series(dtype="int64")
+    cell = pixel_cell_ids(res)
+    sel = (values > 0) & np.isin(cell, cells)
+    if not sel.any():
+        return pd.Series(dtype="int64")
+    k = int(values.max()) + 1
+    keys, counts = np.unique(cell[sel] * k + values[sel].astype(np.int64), return_counts=True)
+    cell_of, value_of = np.divmod(keys, k)
+    order = np.lexsort((value_of, -counts, cell_of))  # by cell, most pixels, smallest value
+    first = np.unique(cell_of[order], return_index=True)[1]
+    pick = order[first]
+    return pd.Series(value_of[pick], index=pd.Index(cell_of[pick], name="cell_id"))
+
+
+def assign_country(grid: pd.DataFrame, countries_gdf, res: float = MASK_RES_DEG):
+    """Fill grid.country (design 2.1: country of the cell center).
+
+    1. The country whose polygon contains the cell center.
+    2. If the center is in the sea or a gap, the country with most land
+       pixels inside the cell (coastal and island cells).
+    3. Otherwise null (e.g. land with no country polygon).
+
+    Returns (grid, counts) where counts has keys center, majority, none.
+    """
+    import geopandas as gpd
+
+    countries = countries_gdf.reset_index(drop=True)
+    names = country_names(countries)
+
+    points = gpd.GeoDataFrame(
+        {"cell_id": grid["cell_id"].to_numpy()},
+        geometry=gpd.points_from_xy(grid["lon"], grid["lat"]),
+        crs="EPSG:4326",
+    )
+    joined = gpd.sjoin(
+        points, countries[["geometry"]].set_crs("EPSG:4326", allow_override=True),
+        how="left", predicate="within",
+    )
+    joined = joined.sort_values(["cell_id", "index_right"]).drop_duplicates("cell_id")
+    by_center = joined.set_index("cell_id")["index_right"]
+
+    missing = by_center.index[by_center.isna()]
+    ids = rasterize_values(((g, i + 1) for i, g in enumerate(countries.geometry)), res, "int32")
+    by_majority = majority_by_cell(ids, missing, res) - 1
+
+    country_idx = by_center.copy()
+    country_idx.loc[by_majority.index] = by_majority
+    idx = country_idx.reindex(grid["cell_id"]).to_numpy()
+    name_values = names.to_numpy(dtype=object)
+    country = [name_values[int(i)] if pd.notna(i) else None for i in idx]
+
+    out = grid.copy()
+    out["country"] = pd.array(country, dtype="string")
+    counts = {
+        "center": int(by_center.notna().sum()),
+        "majority": int(len(by_majority)),
+        "none": int(out["country"].isna().sum()),
+    }
+    return out, counts
 
 
 def main() -> None:
