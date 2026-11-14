@@ -105,3 +105,34 @@ def test_write_step_manifest_upserts(tmp_path, monkeypatch):
     assert data["steps"][0]["notes"] == ["second"]
     assert data["steps"][0]["outputs"][0]["path"] == "data/processed/grid.parquet"
     assert data["grid"]["n_cells"] == 1
+
+
+def test_last_run_partial(tmp_path):
+    path = tmp_path / "manifest.json"
+    assert not common.last_run_partial("02_terrain", path)
+    path.write_text(
+        json.dumps(
+            {
+                "steps": [
+                    {"step": "01_grid", "notes": [common.bbox_note([-30, -20, -75, -65])]},
+                    {"step": "02_terrain", "notes": ["ok"]},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert common.bbox_note([-30, -20, -75, -65]) == "partial run: --bbox -30 -20 -75 -65"
+    assert common.last_run_partial("01_grid", path)
+    assert not common.last_run_partial("02_terrain", path)
+    assert not common.last_run_partial("03_temperature", path)
+
+
+def test_atomic_write_netcdf_with_encoding(tmp_path):
+    import numpy as np
+    import xarray as xr
+
+    da = xr.DataArray(np.ones((2, 3), dtype="uint8"), dims=("lat", "lon"), name="land")
+    path = tmp_path / "m.nc"
+    common.atomic_write_netcdf(da, path, encoding={"land": {"zlib": True, "complevel": 4}})
+    with xr.open_dataarray(path) as back:
+        assert back.dtype == np.uint8 and int(back.sum()) == 6

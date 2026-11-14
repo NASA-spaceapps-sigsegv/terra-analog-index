@@ -131,6 +131,30 @@ def is_up_to_date(outputs: Iterable[Path], inputs: Iterable[Path]) -> bool:
     return oldest_output > newest_input
 
 
+PARTIAL_NOTE_PREFIX = "partial run: --bbox"
+
+
+def bbox_note(bbox: Iterable[float]) -> str:
+    """Manifest note that marks an output as computed for a region only."""
+    return f"{PARTIAL_NOTE_PREFIX} {' '.join(f'{v:g}' for v in bbox)}"
+
+
+def last_run_partial(step: str, path: Path = MANIFEST_PATH) -> bool:
+    """True if the manifest says the last run of `step` used --bbox.
+
+    Steps call this next to is_up_to_date so a quick regional run never
+    passes for a complete output.
+    """
+    path = Path(path)
+    if not path.exists():
+        return False
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    for entry in manifest.get("steps", []):
+        if entry.get("step") == step:
+            return any(n.startswith(PARTIAL_NOTE_PREFIX) for n in entry.get("notes", []))
+    return False
+
+
 def load_grid(path: Path = GRID_PATH) -> pd.DataFrame:
     """Read grid.parquet (output of step 01)."""
     require_inputs([path])
@@ -163,8 +187,10 @@ def atomic_write_json(obj, path: Path) -> None:
     _atomic_replace(path, lambda tmp: tmp.write_text(text, encoding="utf-8"))
 
 
-def atomic_write_netcdf(ds, path: Path) -> None:
-    _atomic_replace(path, lambda tmp: ds.to_netcdf(tmp))
+def atomic_write_netcdf(ds, path: Path, **kwargs) -> None:
+    """kwargs go to Dataset.to_netcdf (e.g. encoding for compression)."""
+    kwargs.setdefault("engine", "netcdf4")
+    _atomic_replace(path, lambda tmp: ds.to_netcdf(tmp, **kwargs))
 
 
 # --- Manifest (design 6.4, contracts 6.2) ------------------------------------
