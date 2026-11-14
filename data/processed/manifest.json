@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "project": "terra-analog-index",
+  "data_year": 2025,
+  "grid": {
+    "res_deg": 1.0,
+    "n_cells": 21357,
+    "land_frac_min": 0.5
+  },
+  "steps": [
+    {
+      "step": "01_grid",
+      "ran_at": "2026-11-14T14:24:41Z",
+      "duration_s": 4.4,
+      "git_commit": "3da92c5",
+      "inputs": [
+        {
+          "name": "Natural Earth, tierra 1:50m",
+          "product": "ne_50m_land",
+          "portal": "Natural Earth",
+          "url": "https://www.naturalearthdata.com/downloads/50m-physical-vectors/",
+          "files": 1,
+          "size_mb": 1.6,
+          "license_note": "Dominio público"
+        },
+        {
+          "name": "Natural Earth, países 1:50m",
+          "product": "ne_50m_admin_0_countries",
+          "portal": "Natural Earth",
+          "url": "https://www.naturalearthdata.com/downloads/50m-cultural-vectors/",
+          "files": 1,
+          "size_mb": 3.1,
+          "license_note": "Dominio público"
+        }
+      ],
+      "outputs": [
+        {
+          "path": "data/processed/grid.parquet",
+          "rows": 21357,
+          "size_mb": 0.2
+        },
+        {
+          "path": "data/interim/land_mask.nc",
+          "rows": 25920000,
+          "size_mb": 0.3
+        }
+      ],
+      "columns": {
+        "lat": {
+          "non_null": 21357,
+          "null": 0,
+          "min": -89.5,
+          "max": 83.5
+        },
+        "lon": {
+          "non_null": 21357,
+          "null": 0,
+          "min": -179.5,
+          "max": 179.5
+        },
+        "area_km2": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 107.897,
+          "max": 12363.718
+        },
+        "land_frac": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 0.5,
+          "max": 1.0
+        },
+        "country": {
+          "non_null": 21357,
+          "null": 0,
+          "min": null,
+          "max": null
+        }
+      },
+      "earth_stats": null,
+      "notes": [
+        "21357 celdas con land_frac >= 0.5",
+        "país por el centro: 21141; por mayoría de píxeles: 216; sin país: 0"
+      ]
+    }
+  ]
+}
