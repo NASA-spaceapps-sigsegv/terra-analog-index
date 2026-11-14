@@ -12,7 +12,7 @@ from tai import scoring
 from tai.constants import RANKING_LIMIT_MAX, TOP_N
 from tai.errors import TargetNotFoundError
 from tai.io import DataBundle
-from tai.models import Ranking, RankingRow, TargetSummary, Weights
+from tai.models import AnalogRef, Ranking, RankingItem, TargetSummary, Weights
 
 
 def _num(x) -> float | None:
@@ -51,20 +51,33 @@ def get_ranking(
     top = ranked.head(limit)
     grid = bundle.grid.loc[top["cell_id"]]  # lat, lon, country de las filas elegidas
 
-    rows = [
-        RankingRow(
+    names = {a.analog_id: a.name for a in bundle.known_analogs}
+
+    def analog(x) -> AnalogRef | None:
+        aid = _text(x)
+        return None if aid is None else AnalogRef(analog_id=aid, name=names.get(aid, aid))
+
+    items = [
+        RankingItem(
             rank=i,
             cell_id=int(r.cell_id),
             lat=float(g.lat),
             lon=float(g.lon),
             country=_text(g.country),
             total=float(r.total),
-            terrain=_num(r.s_terrain),
-            temperature=_num(r.s_temperature),
-            water_ice=_num(r.s_water_ice),
-            biology=float(r.bio_score),
-            known_analog=_text(r.known_analog),
+            s_terrain=_num(r.s_terrain),
+            s_temperature=_num(r.s_temperature),
+            s_water_ice=_num(r.s_water_ice),
+            bio_score=float(r.bio_score),
+            known_analog=analog(r.known_analog),
         )
         for i, (r, g) in enumerate(zip(top.itertuples(index=False), grid.itertuples(index=False)), start=1)
     ]
-    return Ranking(target_id=target_id, weights=w, total_eligible=len(ranked), rows=rows)
+    return Ranking(
+        target_id=target_id,
+        weights=w,
+        hide_known=hide_known,
+        limit=limit,
+        total_eligible=len(ranked),
+        items=items,
+    )

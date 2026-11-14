@@ -65,12 +65,13 @@ def handle_tai_errors(fatal: bool = False):
 
 
 def ranking_table(ranking) -> pd.DataFrame:
-    df = pd.DataFrame([r.model_dump() for r in ranking.rows])
+    df = pd.DataFrame([item.model_dump() for item in ranking.items])
+    df["known_analog"] = [a["name"] if a else None for a in df["known_analog"]]
     df = df.rename(
         columns={
             "rank": "Puesto", "lat": "Lat", "lon": "Lon", "country": "País", "total": "Total",
-            "terrain": "Terreno", "temperature": "Temperatura", "water_ice": "Agua y hielo",
-            "biology": "Astrobiología", "known_analog": "Análogo conocido",
+            "s_terrain": "Terreno", "s_temperature": "Temperatura", "s_water_ice": "Agua y hielo",
+            "bio_score": "Astrobiología", "known_analog": "Análogo conocido",
         }
     )
     return df[["Puesto", "Lat", "Lon", "País", "Total", "Terreno", "Temperatura", "Agua y hielo", "Astrobiología", "Análogo conocido"]]
@@ -82,7 +83,7 @@ def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
     with left:
         st.subheader("Mejores celdas")
         ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)
-        if not ranking.rows:
+        if not ranking.items:
             st.info("No quedan celdas con este filtro.")
         else:
             fmt = f"%.{SCORE_DECIMALS_UI}f"

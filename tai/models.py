@@ -316,10 +316,17 @@ class BioTermsFile(_Model):
     types: list[BioTermType] = Field(min_length=1)
 
 
-# --- Respuesta de get_ranking (design 9.2 / 10.4) ----------------------------
+# --- Respuesta de get_ranking (contracts 4.5) --------------------------------
 
 
-class RankingRow(_Model):
+class AnalogRef(_Model):
+    """Análogo conocido que cubre una celda: id y nombre para mostrar."""
+
+    analog_id: str
+    name: str = Field(min_length=1)
+
+
+class RankingItem(_Model):
     """Una fila del ranking. Un puntaje nulo es "sin dato", nunca 0."""
 
     rank: int = Field(ge=1)
@@ -328,15 +335,17 @@ class RankingRow(_Model):
     lon: float
     country: str | None
     total: float = Field(ge=0, le=1)
-    terrain: float | None = Field(ge=0, le=1)
-    temperature: float | None = Field(ge=0, le=1)
-    water_ice: float | None = Field(ge=0, le=1)
-    biology: float = Field(ge=0, le=1)
-    known_analog: str | None
+    s_terrain: float | None = Field(ge=0, le=1)
+    s_temperature: float | None = Field(ge=0, le=1)
+    s_water_ice: float | None = Field(ge=0, le=1)
+    bio_score: float = Field(ge=0, le=1)
+    known_analog: AnalogRef | None
 
 
 class Ranking(_Model):
     target_id: str
     weights: Weights
-    total_eligible: int = Field(ge=0)  # celdas que entran al ranking antes del límite
-    rows: list[RankingRow]
+    hide_known: bool
+    limit: int = Field(ge=1)
+    total_eligible: int = Field(ge=0)  # elegibles antes de aplicar limit (y después de hide_known)
+    items: list[RankingItem]

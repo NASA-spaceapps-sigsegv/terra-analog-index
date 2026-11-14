@@ -15,6 +15,12 @@ from tai.constants import DIMENSIONS, MIN_PHYSICAL_DIMS, PHYSICAL_DIMENSIONS
 from tai.errors import InvalidWeightsError, ZeroWeightsError
 from tai.models import Weights
 
+# Los puntajes vienen en float32 (0,1 o 0,3 no son exactos), así que dos totales
+# iguales en papel pueden diferir en la octava cifra. Se ordena por el total
+# redondeado a esta cantidad de decimales para que un empate real se decida
+# por cell_id (design 5.7), sin mezclar totales que difieren de verdad.
+TIE_DECIMALS = 6
+
 # dimensión -> columna de similarity.parquet
 SCORE_COLUMNS = {
     "terrain": "s_terrain",
@@ -67,5 +73,6 @@ def rank(sim: pd.DataFrame, total: pd.Series, hide_known: bool = False) -> pd.Da
     mask = is_eligible(sim).to_numpy() & total.notna().to_numpy()
     if hide_known:
         mask &= sim["known_analog"].isna().to_numpy()
-    df = sim.assign(total=total)[mask].reset_index()
-    return df.sort_values(["total", "cell_id"], ascending=[False, True], kind="stable").reset_index(drop=True)
+    df = sim.assign(total=total, _key=total.round(TIE_DECIMALS))[mask].reset_index()
+    df = df.sort_values(["_key", "cell_id"], ascending=[False, True], kind="stable")
+    return df.drop(columns="_key").reset_index(drop=True)
