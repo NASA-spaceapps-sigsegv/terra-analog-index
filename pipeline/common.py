@@ -12,9 +12,14 @@ Every step script follows the same shape:
 from __future__ import annotations
 
 import argparse
+import json
 import logging
+import os
+import subprocess
 import sys
+import time
 from collections.abc import Iterable
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -129,3 +134,149 @@ def load_grid(path: Path = GRID_PATH) -> pd.DataFrame:
     """Read grid.parquet (output of step 01)."""
     require_inputs([path])
     return pd.read_parquet(path)
+
+
+# --- Atomic writes (design 6.2) ----------------------------------------------
+
+
+def _atomic_replace(path: Path, write) -> None:
+    """Write via `write(tmp_path)` then rename, so a crash never leaves half a file."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp")
+    try:
+        write(tmp)
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+
+def atomic_write_parquet(df: pd.DataFrame, path: Path) -> None:
+    _atomic_replace(path, lambda tmp: df.to_parquet(tmp, index=False))
+
+
+def atomic_write_json(obj, path: Path) -> None:
+    """Strict JSON: NaN/Infinity raise instead of being written (contracts 1)."""
+    text = json.dumps(obj, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+    _atomic_replace(path, lambda tmp: tmp.write_text(text, encoding="utf-8"))
+
+
+def atomic_write_netcdf(ds, path: Path) -> None:
+    _atomic_replace(path, lambda tmp: ds.to_netcdf(tmp))
+
+
+# --- Manifest (design 6.4, contracts 6.2) ------------------------------------
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def file_size_mb(path: Path) -> float:
+    path = Path(path)
+    if path.is_dir():
+        size = sum(p.stat().st_size for p in path.rglob("*") if p.is_file())
+    else:
+        size = path.stat().st_size
+    return round(size / 1e6, 1)
+
+
+def git_commit() -> str | None:
+    """Short hash of HEAD, or None outside a git checkout."""
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return out.stdout.strip() or None
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+def _num(x) -> float | None:
+    if x is None or pd.isna(x):
+        return None
+    return round(float(x), 3)
+
+
+def column_stats(df: pd.DataFrame, columns: Iterable[str]) -> dict:
+    """non_null / null / min / max per column, as in the manifest contract."""
+    stats = {}
+    for col in columns:
+        s = df[col]
+        numeric = pd.api.types.is_numeric_dtype(s) and not pd.api.types.is_bool_dtype(s)
+        stats[col] = {
+            "non_null": int(s.notna().sum()),
+            "null": int(s.isna().sum()),
+            "min": _num(s.min()) if numeric else None,
+            "max": _num(s.max()) if numeric else None,
+        }
+    return stats
+
+
+def step_entry(
+    step: str,
+    started: float,
+    inputs: list[dict],
+    outputs: list[tuple[Path, int]],
+    columns: dict | None = None,
+    notes: list[str] | None = None,
+    earth_stats: dict | None = None,
+) -> dict:
+    """Build one manifest step entry.
+
+    `started` is a time.monotonic() value taken when the step began.
+    `inputs` are dicts with name, product, portal, url, files, size_mb, license_note.
+    `outputs` are (path, rows) pairs; size is read from disk.
+    """
+    return {
+        "step": step,
+        "ran_at": utc_now_iso(),
+        "duration_s": round(time.monotonic() - started, 1),
+        "git_commit": git_commit(),
+        "inputs": inputs,
+        "outputs": [
+            {
+                "path": Path(p).resolve().relative_to(ROOT).as_posix(),
+                "rows": int(rows),
+                "size_mb": file_size_mb(p),
+            }
+            for p, rows in outputs
+        ],
+        "columns": columns or {},
+        "earth_stats": earth_stats,
+        "notes": notes or [],
+    }
+
+
+def write_step_manifest(entry: dict, grid: dict | None = None, path: Path = MANIFEST_PATH) -> None:
+    """Insert or replace this step's entry in manifest.json (one entry per step).
+
+    `grid` ({res_deg, n_cells, land_frac_min}) is set by step 01 only.
+    The result is validated against tai.models.Manifest before writing.
+    """
+    from tai.constants import DATA_YEAR, SCHEMA_VERSION
+    from tai.models import Manifest
+
+    path = Path(path)
+    if path.exists():
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    else:
+        manifest = {
+            "schema_version": SCHEMA_VERSION,
+            "project": "terra-analog-index",
+            "data_year": DATA_YEAR,
+            "grid": None,
+            "steps": [],
+        }
+    if grid is not None:
+        manifest["grid"] = grid
+    steps = [s for s in manifest["steps"] if s["step"] != entry["step"]]
+    steps.append(entry)
+    manifest["steps"] = sorted(steps, key=lambda s: s["step"])
+    Manifest.model_validate(manifest)
+    atomic_write_json(manifest, path)
