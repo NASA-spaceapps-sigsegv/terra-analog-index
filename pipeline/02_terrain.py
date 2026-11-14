@@ -43,6 +43,7 @@ from pipeline.common import (  # noqa: E402
     is_up_to_date,
     last_run_partial,
     load_grid,
+    load_land_mask,
     local_roughness,
     make_parser,
     raster_to_cells,
@@ -149,16 +150,6 @@ def global_view(src, ppd: int):
         nodata=np.nan,
         dtype="float32",
     )
-
-
-def load_land_mask(path: Path = LAND_MASK_PATH) -> tuple[np.ndarray, float]:
-    """Land mask of step 01 as a north-up bool array, with its resolution in degrees."""
-    require_inputs([path])
-    with xr.open_dataset(path) as ds:
-        da = ds["land"].load()
-    da = da.sortby("lat", ascending=False).sortby("lon")
-    res = float(abs(da.lat.values[1] - da.lat.values[0]))
-    return da.values.astype(bool), res
 
 
 class RowCache:

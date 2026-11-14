@@ -15,11 +15,12 @@ import argparse
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import time
 from collections.abc import Iterable
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import numpy as np
@@ -520,3 +521,73 @@ def local_roughness(dem, window: int | None = None, min_valid: int | None = None
     out = np.sqrt(np.clip(var, 0.0, None))
     out[(n < min_valid) | ~valid] = np.nan
     return out
+
+
+# --- Global lat/lon rasters and inputs shared by steps 01 to 04 --------------
+
+
+def global_coords(res: float) -> tuple[np.ndarray, np.ndarray]:
+    """Pixel-center latitudes (north to south) and longitudes (west to east)
+    of a global raster of `res` degrees with origin (-180, 90), such as the
+    land mask and the MODIS 0.05 deg CMG products."""
+    n_lat = int(round(180 / res))
+    n_lon = int(round(360 / res))
+    lat = 90.0 - res * (np.arange(n_lat) + 0.5)
+    lon = -180.0 + res * (np.arange(n_lon) + 0.5)
+    return lat, lon
+
+
+def land_mask_da(path: Path = LAND_MASK_PATH):
+    """Land mask of step 01 as a north-up boolean DataArray (lat, lon)."""
+    import xarray as xr
+
+    require_inputs([path])
+    with xr.open_dataset(path) as ds:
+        da = ds["land"].load()
+    return da.sortby("lat", ascending=False).sortby("lon").astype(bool)
+
+
+def load_land_mask(path: Path = LAND_MASK_PATH) -> tuple[np.ndarray, float]:
+    """Land mask of step 01 as a north-up bool array, with its resolution in degrees."""
+    da = land_mask_da(path)
+    res = float(abs(da.lat.values[1] - da.lat.values[0]))
+    return da.values, res
+
+
+def read_hdf4_layer(path: Path, layer: str) -> np.ndarray:
+    """Raw values of one HDF4 (MODIS) layer as float32, NaN where invalid.
+
+    Pixels equal to _FillValue or outside valid_range become NaN. Scale and
+    offset are NOT applied: MODIS layers differ in how they use add_offset,
+    so each step applies the factor documented for its product.
+    """
+    from pyhdf.SD import SD, SDC
+
+    sd = SD(str(path), SDC.READ)
+    try:
+        sds = sd.select(layer)
+        attrs = sds.attributes()
+        values = sds[:].astype(np.float32)
+    finally:
+        sd.end()
+    fill = attrs.get("_FillValue")
+    if isinstance(fill, (int, float)):
+        values[values == fill] = np.nan
+    valid = attrs.get("valid_range")
+    if isinstance(valid, (list, tuple)) and len(valid) == 2:
+        lo, hi = valid
+        values[(values < lo) | (values > hi)] = np.nan
+    return values
+
+
+_MODIS_DATE = re.compile(r"\.A(\d{4})(\d{3})\.")
+
+
+def modis_month(path: Path) -> tuple[int, int]:
+    """(year, month) of a MODIS monthly file from its A<YYYY><DOY> tag."""
+    m = _MODIS_DATE.search(Path(path).name)
+    if not m:
+        raise ValueError(f"no .A<YYYY><DOY>. date in {Path(path).name}")
+    year, doy = int(m.group(1)), int(m.group(2))
+    date = datetime(year, 1, 1) + timedelta(days=doy - 1)
+    return year, date.month

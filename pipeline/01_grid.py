@@ -28,6 +28,7 @@ from pipeline.common import (  # noqa: E402
     bbox_note,
     column_stats,
     file_size_mb,
+    global_coords,
     is_up_to_date,
     last_run_partial,
     make_parser,
@@ -75,15 +76,6 @@ def read_vector(path: Path):
     return gdf[gdf.geometry.notna() & ~gdf.geometry.is_empty]
 
 
-def raster_coords(res: float = MASK_RES_DEG) -> tuple[np.ndarray, np.ndarray]:
-    """Pixel-center latitudes (north to south) and longitudes (west to east)."""
-    n_lat = int(round(180 / res))
-    n_lon = int(round(360 / res))
-    lat = 90.0 - res * (np.arange(n_lat) + 0.5)
-    lon = -180.0 + res * (np.arange(n_lon) + 0.5)
-    return lat, lon
-
-
 def rasterize_values(shapes, res: float = MASK_RES_DEG, dtype="uint8") -> np.ndarray:
     """Burn (geometry, value) pairs onto the global lat/lon raster.
 
@@ -93,7 +85,7 @@ def rasterize_values(shapes, res: float = MASK_RES_DEG, dtype="uint8") -> np.nda
     from affine import Affine
     from rasterio.features import rasterize
 
-    lat, lon = raster_coords(res)
+    lat, lon = global_coords(res)
     shapes = list(shapes)
     out_shape = (lat.size, lon.size)
     if not shapes:
@@ -110,7 +102,7 @@ def rasterize_values(shapes, res: float = MASK_RES_DEG, dtype="uint8") -> np.nda
 
 def rasterize_land(land_gdf, res: float = MASK_RES_DEG) -> xr.DataArray:
     """0/1 land mask on a global grid of `res` degrees (design 2.1)."""
-    lat, lon = raster_coords(res)
+    lat, lon = global_coords(res)
     values = rasterize_values(((geom, 1) for geom in land_gdf.geometry), res)
     return xr.DataArray(
         values,
@@ -167,7 +159,7 @@ def country_names(countries_gdf) -> pd.Series:
 
 def pixel_cell_ids(res: float = MASK_RES_DEG) -> np.ndarray:
     """cell_id of every pixel of the global raster (by pixel center)."""
-    lat, lon = raster_coords(res)
+    lat, lon = global_coords(res)
     lat_idx, lon_idx = geo.lat_lon_idx(lat, lon)
     return lat_idx.astype(np.int64)[:, None] * 360 + lon_idx.astype(np.int64)[None, :]
 
