@@ -72,6 +72,8 @@ Destinos: `data/raw/03_temperature/` (MOD11C3), `data/raw/04_water_ice/imerg/`, 
 
 Después de bajar MOD11C3: `python pipeline/03_temperature.py` (requiere el paso 01). Necesita los 12 meses de `DATA_YEAR`; si falta alguno, termina con código 2 y dice cuáles. Escribe `data/interim/temperature.parquet`.
 
+Después de bajar IMERG, MOD10CM y MCD12C1: `python pipeline/04_water_ice.py`. Necesita los 12 meses de IMERG y de MOD10CM; para MCD12C1 usa el de `DATA_YEAR` o, si todavía no salió, el último anterior. Escribe `data/interim/water_ice.parquet`. La precipitación queda nula al sur de 60° S, porque IMERG no mide la nieve sobre la Antártida (diseño 4.3).
+
 ## Luna y Marte (TAI-05)
 
 | Objetivo | Variable | Producto | Enlace | measured / literature | Formato y proyección |
