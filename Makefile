@@ -23,19 +23,33 @@ define download
 	@mv $@.part $@
 endef
 
-.PHONY: help data data-grid data-terrain clean-partial
+.PHONY: help data data-grid data-terrain data-earthdata data-temperature data-water-ice clean-partial
 
 help:
-	@echo "make data          all raw datasets (~1.6 GB)"
-	@echo "make data-grid     step 01: Natural Earth land and countries (~5 MB)"
-	@echo "make data-terrain  step 02: ETOPO 2022 elevation, 30 arc-seconds (~1.6 GB)"
+	@echo "make data             all raw datasets (~3.9 GB)"
+	@echo "make data-grid        step 01: Natural Earth land and countries (~5 MB)"
+	@echo "make data-terrain     step 02: ETOPO 2022 elevation, 30 arc-seconds (~1.6 GB)"
+	@echo "make data-earthdata   steps 03 and 04, needs an Earthdata login (~2.3 GB)"
+	@echo "make data-temperature step 03: MOD11C3 monthly LST (~0.8 GB)"
+	@echo "make data-water-ice   step 04: IMERG, MOD10CM, MCD12C1 (~1.4 GB)"
 	@echo "make clean-partial delete unfinished *.part downloads"
 
-data: data-grid data-terrain
+data: data-grid data-terrain data-earthdata
 
 data-grid: $(GRID_FILES)
 
 data-terrain: $(TERRAIN_FILES)
+
+# Earthdata products: the granule list comes from CMR, so these run the
+# downloader, which skips files already on disk.
+data-earthdata:
+	python3 pipeline/fetch_earthdata.py
+
+data-temperature:
+	python3 pipeline/fetch_earthdata.py mod11c3
+
+data-water-ice:
+	python3 pipeline/fetch_earthdata.py imerg mod10cm mcd12c1
 
 $(RAW)/01_grid/%.geojson:
 	$(call download,$(NE_BASE)/$*.geojson)
