@@ -82,6 +82,49 @@
         "21357 celdas con land_frac >= 0.5",
         "país por el centro: 21141; por mayoría de píxeles: 216; sin país: 0"
       ]
+    },
+    {
+      "step": "02_terrain",
+      "ran_at": "2026-11-14T15:39:21Z",
+      "duration_s": 264.9,
+      "git_commit": "4170a30",
+      "inputs": [
+        {
+          "name": "ETOPO 2022, elevación de superficie, 30 segundos de arco",
+          "product": "ETOPO_2022_v1_30s_surface",
+          "portal": "NOAA NCEI",
+          "url": "https://www.ncei.noaa.gov/products/etopo-global-relief-model",
+          "license_note": "Dominio público (NOAA)",
+          "files": 1,
+          "size_mb": 1642.3
+        }
+      ],
+      "outputs": [
+        {
+          "path": "data/interim/terrain.parquet",
+          "rows": 21357,
+          "size_mb": 0.4
+        }
+      ],
+      "columns": {
+        "slope_deg": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 0.011,
+          "max": 21.039
+        },
+        "roughness_m": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 0.23,
+          "max": 407.433
+        }
+      },
+      "earth_stats": null,
+      "notes": [
+        "resolución base 1.0 km; ventana de rugosidad 5 x 5 píxeles; DEM a 120 px/grado",
+        "0 celdas sin dato de terreno (0.0%)"
+      ]
     }
   ]
 }
