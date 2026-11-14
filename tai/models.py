@@ -314,3 +314,29 @@ class BioTermType(_Model):
 class BioTermsFile(_Model):
     schema_version: Literal[SCHEMA_VERSION]  # type: ignore[valid-type]
     types: list[BioTermType] = Field(min_length=1)
+
+
+# --- Respuesta de get_ranking (design 9.2 / 10.4) ----------------------------
+
+
+class RankingRow(_Model):
+    """Una fila del ranking. Un puntaje nulo es "sin dato", nunca 0."""
+
+    rank: int = Field(ge=1)
+    cell_id: int = Field(ge=0)
+    lat: float
+    lon: float
+    country: str | None
+    total: float = Field(ge=0, le=1)
+    terrain: float | None = Field(ge=0, le=1)
+    temperature: float | None = Field(ge=0, le=1)
+    water_ice: float | None = Field(ge=0, le=1)
+    biology: float = Field(ge=0, le=1)
+    known_analog: str | None
+
+
+class Ranking(_Model):
+    target_id: str
+    weights: Weights
+    total_eligible: int = Field(ge=0)  # celdas que entran al ranking antes del límite
+    rows: list[RankingRow]
