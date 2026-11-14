@@ -1,0 +1,526 @@
+diff --git a/scripts/check_maps.py b/scripts/check_maps.py
+new file mode 100644
+index 0000000..892c2df
+--- /dev/null
++++ b/scripts/check_maps.py
+@@ -0,0 +1,520 @@
++"""Mapas de control de los intermedios (TAI-24).
++
++Para grid, terrain, temperature y water_ice genera:
++  * un mapa de dispersión de Plotly por variable (coloreado por valor, nulos en gris)
++    y un histograma por variable, para ver unidades mal convertidas;
++  * chequeos automáticos contra los criterios de aceptación de TAI-11 a TAI-14:
++    rangos, nulos, estructura, coherencia con el manifiesto y regiones de referencia;
++  * la comprobación de que cada análogo de config/known_analogs.csv cae en una celda
++    de la grilla, más los criterios de cantidad y fuentes de TAI-17;
++  * index.html (todo en una página) e informe.md (con un mensaje listo para
++    avisarle el resultado a cada responsable).
++
++    python scripts/check_maps.py                       # todo lo que haya
++    python scripts/check_maps.py --only terrain        # un solo archivo
++    python scripts/check_maps.py --projection all      # mundo + polo sur + polo norte
++    python scripts/check_maps.py --checks-only         # sin dibujar (no usa Plotly)
++    python scripts/check_maps.py --parquet-engine fastparquet   # si pyarrow no corre
++    python scripts/check_maps.py --open --strict
++
++Salida en data/interim/maps/ (fuera del repositorio). Los chequeos regionales son
++orientativos: `REVISAR` es algo para mirar en el mapa, no un error confirmado.
++Códigos de salida: 0 bien; 1 con --strict si hay algún REVISAR; 2 falta una entrada
++pedida (o no hay grilla) o falta Plotly.
++"""
++
++import argparse
++import html
++import json
++import sys
++import webbrowser
++from pathlib import Path
++
++import numpy as np
++import pandas as pd
++
++ROOT = Path(__file__).resolve().parents[1]
++sys.path.insert(0, str(ROOT))
++
++from tai import geo  # noqa: E402
++from tai.constants import TARGET_IDS, VALID_RANGES  # noqa: E402
++
++# Cada archivo: dónde vive (processed o interim), qué paso lo genera, de qué ticket
++# es, a quién se le avisa y qué variables se dibujan.
++GROUPS = {
++    "grid": dict(where="processed", file="grid.parquet", step="01_grid", ticket="TAI-11", owner="Juanma", vars=["land_frac", "area_km2"]),
++    "terrain": dict(where="interim", file="terrain.parquet", step="02_terrain", ticket="TAI-12", owner="Juanma", vars=["slope_deg", "roughness_m"]),
++    "temperature": dict(where="interim", file="temperature.parquet", step="03_temperature", ticket="TAI-13", owner="Juanma", vars=["tmin_c", "trange_c"]),
++    "water_ice": dict(where="interim", file="water_ice.parquet", step="04_water_ice", ticket="TAI-14", owner="Alan", vars=["precip_mm", "ice_frac"]),
++}
++UNITS = {"land_frac": "fracción", "area_km2": "km²", "slope_deg": "°", "roughness_m": "m", "tmin_c": "°C",
++         "trange_c": "°C", "precip_mm": "mm/año", "ice_frac": "fracción"}
++FIXED_COLOR_RANGE = {"land_frac": (0.5, 1.0), "ice_frac": (0.0, 1.0)}  # el resto: percentiles 1 a 99
++
++# (lat_min, lat_max, lon_min, lon_max). Aproximadas: solo para los chequeos automáticos.
++BOXES = {
++    "Andes": (-35, -15, -72, -66), "Himalaya": (27, 35, 77, 95), "Sahara": (18, 28, -5, 25),
++    "Pampa": (-38, -31, -66, -58), "Arabia": (18, 28, 40, 55), "Atacama": (-27, -18, -71, -68),
++    "Amazonia": (-10, 0, -70, -55), "Groenlandia": (66, 80, -50, -25), "Antártida interior": (-90, -75, -180, 180),
++}
++CONTINENTS = {  # RF-01: hay celdas en los siete continentes
++    "África": (-30, 30, -15, 45), "Antártida": (-90, -65, -180, 180), "Asia": (25, 60, 60, 120),
++    "Europa": (40, 60, 0, 30), "Norteamérica": (30, 60, -125, -70), "Oceanía": (-35, -15, 120, 150),
++    "Sudamérica": (-40, 0, -75, -40),
++}
++PROJECTIONS = {"world": "Mundo", "south_pole": "Polo sur", "north_pole": "Polo norte"}
++
++
++# --- Utilidades --------------------------------------------------------------
++
++
++def rel(path: Path, root: Path) -> str:
++    """Ruta relativa a la raíz del repositorio; si queda afuera, la ruta tal cual."""
++    try:
++        return str(Path(path).resolve().relative_to(root.resolve()))
++    except ValueError:
++        return str(path)
++
++
++def read_parquet(path: Path, engine: str = "auto") -> pd.DataFrame:
++    return pd.read_parquet(path) if engine == "auto" else pd.read_parquet(path, engine=engine)
++
++
++def group_path(root: Path, spec: dict) -> Path:
++    return root / "data" / spec["where"] / spec["file"]
++
++
++# --- Chequeos ----------------------------------------------------------------
++
++
++def check(name: str, ok: bool | None, detail: str) -> dict:
++    return {"name": name, "status": "?" if ok is None else ("OK" if ok else "REVISAR"), "detail": detail}
++
++
++def in_box(df: pd.DataFrame, box) -> pd.DataFrame:
++    """Celdas dentro de una región por nombre (BOXES o CONTINENTS) o de una tupla."""
++    if isinstance(box, str):
++        box = BOXES[box] if box in BOXES else CONTINENTS[box]
++    la0, la1, lo0, lo1 = box
++    return df[(df["lat"] >= la0) & (df["lat"] <= la1) & (df["lon"] >= lo0) & (df["lon"] <= lo1)]
++
++
++def box_percentile(df: pd.DataFrame, var: str, name: str) -> tuple[float, int]:
++    """Percentil (0 a 1) de la media de la región dentro de todas las celdas con dato."""
++    sub = in_box(df, name)[var].dropna()
++    if sub.empty:
++        return float("nan"), 0
++    return float((df[var].dropna() < sub.mean()).mean()), len(sub)
++
++
++def high_low(df: pd.DataFrame, var: str, region: str, high: bool, thr: float) -> dict:
++    label = f"{var}: {region} {'alta' if high else 'baja'}"
++    p, n = box_percentile(df, var, region)
++    if n == 0:
++        return check(label, None, "sin celdas con dato en la región")
++    ok = p >= thr if high else p <= thr
++    return check(label, ok, f"percentil {p:.0%} ({n} celdas); se espera {'≥' if high else '≤'} {thr:.0%}")
++
++
++def range_check(df: pd.DataFrame, var: str) -> dict:
++    lo, hi = VALID_RANGES[var]
++    s = df[var].dropna()
++    if var == "area_km2":  # estrictamente mayor a 0
++        bad = int((s <= 0).sum())
++    else:
++        too_low = s < lo
++        too_high = (s > hi) if hi is not None else pd.Series(False, index=s.index)
++        bad = int((too_low | too_high).sum())
++    return check(f"{var}: dentro de rango", bad == 0, f"{bad} valores fuera de rango ({lo} a {hi})")
++
++
++def null_check(df: pd.DataFrame, var: str, max_frac: float | None = None) -> dict:
++    n_null, frac = int(df[var].isna().sum()), float(df[var].isna().mean())
++    extra = "" if max_frac is None else f"; se espera menos de {max_frac:.0%}"
++    return check(f"{var}: nulos", None if max_frac is None else frac < max_frac, f"{n_null} de {len(df)} ({frac:.1%}){extra}")
++
++
++def structure_checks(name: str, df: pd.DataFrame, grid_ids: set) -> list[dict]:
++    dups = int(df["cell_id"].duplicated().sum())
++    c = [check("cell_id únicos", dups == 0, f"{dups} repetidos")]
++    if name != "grid":
++        extra = set(df["cell_id"]) - grid_ids
++        missing = len(grid_ids - set(df["cell_id"]))
++        c.append(check("todos los cell_id existen en la grilla", not extra, f"{len(extra)} cell_id fuera de la grilla"))
++        c.append(check("una fila por celda de la grilla", missing == 0, f"{missing} celdas de la grilla sin fila"))
++    return c
++
++
++def partial_steps(manifest: dict | None) -> set[str]:
++    """Pasos cuya última corrida fue parcial (--bbox): ahí los nulos son esperables."""
++    if not manifest:
++        return set()
++    return {s["step"] for s in manifest.get("steps", []) if any("partial run" in n for n in s.get("notes", []))}
++
++
++def manifest_checks(name: str, df: pd.DataFrame, manifest: dict | None) -> list[dict]:
++    """El manifiesto debe informar lo mismo que se ve en el archivo (RF-11)."""
++    if manifest is None:
++        return [check("manifiesto", None, "no existe data/processed/manifest.json")]
++    spec = GROUPS[name]
++    entry = next((s for s in manifest.get("steps", []) if s["step"] == spec["step"]), None)
++    if entry is None:
++        return [check("manifiesto", False, f"no tiene entrada del paso {spec['step']}")]
++    c = []
++    if name == "grid":
++        n = (manifest.get("grid") or {}).get("n_cells")
++        c.append(check("manifiesto: cantidad de celdas", None if n is None else n == len(df), f"manifiesto {n}, archivo {len(df)}"))
++    for var in spec["vars"]:
++        stats = entry.get("columns", {}).get(var)
++        actual = int(df[var].isna().sum())
++        if stats is None:
++            c.append(check(f"manifiesto: nulos de {var}", None if name == "grid" else False, "el manifiesto no informa esta columna"))
++        else:
++            c.append(check(f"manifiesto: nulos de {var}", stats["null"] == actual, f"manifiesto {stats['null']}, archivo {actual}"))
++    return c
++
++
++def run_checks(name: str, df: pd.DataFrame, regional: bool = True) -> list[dict]:
++    """Chequeos de la tabla `name` (con lat y lon unidas). regional=False en corridas parciales."""
++    c = [range_check(df, v) for v in GROUPS[name]["vars"]]
++    if name == "grid":
++        n = len(df)
++        c += [check("celdas entre 15.000 y 25.000", 15_000 <= n <= 25_000, f"{n} celdas"),
++              check("hay celdas al sur de 85°S", bool((df["lat"] < -85).any()), f"{int((df['lat'] < -85).sum())} celdas")]
++        if regional:
++            counts_ = {k: len(in_box(df, k)) for k in CONTINENTS}
++            c.append(check("hay celdas en los siete continentes", all(counts_.values()), ", ".join(f"{k} {v}" for k, v in counts_.items())))
++        c.append(check("los centros dibujan los continentes", None, "confirmar a ojo en grid__land_frac"))
++    elif name == "terrain":
++        c += [null_check(df, v, 0.05) for v in ("slope_deg", "roughness_m")]
++        if regional:
++            c += [high_low(df, "slope_deg", r, True, 0.75) for r in ("Andes", "Himalaya")]
++            c += [high_low(df, "slope_deg", r, False, 0.50) for r in ("Sahara", "Pampa")]
++    elif name == "temperature":
++        c += [null_check(df, v) for v in ("tmin_c", "trange_c")]
++        if regional:
++            if df["tmin_c"].notna().any():
++                cold = df.loc[df["tmin_c"].idxmin()]
++                c.append(check("tmin_c: la celda más fría está en la Antártida", cold["lat"] <= -75, f"{cold['tmin_c']:.1f} °C en ({cold['lat']}, {cold['lon']})"))
++            c += [high_low(df, "trange_c", r, True, 0.75) for r in ("Sahara", "Arabia")]
++    elif name == "water_ice":
++        c += [null_check(df, v) for v in ("precip_mm", "ice_frac")]
++        polar = df[df["lat"].abs() >= 60]
++        c.append(check("precip_mm: nulos polares (informarlos en el manifiesto)", None, f"{int(polar['precip_mm'].isna().sum())} de {len(polar)} celdas con |lat| ≥ 60°"))
++        if regional:
++            c += [high_low(df, "precip_mm", r, False, 0.15) for r in ("Atacama", "Sahara")]
++            c.append(high_low(df, "precip_mm", "Amazonia", True, 0.85))
++            for region, thr in (("Groenlandia", 0.5), ("Antártida interior", 0.9)):
++                sub = in_box(df, region)["ice_frac"].dropna()
++                share = float((sub >= 0.999).mean()) if len(sub) else float("nan")
++                c.append(check(f"ice_frac = 1 en {region}", None if not len(sub) else share >= thr, f"{share:.0%} de {len(sub)} celdas; se espera ≥ {thr:.0%}"))
++    return c
++
++
++def stats_table(df: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
++    """Resumen por variable: lo primero que delata una unidad mal convertida."""
++    rows = []
++    for v in variables:
++        s = df[v].dropna()
++        q = s.quantile([0.01, 0.5, 0.99]).tolist() if len(s) else [np.nan] * 3
++        rows.append({"variable": v, "unidad": UNITS.get(v, ""), "con dato": len(s), "nulos": int(df[v].isna().sum()),
++                     "mín": s.min() if len(s) else np.nan, "p01": q[0], "mediana": q[1], "p99": q[2],
++                     "máx": s.max() if len(s) else np.nan, "media": s.mean() if len(s) else np.nan})
++    return pd.DataFrame(rows)
++
++
++# --- Análogos conocidos (TAI-17) ---------------------------------------------
++
++
++def check_analogs(analogs: pd.DataFrame, grid: pd.DataFrame) -> pd.DataFrame:
++    """Para cada análogo: ¿su punto cae en una celda de la grilla?"""
++    ids = set(grid["cell_id"])
++    rows = []
++    for a in analogs.itertuples(index=False):
++        try:
++            cid, err = int(geo.cell_id_of(a.lat, a.lon)), None
++        except (ValueError, TypeError) as exc:
++            cid, err = None, str(exc)
++        ok = cid in ids
++        near = None
++        if not ok and err is None:
++            near = float(np.min(geo.haversine_km(a.lat, a.lon, grid["lat"].to_numpy(), grid["lon"].to_numpy())))
++        rows.append({"analog_id": a.analog_id, "name": a.name, "target_id": a.target_id, "lat": a.lat, "lon": a.lon,
++                     "cell_id": cid, "in_grid": ok, "nearest_cell_km": near, "error": err})
++    return pd.DataFrame(rows)
++
++
++def analog_rule_checks(a: pd.DataFrame) -> list[dict]:
++    """Criterios de aceptación de TAI-17 que se pueden comprobar sin criterio científico."""
++    c = [check("entre 8 y 12 análogos", 8 <= len(a) <= 12, f"{len(a)} filas")]
++    dup = int(a.duplicated(subset=["analog_id", "target_id"]).sum())
++    c.append(check("sin filas repetidas (analog_id, target_id)", dup == 0, f"{dup} repetidas"))
++    unknown = sorted(set(a["target_id"].dropna()) - set(TARGET_IDS))
++    c.append(check("target_id conocidos", not unknown, f"desconocidos: {unknown}" if unknown else "todos válidos"))
++    if "radius_km" in a:
++        bad = int((~(a["radius_km"] > 0)).sum())  # incluye los nulos
++        c.append(check("radius_km mayor a 0", bad == 0, f"{bad} filas con radio inválido"))
++    if "source" in a:
++        empty = int((a["source"].fillna("").astype(str).str.strip() == "").sum())
++        c.append(check("ninguna fila sin fuente", empty == 0, f"{empty} sin fuente"))
++    if "covered" in a:
++        for t in TARGET_IDS:
++            n = int(((a["target_id"] == t) & (a["covered"] == "yes")).sum())
++            c.append(check(f"al menos 3 cubiertos (covered = yes) en {t}", n >= 3, f"{n} cubiertos"))
++    return c
++
++
++# --- Mapas -------------------------------------------------------------------
++
++
++def color_range(s: pd.Series, var: str) -> tuple[float, float]:
++    if var in FIXED_COLOR_RANGE:
++        return FIXED_COLOR_RANGE[var]
++    lo, hi = float(s.quantile(0.01)), float(s.quantile(0.99))
++    if lo == hi:
++        lo, hi = float(s.min()), float(s.max())
++    return (lo, hi) if lo != hi else (lo - 0.5, hi + 0.5)
++
++
++def draw_map(df: pd.DataFrame, var: str, projection: str, analogs: pd.DataFrame | None = None):
++    import plotly.graph_objects as go  # recién acá: --checks-only no necesita Plotly
++
++    df = df[df["lat"].notna()]
++    valid, nulls = df[df[var].notna()], df[df[var].isna()]
++    unit = UNITS.get(var, "")
++    country = valid["country"].fillna("—").astype(str) if "country" in valid else pd.Series("", index=valid.index)
++    fig = go.Figure()
++    if len(nulls):
++        fig.add_trace(go.Scattergeo(lat=nulls["lat"], lon=nulls["lon"], mode="markers", name="sin dato",
++                                    marker=dict(symbol="square", size=4, color="lightgray"),
++                                    hovertemplate="lat %{lat}, lon %{lon}<br>sin dato<extra></extra>"))
++    if len(valid):
++        cmin, cmax = color_range(valid[var], var)
++        fig.add_trace(go.Scattergeo(
++            lat=valid["lat"], lon=valid["lon"], text=country, customdata=valid[var], mode="markers", name=var,
++            marker=dict(symbol="square", size=4, color=valid[var], colorscale="Viridis", cmin=cmin, cmax=cmax,
++                        colorbar=dict(title=dict(text=f"{var} ({unit})"))),
++            hovertemplate="%{text}<br>lat %{lat}, lon %{lon}<br>" + var + " = %{customdata:.3f} " + unit + "<extra></extra>"))
++    if analogs is not None and len(analogs):  # puntos de known_analogs.csv, para ver si caen en tierra
++        for ok, color, label in ((True, "white", "análogo en grilla"), (False, "red", "análogo FUERA de la grilla")):
++            sub = analogs[(analogs["in_grid"] == ok) & analogs["lat"].notna()]
++            if len(sub):
++                fig.add_trace(go.Scattergeo(lat=sub["lat"], lon=sub["lon"], text=sub["name"] + " (" + sub["target_id"] + ")",
++                                            mode="markers", name=label, hovertemplate="%{text}<extra></extra>",
++                                            marker=dict(symbol="diamond", size=9, color=color, line=dict(color="black", width=1))))
++    geos = dict(showcoastlines=True, showland=True, landcolor="rgb(245,245,245)")
++    if projection == "world":
++        geos["projection_type"] = "natural earth"
++    else:
++        geos["projection"] = dict(type="orthographic", rotation=dict(lon=0, lat=-90 if projection == "south_pole" else 90))
++    rng = "" if var in FIXED_COLOR_RANGE else "; color entre p1 y p99"
++    lo, hi = (valid[var].min(), valid[var].max()) if len(valid) else (float("nan"),) * 2
++    fig.update_geos(**geos)
++    fig.update_layout(title=f"{var} · {PROJECTIONS[projection]}: {len(valid)} con dato de {len(df)}; mín {lo:.3g}, máx {hi:.3g}{rng}",
++                      height=650, margin=dict(l=0, r=0, t=50, b=0))
++    return fig
++
++
++def draw_hist(df: pd.DataFrame, var: str):
++    import plotly.graph_objects as go
++
++    s = df[var].dropna()
++    fig = go.Figure(go.Histogram(x=s, nbinsx=60, name=var))
++    lo, hi = VALID_RANGES[var]
++    for x in (lo, hi):  # límites válidos del contrato, si existen
++        if x is not None:
++            fig.add_vline(x=x, line_dash="dash", line_color="red")
++    fig.update_layout(title=f"{var}: distribución ({len(s)} celdas con dato; línea roja = límite válido)",
++                      xaxis_title=f"{var} ({UNITS.get(var, '')})", yaxis_title="celdas", height=420, margin=dict(t=50))
++    return fig
++
++
++# --- Informe e índice --------------------------------------------------------
++
++
++def counts(checks: list[dict]) -> dict:
++    return {k: sum(c["status"] == k for c in checks) for k in ("OK", "REVISAR", "?")}
++
++
++def message_for(res: dict) -> str:
++    n, bad = counts(res["checks"]), [c for c in res["checks"] if c["status"] == "REVISAR"]
++    head = f"{res['owner']}: revisé los mapas de {res['name']} ({res['ticket']}). {n['OK']} chequeos OK, {n['REVISAR']} para mirar."
++    if not bad:
++        return head + " Nada raro a primera vista."
++    return head + "".join(f"\n  - {c['name']}: {c['detail']}" for c in bad)
++
++
++def write_report(path: Path, results: dict, analog_result, analog_checks, notes: list[str]) -> None:
++    out = ["# Informe de mapas de control (TAI-24)", "",
++           "Chequeos automáticos orientativos: confirmar mirando cada mapa. `REVISAR` no es un error confirmado.", ""]
++    out += [f"> {n}" for n in notes] + ([""] if notes else [])
++    for name, res in results.items():
++        n = counts(res["checks"])
++        out += [f"## {name} ({res['ticket']}). Avisar a: {res['owner']}", "",
++                f"{n['OK']} OK · {n['REVISAR']} REVISAR · {n['?']} a mirar a ojo", "",
++                "- [ ] Mapas revisados a ojo y resultado avisado", ""]
++        out += [f"- **{c['status']}** {c['name']}: {c['detail']}" for c in res["checks"]] + [""]
++        out += ["Mensaje para pegar:", "", "```", message_for({**res, "name": name}), "```", ""]
++    out += ["## Análogos conocidos (TAI-17). Avisar a: Santino", ""]
++    if analog_result is None:
++        out += ["No se comprobó: falta config/known_analogs.csv.", ""]
++    else:
++        bad = analog_result[~analog_result["in_grid"]]
++        if bad.empty:
++            out += [f"Los {len(analog_result)} análogos caen en una celda de la grilla.", ""]
++        else:
++            out += [f"{len(bad)} de {len(analog_result)} análogos NO caen en ninguna celda de la grilla:", ""]
++            for r in bad.itertuples():
++                dist = "coordenadas inválidas" if pd.isna(r.nearest_cell_km) else f"celda más cercana a {r.nearest_cell_km:.0f} km"
++                out.append(f"- `{r.analog_id}` ({r.name}, {r.target_id}): ({r.lat}, {r.lon}); {dist}")
++            out.append("")
++        out += [f"- **{c['status']}** {c['name']}: {c['detail']}" for c in analog_checks] + [""]
++    path.write_text("\n".join(out), encoding="utf-8")
++
++
++_CSS = """body{font:15px/1.5 system-ui,sans-serif;max-width:1000px;margin:2rem auto;padding:0 1rem;color:#1a1a1a;background:#fff}
++h1,h2{margin-top:2rem}table{border-collapse:collapse;width:100%;margin:.5rem 0}td,th{border:1px solid #ccc;padding:.25rem .5rem;text-align:left;font-size:13px}
++.OK{color:#0a7a2f;font-weight:600}.REVISAR{color:#b42318;font-weight:600}.q{color:#667085;font-weight:600}.note{background:#fff4e5;padding:.5rem 1rem;border-radius:6px}
++a{color:#175cd3}@media(prefers-color-scheme:dark){body{color:#eee;background:#111}td,th{border-color:#444}.note{background:#3a2a10}a{color:#7cb0ff}.OK{color:#4ade80}.REVISAR{color:#f87171}}"""
++
++
++def _table(headers, rows) -> str:
++    th = "".join(f"<th>{html.escape(str(h))}</th>" for h in headers)
++    body = "".join("<tr>" + "".join(f"<td>{cell}</td>" for cell in r) + "</tr>" for r in rows)
++    return f"<table><tr>{th}</tr>{body}</table>"
++
++
++def _status(c: dict) -> str:
++    cls = {"OK": "OK", "REVISAR": "REVISAR", "?": "q"}[c["status"]]
++    return f'<span class="{cls}">{html.escape(c["status"])}</span>'
++
++
++def write_index(path: Path, results: dict, analog_result, analog_checks, notes: list[str]) -> None:
++    h = ["<!doctype html><meta charset=utf-8><title>Mapas de control (TAI-24)</title>", f"<style>{_CSS}</style>",
++         "<h1>Mapas de control de los intermedios (TAI-24)</h1>",
++         "<p>Chequeos automáticos orientativos: <b>REVISAR</b> es algo para mirar en el mapa, no un error confirmado.</p>"]
++    h += [f'<p class="note">{html.escape(n)}</p>' for n in notes]
++    for name, res in results.items():
++        n = counts(res["checks"])
++        h.append(f"<h2>{html.escape(name)} · {res['ticket']} · avisar a {html.escape(res['owner'])}</h2>")
++        h.append(f"<p>{n['OK']} OK · {n['REVISAR']} REVISAR · {n['?']} a mirar a ojo</p>")
++        h.append(_table(["", "chequeo", "detalle"], [(_status(c), html.escape(c["name"]), html.escape(c["detail"])) for c in res["checks"]]))
++        st = res["stats"]
++        h.append(_table(list(st.columns), [[html.escape(f"{v:.4g}" if isinstance(v, float) else str(v)) for v in r] for r in st.itertuples(index=False)]))
++        links = [f'<a href="{html.escape(f)}">{html.escape(f)}</a>' for f in res["maps"] + res["hists"]]
++        h.append("<p>" + (" · ".join(links) if links else "Sin mapas (--checks-only).") + "</p>")
++    h.append("<h2>Análogos conocidos · TAI-17 · avisar a Santino</h2>")
++    if analog_result is None:
++        h.append("<p>No se comprobó: falta config/known_analogs.csv.</p>")
++    else:
++        bad = analog_result[~analog_result["in_grid"]]
++        if bad.empty:
++            summary = "Caen todos en la grilla."
++        else:
++            summary = f"{len(bad)} de {len(analog_result)} NO caen en la grilla: " + ", ".join(bad["analog_id"])
++        h.append(f"<p>{html.escape(summary)}</p>")
++        h.append(_table(["", "chequeo", "detalle"], [(_status(c), html.escape(c["name"]), html.escape(c["detail"])) for c in analog_checks]))
++    path.write_text("\n".join(h), encoding="utf-8")
++
++
++# --- Programa ----------------------------------------------------------------
++
++
++def main(argv=None) -> int:
++    p = argparse.ArgumentParser(description="Mapas de control de los intermedios (TAI-24)")
++    p.add_argument("--only", nargs="+", choices=list(GROUPS), help="solo estos archivos")
++    p.add_argument("--root", type=Path, default=ROOT, help="raíz del repositorio (por defecto, la de este script)")
++    p.add_argument("--out", type=Path, default=None, help="carpeta de salida (por defecto data/interim/maps)")
++    p.add_argument("--projection", choices=[*PROJECTIONS, "all"], default="world")
++    p.add_argument("--parquet-engine", choices=["auto", "pyarrow", "fastparquet"], default="auto",
++                   help="motor para leer Parquet; fastparquet sirve si pyarrow no corre en la máquina")
++    p.add_argument("--checks-only", action="store_true", help="no dibuja mapas")
++    p.add_argument("--strict", action="store_true", help="salir con código 1 si hay algún REVISAR")
++    p.add_argument("--open", action="store_true", help="abrir index.html en el navegador")
++    args = p.parse_args(argv)
++
++    root = args.root.resolve()
++    out_dir = args.out or root / "data" / "interim" / "maps"
++    manifest_path = root / "data" / "processed" / "manifest.json"
++    analogs_csv = root / "config" / "known_analogs.csv"
++    projections = list(PROJECTIONS) if args.projection == "all" else [args.projection]
++
++    grid_path = group_path(root, GROUPS["grid"])
++    if not grid_path.exists():
++        print(f"Falta {rel(grid_path, root)} (lo genera el paso 01_grid).", file=sys.stderr)
++        return 2
++    if not args.checks_only:
++        try:
++            import plotly  # noqa: F401
++        except ImportError:
++            print("Falta Plotly: pip install plotly (o usá --checks-only).", file=sys.stderr)
++            return 2
++
++    grid = read_parquet(grid_path, args.parquet_engine)
++    cols = [c for c in ("cell_id", "lat", "lon", "country") if c in grid.columns]
++    centers, grid_ids = grid[cols], set(grid["cell_id"])
++    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else None
++    partial = partial_steps(manifest)
++    notes = []
++    if partial:
++        notes.append(f"Corrida parcial (--bbox) en {', '.join(sorted(partial))}: los chequeos regionales se omiten y los nulos son esperables.")
++
++    analog_result, analog_checks = None, []
++    if analogs_csv.exists():
++        analogs = pd.read_csv(analogs_csv)
++        missing = {"analog_id", "name", "lat", "lon", "target_id"} - set(analogs.columns)
++        if missing:
++            print(f"{analogs_csv.name}: faltan columnas {sorted(missing)}", file=sys.stderr)
++            return 2
++        analog_result, analog_checks = check_analogs(analogs, grid), analog_rule_checks(analogs)
++    else:
++        print(f"Aviso: no existe {rel(analogs_csv, root)} (TAI-17); se omite la comprobación de análogos.")
++
++    out_dir.mkdir(parents=True, exist_ok=True)
++    results, status = {}, 0
++    for name in args.only or list(GROUPS):
++        spec = GROUPS[name]
++        path = group_path(root, spec)
++        if not path.exists():
++            print(f"Se omite {name}: falta {rel(path, root)}")
++            status = 2 if args.only else status
++            continue
++        df = read_parquet(path, args.parquet_engine)
++        if "lat" not in df.columns:
++            df = df.merge(centers, on="cell_id", how="left")
++        checks = structure_checks(name, df, grid_ids) + run_checks(name, df, regional=spec["step"] not in partial) + manifest_checks(name, df, manifest)
++        res = dict(ticket=spec["ticket"], owner=spec["owner"], checks=checks, stats=stats_table(df, spec["vars"]), maps=[], hists=[])
++        print(f"\n== {name} ({spec['ticket']}, {spec['owner']}) ==")
++        for c in checks:
++            print(f"  [{c['status']:>7}] {c['name']}: {c['detail']}")
++        if not args.checks_only:
++            for var in spec["vars"]:
++                for proj in projections:
++                    f = f"{name}__{var}__{proj}.html"
++                    draw_map(df, var, proj, analog_result if name == "grid" else None).write_html(out_dir / f, include_plotlyjs="directory")
++                    res["maps"].append(f)
++                f = f"{name}__{var}__hist.html"
++                draw_hist(df, var).write_html(out_dir / f, include_plotlyjs="directory")
++                res["hists"].append(f)
++            print(f"  {len(res['maps'])} mapas y {len(res['hists'])} histogramas en {rel(out_dir, root)}")
++        results[name] = res
++
++    if analog_result is not None:
++        bad = analog_result[~analog_result["in_grid"]]
++        print("\n== análogos conocidos (TAI-17) ==")
++        print("  Caen todos en la grilla." if bad.empty else f"  {len(bad)} NO caen en la grilla: {', '.join(bad['analog_id'])}")
++        for c in analog_checks:
++            print(f"  [{c['status']:>7}] {c['name']}: {c['detail']}")
++
++    write_report(out_dir / "informe.md", results, analog_result, analog_checks, notes)
++    write_index(out_dir / "index.html", results, analog_result, analog_checks, notes)
++    print(f"\nInforme: {rel(out_dir / 'informe.md', root)}\nÍndice:  {rel(out_dir / 'index.html', root)}")
++    if args.strict and any(c["status"] == "REVISAR" for r in results.values() for c in r["checks"] + analog_checks):
++        status = 1
++    if args.open:
++        webbrowser.open((out_dir / "index.html").resolve().as_uri())
++    return status
++
++
++if __name__ == "__main__":
++    sys.exit(main())
