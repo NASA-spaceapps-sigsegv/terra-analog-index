@@ -35,12 +35,12 @@ from pipeline.common import (  # noqa: E402
     LAND_MASK_PATH,
     RAW,
     ROOT,
-    MissingInputError,
     atomic_write_parquet,
     bbox_mask,
     bbox_note,
     column_stats,
     file_size_mb,
+    find_modis_months,
     global_coords,
     is_up_to_date,
     land_mask_da,
@@ -74,23 +74,8 @@ COLUMNS = ["tmin_c", "trange_c"]
 
 
 def find_months(folder: Path = RAW_DIR, year: int = DATA_YEAR) -> list[Path]:
-    """The 12 monthly MOD11C3 files of `year`, January first.
-
-    Raises MissingInputError naming the missing months; with two files for
-    the same month (a reprocessed granule) the newest name wins.
-    """
-    by_month: dict[int, Path] = {}
-    for path in sorted(Path(folder).glob(f"{PRODUCT}.A*.hdf")):
-        y, m = modis_month(path)
-        if y == year:
-            by_month[m] = path
-    missing = [m for m in range(1, 13) if m not in by_month]
-    if missing:
-        raise MissingInputError(
-            f"missing {PRODUCT} months {missing} of {year} in {folder} "
-            "(run `make data-temperature`; see data/raw/README.md)"
-        )
-    return [by_month[m] for m in range(1, 13)]
+    """The 12 monthly MOD11C3 files of `year`, January first."""
+    return find_modis_months(folder, PRODUCT, year)
 
 
 def lst_celsius(values: np.ndarray) -> np.ndarray:

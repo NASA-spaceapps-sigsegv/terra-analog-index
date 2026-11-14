@@ -554,12 +554,14 @@ def load_land_mask(path: Path = LAND_MASK_PATH) -> tuple[np.ndarray, float]:
     return da.values, res
 
 
-def read_hdf4_layer(path: Path, layer: str) -> np.ndarray:
+def read_hdf4_layer(path: Path, layer: str, band: int | None = None) -> np.ndarray:
     """Raw values of one HDF4 (MODIS) layer as float32, NaN where invalid.
 
     Pixels equal to _FillValue or outside valid_range become NaN. Scale and
     offset are NOT applied: MODIS layers differ in how they use add_offset,
     so each step applies the factor documented for its product.
+    band: for 3-D layers (e.g. MCD12C1 Land_Cover_Type_1_Percent, one plane
+    per class) read only that plane of the last axis.
     """
     from pyhdf.SD import SD, SDC
 
@@ -567,7 +569,8 @@ def read_hdf4_layer(path: Path, layer: str) -> np.ndarray:
     try:
         sds = sd.select(layer)
         attrs = sds.attributes()
-        values = sds[:].astype(np.float32)
+        raw = sds[:] if band is None else sds[:, :, band]
+        values = np.asarray(raw).astype(np.float32)
     finally:
         sd.end()
     fill = attrs.get("_FillValue")
@@ -591,3 +594,23 @@ def modis_month(path: Path) -> tuple[int, int]:
     year, doy = int(m.group(1)), int(m.group(2))
     date = datetime(year, 1, 1) + timedelta(days=doy - 1)
     return year, date.month
+
+
+def find_modis_months(folder: Path, product: str, year: int) -> list[Path]:
+    """The 12 monthly files of a MODIS product for `year`, January first.
+
+    Raises MissingInputError naming the missing months; with two files for
+    the same month (a reprocessed granule) the last name in sort order wins.
+    """
+    by_month: dict[int, Path] = {}
+    for path in sorted(Path(folder).glob(f"{product}.A*.hdf")):
+        y, m = modis_month(path)
+        if y == year:
+            by_month[m] = path
+    missing = [m for m in range(1, 13) if m not in by_month]
+    if missing:
+        raise MissingInputError(
+            f"missing {product} months {missing} of {year} in {folder} "
+            "(run `make data-earthdata`; see data/raw/README.md)"
+        )
+    return [by_month[m] for m in range(1, 13)]
