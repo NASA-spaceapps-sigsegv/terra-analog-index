@@ -170,6 +170,71 @@
         "meses con dato nocturno (meses: celdas): 12: 20741, 11: 360, 10: 148, 9: 68, 8: 25, 7: 14, 6: 1",
         "meses con dato diurno y nocturno (meses: celdas): 12: 20678, 11: 410, 10: 161, 9: 68, 8: 25, 7: 13, 6: 1, 5: 1"
       ]
+    },
+    {
+      "step": "04_water_ice",
+      "ran_at": "2026-11-14T18:18:18Z",
+      "duration_s": 50.7,
+      "git_commit": "573f77b",
+      "inputs": [
+        {
+          "name": "GPM IMERG Final, precipitación mensual, 2024",
+          "product": "GPM_3IMERGM v07",
+          "portal": "NASA Earthdata",
+          "url": "https://disc.gsfc.nasa.gov/datasets/GPM_3IMERGM_07/summary",
+          "files": 12,
+          "size_mb": 224.6,
+          "license_note": "Datos abiertos de NASA"
+        },
+        {
+          "name": "MODIS, cobertura de nieve mensual, 2024",
+          "product": "MOD10CM v061",
+          "portal": "NASA Earthdata",
+          "url": "https://doi.org/10.5067/MODIS/MOD10CM.061",
+          "files": 12,
+          "size_mb": 16.8,
+          "license_note": "Datos abiertos de NASA"
+        },
+        {
+          "name": "MODIS, cobertura del suelo anual, 2024",
+          "product": "MCD12C1 v061",
+          "portal": "NASA Earthdata",
+          "url": "https://doi.org/10.5067/MODIS/MCD12C1.061",
+          "files": 1,
+          "size_mb": 1244.3,
+          "license_note": "Datos abiertos de NASA"
+        }
+      ],
+      "outputs": [
+        {
+          "path": "data/interim/water_ice.parquet",
+          "rows": 21357,
+          "size_mb": 0.3
+        }
+      ],
+      "columns": {
+        "precip_mm": {
+          "non_null": 15316,
+          "null": 6041,
+          "min": 0.0,
+          "max": 5838.682
+        },
+        "ice_frac": {
+          "non_null": 21338,
+          "null": 19,
+          "min": 0.0,
+          "max": 1.0
+        }
+      },
+      "earth_stats": null,
+      "notes": [
+        "precip_mm nula en 6041 celdas al sur de -60°: IMERG no mide la nieve sobre la Antártida; ahí la dimensión agua y hielo usa solo ice_frac (diseño 4.3)",
+        "precip_mm nula en 0 celdas más por meses sin dato",
+        "precip_mm = 0 exacto en 49 celdas (centro del casquete de Groenlandia): IMERG no estima la nieve sobre el hielo; se conservan como dato, pero no son un mínimo real",
+        "ice_frac = 1 en 6766 celdas con más de la mitad de su tierra en hielo permanente (MCD12C1 2024, clase IGBP 15)",
+        "ice_frac nula en 19 celdas sin mes válido de nieve ni hielo permanente",
+        "meses con dato de nieve (meses: celdas): 12: 17835, 11: 1331, 10: 772, 9: 914, 8: 377, 7: 68, 0: 60"
+      ]
     }
   ]
 }
