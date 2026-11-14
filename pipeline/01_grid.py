@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
 import xarray as xr  # noqa: E402
 
 from pipeline.common import (  # noqa: E402
@@ -20,9 +21,12 @@ from pipeline.common import (  # noqa: E402
     RAW,
     MissingInputError,
     make_parser,
+    raster_to_cells,
     run,
     setup_logging,
 )
+from tai import geo  # noqa: E402
+from tai.constants import LAND_FRAC_MIN, N_CELLS_GLOBAL  # noqa: E402
 
 STEP = "01_grid"
 RAW_DIR = RAW / STEP
@@ -103,6 +107,36 @@ def rasterize_land(land_gdf, res: float = MASK_RES_DEG) -> xr.DataArray:
             "source": "Natural Earth 1:50m land polygons",
             "res_deg": res,
         },
+    )
+
+
+def land_fraction(mask: xr.DataArray) -> pd.Series:
+    """Fraction of land pixels in each of the 64,800 one-degree cells."""
+    all_cells = pd.DataFrame({"cell_id": np.arange(N_CELLS_GLOBAL, dtype="int32")})
+    frac = raster_to_cells(mask.astype("float32"), all_cells, min_valid_frac=0.0)
+    return frac.fillna(0.0).rename("land_frac")
+
+
+def build_grid(land_frac: pd.Series, min_frac: float = LAND_FRAC_MIN) -> pd.DataFrame:
+    """Cells with land_frac >= min_frac, with indices, center and area (contracts 3.1).
+
+    `country` is added later by assign_country; here it is all null.
+    """
+    kept = land_frac[land_frac >= min_frac].sort_index()
+    ids = kept.index.to_numpy(dtype="int32")
+    lat_idx, lon_idx = geo.split_cell_id(ids)
+    lat, lon = geo.cell_center(ids)
+    return pd.DataFrame(
+        {
+            "cell_id": ids,
+            "lat_idx": np.asarray(lat_idx, dtype="int16"),
+            "lon_idx": np.asarray(lon_idx, dtype="int16"),
+            "lat": np.asarray(lat, dtype="float32"),
+            "lon": np.asarray(lon, dtype="float32"),
+            "area_km2": np.asarray(geo.cell_area_km2(lat_idx), dtype="float32"),
+            "land_frac": kept.to_numpy(dtype="float32"),
+            "country": pd.array([None] * len(ids), dtype="string"),
+        }
     )
 
 
