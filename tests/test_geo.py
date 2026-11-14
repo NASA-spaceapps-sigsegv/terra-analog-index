@@ -20,6 +20,11 @@ def test_edges_go_to_last_index():
     assert geo.cell_id_of(-90.0, -180.0) == 0
 
 
+def test_lon_minus_180_is_first_column():
+    assert geo.lat_lon_idx(0.5, -180.0) == (90, 0)
+    assert geo.cell_center(geo.cell_id_of(0.5, -180.0)) == (0.5, -179.5)
+
+
 def test_integer_boundaries_belong_to_upper_cell():
     assert geo.lat_lon_idx(0.0, 0.0) == (90, 180)
     assert geo.lat_lon_idx(-0.0001, -0.0001) == (89, 179)
