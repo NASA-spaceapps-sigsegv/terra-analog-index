@@ -1,8 +1,9 @@
-"""PROVISIONAL: lo mínimo de TAI-19 que necesita TAI-21 (design 5.6 y 5.7).
+"""Puntaje total con pesos, elegibilidad y orden del ranking (design 5.6 y 5.7, TAI-19).
 
-Es la fórmula del diseño y nada más. Cuando Alan entregue su tai/scoring.py
-(con tests/test_scoring.py), se reemplaza este archivo completo: services.py
-solo usa validate_weights, combine, is_eligible y rank.
+Lo usan la app en vivo y el paso 09 de validación, con la misma fórmula.
+Funciones puras sobre la tabla de similitud de un objetivo (indexada por
+cell_id): no leen archivos ni modifican su entrada. Las pruebas están en
+tests/test_scoring.py.
 """
 
 from collections.abc import Mapping
