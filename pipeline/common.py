@@ -132,12 +132,12 @@ def is_up_to_date(outputs: Iterable[Path], inputs: Iterable[Path]) -> bool:
     return oldest_output > newest_input
 
 
-PARTIAL_NOTE_PREFIX = "partial run: --bbox"
+PARTIAL_NOTE_PREFIX = "partial run:"
 
 
 def bbox_note(bbox: Iterable[float]) -> str:
     """Manifest note that marks an output as computed for a region only."""
-    return f"{PARTIAL_NOTE_PREFIX} {' '.join(f'{v:g}' for v in bbox)}"
+    return f"{PARTIAL_NOTE_PREFIX} --bbox {' '.join(f'{v:g}' for v in bbox)}"
 
 
 def last_run_partial(step: str, path: Path = MANIFEST_PATH) -> bool:

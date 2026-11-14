@@ -312,7 +312,10 @@ class BioTermType(_Model):
 
 
 class BioTermsFile(_Model):
-    schema_version: Literal[SCHEMA_VERSION]  # type: ignore[valid-type]
+    # Versión 2 (TAI-06) agrega `shared`: filtro de BioSample común a todos los tipos
+    # (bacterias, sin metagenomas, con lat_lon y los atributos de ambiente). Versión 1 no lo trae.
+    schema_version: Literal[1, 2]
+    shared: str = ""
     types: list[BioTermType] = Field(min_length=1)
 
 
