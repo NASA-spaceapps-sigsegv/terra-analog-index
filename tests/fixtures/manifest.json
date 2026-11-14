@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "terra-analog-index",
-  "data_year": 2025,
+  "data_year": 2024,
   "grid": { "res_deg": 1.0, "n_cells": 20112, "land_frac_min": 0.5 },
   "steps": [
     {
@@ -11,7 +11,7 @@
       "git_commit": "a1b2c3d",
       "inputs": [
         {
-          "name": "MODIS, temperatura superficial mensual, 2025",
+          "name": "MODIS, temperatura superficial mensual, 2024",
           "product": "MOD11C3",
           "portal": "NASA Earthdata Search",
           "url": "https://search.earthdata.nasa.gov/",
