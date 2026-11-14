@@ -1,0 +1,4 @@
+analog_id,name,lat,lon,radius_km,target_id,basis,covered,source
+haughton_crater,Cráter Haughton (isla Devon),75.43,-89.86,150,moon_south_pole,"Desierto polar frío y seco con hielo en el suelo; análogo de Shackleton",yes,"Lee et al. 2007, LPSC XXXVIII, abstract 2426"
+concordia_dome_c,Estación Concordia (Domo C),-75.10,123.33,150,moon_south_pole,"Frío extremo y hielo de la meseta antártica",yes,"ESA, Concordia: the analogue space mission (2024)"
+askja_iceland,Caldera de Askja (Islandia),65.03,-16.75,150,moon_south_pole,"Geología volcánica; entrenamiento de astronautas del Apolo 1965 y 1967",no,"NASA, Apollo program training; Astronaut Monument, Húsavík"
