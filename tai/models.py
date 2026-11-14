@@ -314,3 +314,38 @@ class BioTermType(_Model):
 class BioTermsFile(_Model):
     schema_version: Literal[SCHEMA_VERSION]  # type: ignore[valid-type]
     types: list[BioTermType] = Field(min_length=1)
+
+
+# --- Respuesta de get_ranking (contracts 4.5) --------------------------------
+
+
+class AnalogRef(_Model):
+    """Análogo conocido que cubre una celda: id y nombre para mostrar."""
+
+    analog_id: str
+    name: str = Field(min_length=1)
+
+
+class RankingItem(_Model):
+    """Una fila del ranking. Un puntaje nulo es "sin dato", nunca 0."""
+
+    rank: int = Field(ge=1)
+    cell_id: int = Field(ge=0)
+    lat: float
+    lon: float
+    country: str | None
+    total: float = Field(ge=0, le=1)
+    s_terrain: float | None = Field(ge=0, le=1)
+    s_temperature: float | None = Field(ge=0, le=1)
+    s_water_ice: float | None = Field(ge=0, le=1)
+    bio_score: float = Field(ge=0, le=1)
+    known_analog: AnalogRef | None
+
+
+class Ranking(_Model):
+    target_id: str
+    weights: Weights
+    hide_known: bool
+    limit: int = Field(ge=1)
+    total_eligible: int = Field(ge=0)  # elegibles antes de aplicar limit (y después de hide_known)
+    items: list[RankingItem]
