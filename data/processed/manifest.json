@@ -125,6 +125,51 @@
         "resolución base 1.0 km; ventana de rugosidad 5 x 5 píxeles; DEM a 120 px/grado",
         "0 celdas sin dato de terreno (0.0%)"
       ]
+    },
+    {
+      "step": "03_temperature",
+      "ran_at": "2026-11-14T17:38:26Z",
+      "duration_s": 34.8,
+      "git_commit": "02e4173",
+      "inputs": [
+        {
+          "name": "MODIS, temperatura superficial mensual, 2024",
+          "product": "MOD11C3 v061",
+          "portal": "NASA Earthdata (LP DAAC)",
+          "url": "https://doi.org/10.5067/MODIS/MOD11C3.061",
+          "files": 12,
+          "size_mb": 877.9,
+          "license_note": "Datos abiertos de NASA"
+        }
+      ],
+      "outputs": [
+        {
+          "path": "data/interim/temperature.parquet",
+          "rows": 21357,
+          "size_mb": 0.4
+        }
+      ],
+      "columns": {
+        "tmin_c": {
+          "non_null": 21357,
+          "null": 0,
+          "min": -75.962,
+          "max": 26.872
+        },
+        "trange_c": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 0.0,
+          "max": 28.953
+        }
+      },
+      "earth_stats": null,
+      "notes": [
+        "celdas sin dato: tmin_c 0, trange_c 0",
+        "890 celdas con rango anual negativo llevado a 0 (meseta de hielo, dentro del error de MODIS)",
+        "meses con dato nocturno (meses: celdas): 12: 20741, 11: 360, 10: 148, 9: 68, 8: 25, 7: 14, 6: 1",
+        "meses con dato diurno y nocturno (meses: celdas): 12: 20678, 11: 410, 10: 161, 9: 68, 8: 25, 7: 13, 6: 1, 5: 1"
+      ]
     }
   ]
 }
