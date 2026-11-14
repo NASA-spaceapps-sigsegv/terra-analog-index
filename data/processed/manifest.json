@@ -235,6 +235,60 @@
         "ice_frac nula en 19 celdas sin mes válido de nieve ni hielo permanente",
         "meses con dato de nieve (meses: celdas): 12: 17835, 11: 1331, 10: 772, 9: 914, 8: 377, 7: 68, 0: 60"
       ]
+    },
+    {
+      "step": "05_biology_ncbi",
+      "ran_at": "2026-11-14T20:15:19Z",
+      "duration_s": 246.9,
+      "git_commit": "20ab1b5",
+      "inputs": [
+        {
+          "name": "NCBI BioSample",
+          "product": "BioSample (Entrez esearch/efetch)",
+          "portal": "NCBI",
+          "url": "https://www.ncbi.nlm.nih.gov/biosample",
+          "files": 127,
+          "size_mb": 76.4,
+          "license_note": "Datos públicos de NCBI"
+        }
+      ],
+      "outputs": [
+        {
+          "path": "data/processed/bio_samples.parquet",
+          "rows": 19778,
+          "size_mb": 0.2
+        },
+        {
+          "path": "data/interim/biology.parquet",
+          "rows": 21357,
+          "size_mb": 0.1
+        }
+      ],
+      "columns": {
+        "bio_records": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 0.0,
+          "max": 2449.0
+        },
+        "bio_types": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 0.0,
+          "max": 2.0
+        }
+      },
+      "earth_stats": null,
+      "notes": [
+        "halophile: total en NCBI 11485, bajados 5000, con coordenadas 4710, en tierra 3103",
+        "psychrophile: total en NCBI 12164, bajados 5000, con coordenadas 4771, en tierra 2991",
+        "xerophile: total en NCBI 4943, bajados 4943, con coordenadas 3718, en tierra 3651",
+        "acidophile: total en NCBI 8621, bajados 5000, con coordenadas 4988, en tierra 4957",
+        "thermophile: total en NCBI 25557, bajados 5000, con coordenadas 4923, en tierra 4922",
+        "radioresistant: total en NCBI 205, bajados 205, con coordenadas 182, en tierra 154",
+        "muestras únicas en tierra: 19769 en 237 celdas",
+        "tope de 5000 registros por tipo alcanzado en: halophile, psychrophile, acidophile, thermophile (design 7.6)"
+      ]
     }
   ]
 }
