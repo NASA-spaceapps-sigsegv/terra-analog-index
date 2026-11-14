@@ -37,6 +37,14 @@ En Windows, si `rasterio` o `geopandas` fallan con pip, instalarlos con conda.
 
 ## Uso
 
+Datos crudos que faltan (Natural Earth y elevación, ~1,6 GB; los ya bajados se saltean y una descarga cortada se retoma). `make help` lista los objetivos:
+
+```bash
+make data
+```
+
+En Windows, `make` se corre desde Git Bash o WSL; si no, los mismos comandos `curl` están en `data/raw/README.md`.
+
 Pruebas:
 
 ```bash
