@@ -68,7 +68,9 @@ make data-earthdata                            # baja todo 2024 (~2,3 GB); se pu
 
 Destinos: `data/raw/03_temperature/` (MOD11C3), `data/raw/04_water_ice/imerg/`, `.../mod10cm/` y `.../mcd12c1/`.
 
-**Lectura de HDF4.** MOD11C3, MOD10CM y MCD12C1 vienen en HDF4. El rasterio instalado con pip trae GDAL sin el driver HDF4, así que no los abre. Por eso `requirements-pipeline.txt` incluye `pyhdf==0.11.7` (tiene rueda para Python 3.14 en Linux, así que `pip install -r requirements-pipeline.txt` alcanza). Con conda, `gdal` de conda-forge también trae HDF4. IMERG (HDF5) y ETOPO (netCDF) se leen con lo que ya está instalado.
+**Lectura de HDF4.** MOD11C3, MOD10CM y MCD12C1 vienen en HDF4. El rasterio instalado con pip trae GDAL sin el driver HDF4, así que no los abre. Por eso `requirements-pipeline.txt` incluye `pyhdf==0.11.7` (tiene rueda para Python 3.14 en Linux, así que `pip install -r requirements-pipeline.txt` alcanza). Con conda, `gdal` de conda-forge también trae HDF4. IMERG (HDF5) y ETOPO (netCDF) se leen con lo que ya está instalado. En el código, `read_hdf4_layer` de `pipeline/common.py` abre cualquier capa y marca como nulos el relleno y lo que cae fuera de `valid_range`.
+
+Después de bajar MOD11C3: `python pipeline/03_temperature.py` (requiere el paso 01). Necesita los 12 meses de `DATA_YEAR`; si falta alguno, termina con código 2 y dice cuáles. Escribe `data/interim/temperature.parquet`.
 
 ## Luna y Marte (TAI-05)
 
