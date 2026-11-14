@@ -107,6 +107,24 @@ def test_write_step_manifest_upserts(tmp_path, monkeypatch):
     assert data["grid"]["n_cells"] == 1
 
 
+def test_write_step_manifest_refreshes_data_year(tmp_path, monkeypatch):
+    from tai.constants import DATA_YEAR
+
+    monkeypatch.setattr(common, "ROOT", tmp_path)
+    out = tmp_path / "data" / "processed" / "grid.parquet"
+    common.atomic_write_parquet(pd.DataFrame({"cell_id": [1]}), out)
+    manifest = tmp_path / "manifest.json"
+    entry = common.step_entry("01_grid", time.monotonic(), [], [(out, 1)])
+    common.write_step_manifest(entry, grid={"res_deg": 1.0, "n_cells": 1, "land_frac_min": 0.5}, path=manifest)
+
+    # A manifest written under another DATA_YEAR picks up the current one.
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    data["data_year"] = DATA_YEAR + 1
+    manifest.write_text(json.dumps(data), encoding="utf-8")
+    common.write_step_manifest(entry, path=manifest)
+    assert json.loads(manifest.read_text(encoding="utf-8"))["data_year"] == DATA_YEAR
+
+
 def test_last_run_partial(tmp_path):
     path = tmp_path / "manifest.json"
     assert not common.last_run_partial("02_terrain", path)

@@ -300,6 +300,7 @@ def write_step_manifest(entry: dict, grid: dict | None = None, path: Path = MANI
             "grid": None,
             "steps": [],
         }
+    manifest["data_year"] = DATA_YEAR  # follows the constant if it changes after step 01
     if grid is not None:
         manifest["grid"] = grid
     steps = [s for s in manifest["steps"] if s["step"] != entry["step"]]
