@@ -1,0 +1,4 @@
+analog_id,name,lat,lon,radius_km,target_id,basis,covered,source
+atacama_yungay,"Desierto de Atacama (Yungay)",-24.1,-70.0,150,mars_jezero,"Hiperaridez y suelos casi sin vida",yes,"Fixture: cita o URL que cargue Santino"
+rio_tinto,"Río Tinto",37.7,-6.6,50,mars_jezero,"Química ácida y minerales de hierro",no,"Fixture: cita o URL que cargue Santino"
+mcmurdo_dry_valleys,"Valles Secos de McMurdo",-77.5,162.0,150,moon_south_pole,"Frío extremo y sequedad",yes,"Fixture: cita o URL que cargue Santino"

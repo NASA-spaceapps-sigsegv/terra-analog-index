@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "targets": [
+    {
+      "target_id": "mars_jezero",
+      "label": "Marte, cráter Jezero",
+      "body": "mars",
+      "bounds": { "lat_min": 17.9, "lat_max": 18.9, "lon_min": 77.0, "lon_max": 78.0 },
+      "has_ice": false,
+      "has_ice_source": "Fixture: cita que cargue Santino",
+      "summary": "Antiguo lago y delta; sitio del rover Perseverance.",
+      "unreplicable": ["Gravedad de 3,71 m/s² (38% de la terrestre)"],
+      "notes": [],
+      "vars": {
+        "slope_deg":   { "unit": "°", "source": "MOLA, PDS Geosciences", "source_type": "measured" },
+        "roughness_m": { "unit": "m", "source": "MOLA, PDS Geosciences", "source_type": "measured" },
+        "tmin_c":      { "mean": -83.0, "std": 5.0, "unit": "°C",
+                         "source": "Fixture: cita que cargue Santino", "source_type": "literature" },
+        "trange_c":    { "mean": 60.0, "std": 8.0, "unit": "°C",
+                         "source": "Fixture: cita que cargue Santino", "source_type": "literature" },
+        "precip_mm":   { "mean": 0.0, "std": 0.0, "unit": "mm/año",
+                         "source": "Por definición: no llueve", "source_type": "definition" },
+        "ice_frac":    { "mean": 0.0, "std": 0.0, "unit": "fracción",
+                         "source": "Derivado de has_ice", "source_type": "definition" }
+      }
+    }
+  ]
+}

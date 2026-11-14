@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "project": "terra-analog-index",
+  "data_year": 2025,
+  "grid": { "res_deg": 1.0, "n_cells": 20112, "land_frac_min": 0.5 },
+  "steps": [
+    {
+      "step": "03_temperature",
+      "ran_at": "2026-11-14T19:42:10Z",
+      "duration_s": 184.2,
+      "git_commit": "a1b2c3d",
+      "inputs": [
+        {
+          "name": "MODIS, temperatura superficial mensual, 2025",
+          "product": "MOD11C3",
+          "portal": "NASA Earthdata Search",
+          "url": "https://search.earthdata.nasa.gov/",
+          "files": 12,
+          "size_mb": 310.5,
+          "license_note": "Datos abiertos de NASA"
+        }
+      ],
+      "outputs": [ { "path": "data/interim/temperature.parquet", "rows": 20112, "size_mb": 0.3 } ],
+      "columns": {
+        "tmin_c":   { "non_null": 19870, "null": 242, "min": -68.4, "max": 27.9 },
+        "trange_c": { "non_null": 19870, "null": 242, "min": 0.8,   "max": 41.2 }
+      },
+      "earth_stats": null,
+      "notes": [ "242 celdas sin dato por noche polar" ]
+    },
+    {
+      "step": "06_features",
+      "ran_at": "2026-11-14T21:05:00Z",
+      "duration_s": 3.1,
+      "git_commit": null,
+      "inputs": [],
+      "outputs": [ { "path": "data/processed/features.parquet", "rows": 20112, "size_mb": 0.6 } ],
+      "columns": {},
+      "earth_stats": {
+        "tmin_c": { "p01": -62.0, "p99": 26.0, "std": 19.0 }
+      },
+      "notes": []
+    }
+  ]
+}

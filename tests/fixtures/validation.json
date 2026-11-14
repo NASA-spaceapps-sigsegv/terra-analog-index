@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-14T23:10:00Z",
+  "weights": { "terrain": 1.0, "temperature": 1.0, "water_ice": 1.0, "biology": 0.5 },
+  "percentile_threshold": 90,
+  "targets": [
+    {
+      "target_id": "mars_jezero",
+      "result": "pass",
+      "covered_total": 1,
+      "covered_passed": 1,
+      "n_eligible": 19240,
+      "note": "",
+      "analogs": [
+        {
+          "analog_id": "atacama_yungay",
+          "name": "Desierto de Atacama (Yungay)",
+          "covered": "yes",
+          "n_cells": 6,
+          "best_cell_id": 23510,
+          "best_total": 0.770,
+          "best_rank": 212,
+          "percentile": 98.9,
+          "result": "pass"
+        },
+        {
+          "analog_id": "rio_tinto",
+          "name": "Río Tinto",
+          "covered": "no",
+          "n_cells": 1,
+          "best_cell_id": 45893,
+          "best_total": 0.412,
+          "best_rank": 9800,
+          "percentile": 49.1,
+          "result": "info"
+        }
+      ]
+    },
+    {
+      "target_id": "moon_south_pole",
+      "result": "insufficient",
+      "covered_total": 1,
+      "covered_passed": 0,
+      "n_eligible": 19240,
+      "note": "Fixture: menos de 2 análogos cubiertos",
+      "analogs": [
+        {
+          "analog_id": "mcmurdo_dry_valleys",
+          "name": "Valles Secos de McMurdo",
+          "covered": "yes",
+          "n_cells": 0,
+          "best_cell_id": null,
+          "best_total": null,
+          "best_rank": null,
+          "percentile": null,
+          "result": "no_data"
+        }
+      ]
+    }
+  ]
+}
