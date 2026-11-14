@@ -90,8 +90,8 @@ def rasterize_values(shapes, res: float = MASK_RES_DEG, dtype="uint8") -> np.nda
     A pixel takes a value when its center falls inside the geometry; later
     shapes win where geometries overlap. Unburned pixels are 0.
     """
+    from affine import Affine
     from rasterio.features import rasterize
-    from rasterio.transform import from_origin
 
     lat, lon = raster_coords(res)
     shapes = list(shapes)
@@ -101,7 +101,7 @@ def rasterize_values(shapes, res: float = MASK_RES_DEG, dtype="uint8") -> np.nda
     return rasterize(
         shapes,
         out_shape=out_shape,
-        transform=from_origin(-180.0, 90.0, res, res),
+        transform=Affine(res, 0.0, -180.0, 0.0, -res, 90.0),  # north-up, origin at (-180, 90)
         fill=0,
         dtype=dtype,
         all_touched=False,
