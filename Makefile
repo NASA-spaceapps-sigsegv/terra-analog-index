@@ -1,6 +1,7 @@
 # Raw data downloads for the pipeline (see data/raw/README.md).
 #
 #   make data      download everything that is missing
+#   make maps      control maps of the intermediate files (TAI-24)
 #   make help      list the targets
 #
 # Each target is the downloaded file itself, so files already on disk are
@@ -8,6 +9,11 @@
 # an interrupted download resumes on the next run.
 
 RAW := data/raw
+
+# The project's virtualenv if there is one, else whatever python3 is on PATH.
+PYTHON ?= $(firstword $(wildcard .venv/bin/python .venv/Scripts/python.exe) python3)
+MAPS_DIR := data/interim/maps
+MAPS_ARGS ?= --projection all
 
 NE_BASE := https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson
 ETOPO_URL := https://www.ngdc.noaa.gov/thredds/fileServer/global/ETOPO2022/30s/30s_surface_elev_netcdf/ETOPO_2022_v1_30s_N90W180_surface.nc
@@ -23,7 +29,7 @@ define download
 	@mv $@.part $@
 endef
 
-.PHONY: help data data-grid data-terrain data-earthdata data-temperature data-water-ice clean-partial
+.PHONY: help data data-grid data-terrain data-earthdata data-temperature data-water-ice maps clean-partial
 
 help:
 	@echo "make data             all raw datasets (~3.9 GB)"
@@ -32,7 +38,9 @@ help:
 	@echo "make data-earthdata   steps 03 and 04, needs an Earthdata login (~2.3 GB)"
 	@echo "make data-temperature step 03: MOD11C3 monthly LST (~0.8 GB)"
 	@echo "make data-water-ice   step 04: IMERG, MOD10CM, MCD12C1 (~1.4 GB)"
-	@echo "make clean-partial delete unfinished *.part downloads"
+	@echo "make maps             control maps and report of steps 01-04 in $(MAPS_DIR)"
+	@echo "                      (MAPS_ARGS=\"--only terrain\" to pass other options)"
+	@echo "make clean-partial    delete unfinished *.part downloads"
 
 data: data-grid data-terrain data-earthdata
 
@@ -56,6 +64,15 @@ $(RAW)/01_grid/%.geojson:
 
 $(RAW)/02_terrain/ETOPO_2022_v1_30s_N90W180_surface.nc:
 	$(call download,$(ETOPO_URL))
+
+# Control maps (scripts/check_maps.py): one map per variable in three
+# projections, histograms, index.html and informe.md.
+maps:
+	$(PYTHON) scripts/check_maps.py $(MAPS_ARGS) --out $(MAPS_DIR)
+	@echo ""
+	@echo "Mapas listos. Abrí el índice en el navegador:"
+	@echo "  file://$(abspath $(MAPS_DIR))/index.html"
+	@echo "Informe para avisar a cada responsable: $(MAPS_DIR)/informe.md"
 
 clean-partial:
 	find $(RAW) -name '*.part' -delete

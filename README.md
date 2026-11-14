@@ -45,6 +45,12 @@ make data
 
 En Windows, `make` se corre desde Git Bash o WSL; si no, los mismos comandos `curl` están en `data/raw/README.md`.
 
+Mapas de control de los pasos 01 a 04 (TAI-24): genera un mapa por variable, histogramas, `index.html` e `informe.md` en `data/interim/maps/`, y al final imprime la ruta para abrir el índice en el navegador. Otras opciones del script van en `MAPS_ARGS`, por ejemplo `make maps MAPS_ARGS="--only terrain"`:
+
+```bash
+make maps
+```
+
 Pruebas:
 
 ```bash
