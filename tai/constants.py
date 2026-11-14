@@ -18,7 +18,7 @@ EARTH_RADIUS_KM = 6371.0088
 TERRAIN_BASE_RES_KM = 1.0  # resolution for slope/roughness on all three bodies
 ROUGHNESS_WINDOW_PX = 5  # assumption A8: moving window side, in base-resolution pixels
 MIN_VALID_FRAC = 0.25  # assumption A9: valid land pixels a cell needs to get a value
-DATA_YEAR = 2025  # assumption: year of the monthly Earth data
+DATA_YEAR = 2024  # assumption: year of the Earth data (IMERG Final ends at 2025-09)
 
 # --- Scoring (design 5) ------------------------------------------------------
 SIGMA_FLOOR_FRAC = 0.10  # overlap rule: sigma floor as a fraction of Earth std
