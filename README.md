@@ -81,4 +81,10 @@ El paso 05 lee `NCBI_EMAIL` (obligatoria) y `NCBI_API_KEY` (opcional). Ninguna v
 
 ## Flujo de trabajo
 
-Una rama por ticket (`tai-12-terrain`), integrada con un pull request corto. Commits con [Conventional Commits](https://www.conventionalcommits.org/).
+Una rama por ticket (`tai-12-terrain`), creada desde `develop`. Al terminar, con `pytest` en verde, se integra directo a `develop` (sin pull request):
+
+```bash
+git checkout develop && git pull && git merge tai-12-terrain && git push
+```
+
+Commits con [Conventional Commits](https://www.conventionalcommits.org/).
