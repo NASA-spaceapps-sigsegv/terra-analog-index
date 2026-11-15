@@ -27,6 +27,15 @@ RADAR_COLOR = "#21918c"  # verde de la escala Viridis del mapa
 # Altura fija de las filas de la tabla de variables, en píxeles. st.dataframe solo parte el texto si la
 # altura pasa de 64 px (4rem), y es la misma para todas las filas: 84 px entran tres líneas de "Lectura".
 VARIABLE_ROW_HEIGHT = 84
+# Con height="auto" st.dataframe se corta en 400 px y hay que desplazarse dentro de la tabla. La altura
+# se fija para que entren todas las filas: encabezado de 35 px (2.1875rem), las filas y el borde de 1 px
+# arriba y abajo.
+HEADER_HEIGHT = 35
+TABLE_BORDERS = 2
+
+
+def table_height(n_rows: int, row_height: int = VARIABLE_ROW_HEIGHT) -> int:
+    return HEADER_HEIGHT + n_rows * row_height + TABLE_BORDERS
 
 VARIABLE_COLUMNS = ("Variable", "Tierra", "Objetivo", "Puntaje", "Lectura")
 
@@ -116,6 +125,7 @@ def render_card(card: SiteCard) -> None:
         hide_index=True,
         placeholder=NO_DATA,
         row_height=VARIABLE_ROW_HEIGHT,
+        height=table_height(len(card.variables)),
         column_config={
             "Puntaje": st.column_config.ProgressColumn(
                 "Puntaje", format=f"%.{SCORE_DECIMALS_UI}f", min_value=0.0, max_value=1.0
