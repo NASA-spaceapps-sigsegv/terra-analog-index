@@ -42,11 +42,7 @@ Estos son los límites que el método declara y que conviene tener presentes al 
 - **Un solo año de datos** (el que indica la grilla, arriba) puede no ser representativo del clima.
 - **Se usa la temperatura de superficie, no la del aire,** y el rango térmico lunar, de un ciclo de unos 29,5 días, no equivale al diurno terrestre.
 - **Nieve y precipitación en los polos.** Sin luz no hay dato óptico de nieve en la noche polar, y el producto de precipitación puede ser poco fiable sobre la Antártida.
-
----
-TODO (es así?):
-- escribir sesgo de los datos biológicos: muestras concentradas en China (14.726/19.769 muestras únicas (74,5 %). Por tipo, % de China: acidófilos 97,7, termófilos 93,7, xerófilos 92,1, psicrófilos 49,7, radiorresistentes 27,9, halófilos 12,4) y los sitios famosos (aplicamos un logaritmo para atenuar?). Podrían existir lugares con extremófilos no identificados.
----
+- **Sesgo de datos biológicos**: Se toman los 5 000 primeros datos de cada tipo de extremófilos de BioSample, pero algunos grupos tienen más (salados: 11 485, fríos: 12 164, ácidos: 8 621, cálidos: 25 557). Además, es un tipo de datos menos homogéneo que los demás. Algunos sitios más investigados abundan en muestras, como parte de China, mientras que hay regiones menos exploradas que podrían tener vida extremófila. El logaritmo ayuda a atenuar el efecto, pero no lo elimina.
 
 ## Créditos
 
