@@ -10,9 +10,9 @@
   "steps": [
     {
       "step": "01_grid",
-      "ran_at": "2026-11-14T14:24:41Z",
-      "duration_s": 4.4,
-      "git_commit": "3da92c5",
+      "ran_at": "2026-11-15T02:46:29Z",
+      "duration_s": 1.3,
+      "git_commit": "83e06a9",
       "inputs": [
         {
           "name": "Natural Earth, tierra 1:50m",
@@ -85,9 +85,9 @@
     },
     {
       "step": "02_terrain",
-      "ran_at": "2026-11-14T15:39:21Z",
-      "duration_s": 264.9,
-      "git_commit": "4170a30",
+      "ran_at": "2026-11-15T02:47:58Z",
+      "duration_s": 89.2,
+      "git_commit": "83e06a9",
       "inputs": [
         {
           "name": "ETOPO 2022, elevación de superficie, 30 segundos de arco",
@@ -128,9 +128,9 @@
     },
     {
       "step": "03_temperature",
-      "ran_at": "2026-11-14T17:38:26Z",
-      "duration_s": 34.8,
-      "git_commit": "02e4173",
+      "ran_at": "2026-11-15T02:48:10Z",
+      "duration_s": 11.6,
+      "git_commit": "83e06a9",
       "inputs": [
         {
           "name": "MODIS, temperatura superficial mensual, 2024",
@@ -173,9 +173,9 @@
     },
     {
       "step": "04_water_ice",
-      "ran_at": "2026-11-14T18:18:18Z",
-      "duration_s": 50.7,
-      "git_commit": "573f77b",
+      "ran_at": "2026-11-15T02:48:42Z",
+      "duration_s": 30.8,
+      "git_commit": "83e06a9",
       "inputs": [
         {
           "name": "GPM IMERG Final, precipitación mensual, 2024",
@@ -288,6 +288,298 @@
         "radioresistant: total en NCBI 205, bajados 205, con coordenadas 182, en tierra 154",
         "muestras únicas en tierra: 19769 en 237 celdas",
         "tope de 5000 registros por tipo alcanzado en: halophile, psychrophile, acidophile, thermophile (design 7.6)"
+      ]
+    },
+    {
+      "step": "06_features",
+      "ran_at": "2026-11-15T02:49:22Z",
+      "duration_s": 0.1,
+      "git_commit": "83e06a9",
+      "inputs": [
+        {
+          "name": "Archivos intermedios de los pasos 02 a 05",
+          "product": "terrain.parquet, temperature.parquet, water_ice.parquet, biology.parquet",
+          "portal": "Pipeline del proyecto",
+          "url": "https://github.com/NASA-spaceapps-sigsegv/terra-analog-index",
+          "files": 4,
+          "size_mb": 1.2,
+          "license_note": "Datos derivados del proyecto"
+        }
+      ],
+      "outputs": [
+        {
+          "path": "data/processed/features.parquet",
+          "rows": 21357,
+          "size_mb": 0.8
+        }
+      ],
+      "columns": {
+        "slope_deg": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 0.011,
+          "max": 21.039
+        },
+        "roughness_m": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 0.23,
+          "max": 407.433
+        },
+        "tmin_c": {
+          "non_null": 21357,
+          "null": 0,
+          "min": -75.962,
+          "max": 26.872
+        },
+        "trange_c": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 0.0,
+          "max": 28.953
+        },
+        "precip_mm": {
+          "non_null": 15316,
+          "null": 6041,
+          "min": 0.0,
+          "max": 5838.682
+        },
+        "ice_frac": {
+          "non_null": 21338,
+          "null": 19,
+          "min": 0.0,
+          "max": 1.0
+        },
+        "bio_records": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 0.0,
+          "max": 2449.0
+        },
+        "bio_types": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 0.0,
+          "max": 2.0
+        },
+        "coverage": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 5.0,
+          "max": 6.0
+        },
+        "n_physical": {
+          "non_null": 21357,
+          "null": 0,
+          "min": 3.0,
+          "max": 3.0
+        }
+      },
+      "earth_stats": {
+        "slope_deg": {
+          "p01": 0.042,
+          "p99": 11.979,
+          "std": 2.51
+        },
+        "roughness_m": {
+          "p01": 0.842,
+          "p99": 235.612,
+          "std": 49.424
+        },
+        "tmin_c": {
+          "p01": -66.356,
+          "p99": 23.225,
+          "std": 23.003
+        },
+        "trange_c": {
+          "p01": 0.235,
+          "p99": 21.461,
+          "std": 5.068
+        },
+        "precip_mm": {
+          "p01": 14.587,
+          "p99": 3397.276,
+          "std": 713.701
+        },
+        "ice_frac": {
+          "p01": 0.0,
+          "p99": 1.0,
+          "std": 0.333
+        }
+      },
+      "notes": [
+        "celdas por dimensiones físicas con dato: 3: 21357"
+      ]
+    },
+    {
+      "step": "07_targets",
+      "ran_at": "2026-11-15T02:49:45Z",
+      "duration_s": 22.6,
+      "git_commit": "83e06a9",
+      "inputs": [
+        {
+          "name": "Elevación de la Luna y Marte (LOLA y MOLA)",
+          "product": "LDEM_80S_80MPP_ADJ, MOLA 463 m",
+          "portal": "NASA PGDA y USGS Astrogeology",
+          "url": "https://pgda.gsfc.nasa.gov/products/90",
+          "files": 1,
+          "size_mb": 189.2,
+          "license_note": "Datos abiertos de NASA"
+        }
+      ],
+      "outputs": [
+        {
+          "path": "data/processed/targets.json",
+          "rows": 2,
+          "size_mb": 0.0
+        }
+      ],
+      "columns": {},
+      "earth_stats": null,
+      "notes": [
+        "moon_south_pole.slope_deg: measured, regla overlap",
+        "moon_south_pole.roughness_m: measured, regla overlap",
+        "moon_south_pole.tmin_c: literature, regla directional_low",
+        "moon_south_pole.trange_c: literature, regla directional_high",
+        "moon_south_pole.precip_mm: definition, regla directional_low",
+        "moon_south_pole.ice_frac: definition, regla presence",
+        "mars_jezero.slope_deg: measured, regla overlap",
+        "mars_jezero.roughness_m: measured, regla overlap",
+        "mars_jezero.tmin_c: literature, regla directional_low",
+        "mars_jezero.trange_c: literature, regla directional_high",
+        "mars_jezero.precip_mm: definition, regla directional_low",
+        "mars_jezero.ice_frac: definition, regla absence"
+      ]
+    },
+    {
+      "step": "08_similarity",
+      "ran_at": "2026-11-15T02:49:45Z",
+      "duration_s": 0.1,
+      "git_commit": "83e06a9",
+      "inputs": [
+        {
+          "name": "Variables por celda, perfiles objetivo y análogos conocidos",
+          "product": "features.parquet, targets.json, known_analogs.csv",
+          "portal": "Pipeline del proyecto (pasos 06 y 07; config de TAI-17)",
+          "url": "https://github.com/NASA-spaceapps-sigsegv/terra-analog-index",
+          "files": 4,
+          "size_mb": 1.0,
+          "license_note": "Datos derivados del proyecto"
+        }
+      ],
+      "outputs": [
+        {
+          "path": "data/processed/similarity.parquet",
+          "rows": 42714,
+          "size_mb": 0.6
+        },
+        {
+          "path": "data/processed/known_analogs.csv",
+          "rows": 9,
+          "size_mb": 0.0
+        }
+      ],
+      "columns": {
+        "sv_slope_deg": {
+          "non_null": 42714,
+          "null": 0,
+          "min": 0.0,
+          "max": 1.0
+        },
+        "sv_roughness_m": {
+          "non_null": 42714,
+          "null": 0,
+          "min": 0.001,
+          "max": 1.0
+        },
+        "sv_tmin_c": {
+          "non_null": 42714,
+          "null": 0,
+          "min": 0.0,
+          "max": 1.0
+        },
+        "sv_trange_c": {
+          "non_null": 42714,
+          "null": 0,
+          "min": 0.005,
+          "max": 1.0
+        },
+        "sv_precip_mm": {
+          "non_null": 30632,
+          "null": 12082,
+          "min": 0.0,
+          "max": 1.0
+        },
+        "sv_ice_frac": {
+          "non_null": 42676,
+          "null": 38,
+          "min": 0.0,
+          "max": 1.0
+        },
+        "s_terrain": {
+          "non_null": 42714,
+          "null": 0,
+          "min": 0.001,
+          "max": 0.997
+        },
+        "s_temperature": {
+          "non_null": 42714,
+          "null": 0,
+          "min": 0.012,
+          "max": 0.902
+        },
+        "s_water_ice": {
+          "non_null": 42714,
+          "null": 0,
+          "min": 0.0,
+          "max": 1.0
+        },
+        "bio_score": {
+          "non_null": 42714,
+          "null": 0,
+          "min": 0.0,
+          "max": 0.667
+        }
+      },
+      "earth_stats": null,
+      "notes": [
+        "mars_jezero: 21357 celdas elegibles de 21357; 36 celdas de análogos conocidos",
+        "moon_south_pole: 21357 celdas elegibles de 21357; 48 celdas de análogos conocidos"
+      ]
+    },
+    {
+      "step": "09_validation",
+      "ran_at": "2026-11-15T02:49:46Z",
+      "duration_s": 0.1,
+      "git_commit": "83e06a9",
+      "inputs": [
+        {
+          "name": "Similitud por celda y análogos conocidos",
+          "product": "similarity.parquet, known_analogs.csv",
+          "portal": "Pipeline del proyecto (pasos 08 y 01)",
+          "url": "https://github.com/NASA-spaceapps-sigsegv/terra-analog-index",
+          "files": 3,
+          "size_mb": 0.8,
+          "license_note": "Datos derivados del proyecto"
+        }
+      ],
+      "outputs": [
+        {
+          "path": "data/processed/validation.json",
+          "rows": 2,
+          "size_mb": 0.0
+        },
+        {
+          "path": "data/interim/finalists.csv",
+          "rows": 16,
+          "size_mb": 0.0
+        }
+      ],
+      "columns": {},
+      "earth_stats": null,
+      "notes": [
+        "moon_south_pole: pass (2 de 3 análogos cubiertos en el percentil 90 o más; 21357 celdas elegibles)",
+        "mars_jezero: pass (2 de 3 análogos cubiertos en el percentil 90 o más; 21357 celdas elegibles)"
       ]
     }
   ]

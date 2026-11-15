@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-15T02:49:46Z",
+  "weights": {
+    "terrain": 1.0,
+    "temperature": 1.0,
+    "water_ice": 1.0,
+    "biology": 0.5
+  },
+  "percentile_threshold": 90.0,
+  "targets": [
+    {
+      "target_id": "moon_south_pole",
+      "result": "pass",
+      "covered_total": 3,
+      "covered_passed": 2,
+      "n_eligible": 21357,
+      "note": "",
+      "analogs": [
+        {
+          "analog_id": "haughton_crater",
+          "name": "Cráter Haughton (isla Devon)",
+          "covered": "yes",
+          "n_cells": 14,
+          "best_cell_id": 59853,
+          "best_total": 0.505,
+          "best_rank": 2914,
+          "percentile": 86.4,
+          "result": "fail"
+        },
+        {
+          "analog_id": "concordia_dome_c",
+          "name": "Estación Concordia (Domo C)",
+          "covered": "yes",
+          "n_cells": 19,
+          "best_cell_id": 5699,
+          "best_total": 0.513,
+          "best_rank": 1413,
+          "percentile": 93.4,
+          "result": "pass"
+        },
+        {
+          "analog_id": "askja_iceland",
+          "name": "Caldera de Askja (Islandia)",
+          "covered": "no",
+          "n_cells": 11,
+          "best_cell_id": 55961,
+          "best_total": 0.522,
+          "best_rank": 1064,
+          "percentile": 95.0,
+          "result": "info"
+        },
+        {
+          "analog_id": "ross_island",
+          "name": "Isla de Ross (Antártida)",
+          "covered": "yes",
+          "n_cells": 4,
+          "best_cell_id": 4661,
+          "best_total": 0.768,
+          "best_rank": 1,
+          "percentile": 100.0,
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "target_id": "mars_jezero",
+      "result": "pass",
+      "covered_total": 3,
+      "covered_passed": 2,
+      "n_eligible": 21357,
+      "note": "",
+      "analogs": [
+        {
+          "analog_id": "atacama_yungay",
+          "name": "Desierto de Atacama (Yungay)",
+          "covered": "yes",
+          "n_cells": 4,
+          "best_cell_id": 23870,
+          "best_total": 0.751,
+          "best_rank": 31,
+          "percentile": 99.9,
+          "result": "pass"
+        },
+        {
+          "analog_id": "mcmurdo_dry_valleys",
+          "name": "Valles Secos de McMurdo (Antártida)",
+          "covered": "yes",
+          "n_cells": 20,
+          "best_cell_id": 4298,
+          "best_total": 0.377,
+          "best_rank": 13018,
+          "percentile": 39.1,
+          "result": "fail"
+        },
+        {
+          "analog_id": "licancabur_altiplano",
+          "name": "Volcán Licancabur y lagos del Altiplano (Bolivia y Chile)",
+          "covered": "yes",
+          "n_cells": 5,
+          "best_cell_id": 23871,
+          "best_total": 0.794,
+          "best_rank": 3,
+          "percentile": 100.0,
+          "result": "pass"
+        },
+        {
+          "analog_id": "death_valley_ubehebe",
+          "name": "Valle de la Muerte (cráter Ubehebe)",
+          "covered": "partial",
+          "n_cells": 6,
+          "best_cell_id": 45783,
+          "best_total": 0.743,
+          "best_rank": 46,
+          "percentile": 99.8,
+          "result": "info"
+        },
+        {
+          "analog_id": "rio_tinto",
+          "name": "Río Tinto (España)",
+          "covered": "no",
+          "n_cells": 1,
+          "best_cell_id": 45893,
+          "best_total": 0.583,
+          "best_rank": 2052,
+          "percentile": 90.4,
+          "result": "info"
+        }
+      ]
+    }
+  ]
+}
