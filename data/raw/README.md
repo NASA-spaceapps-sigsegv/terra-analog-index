@@ -74,6 +74,21 @@ Después de bajar MOD11C3: `python pipeline/03_temperature.py` (requiere el paso
 
 Después de bajar IMERG, MOD10CM y MCD12C1: `python pipeline/04_water_ice.py`. Necesita los 12 meses de IMERG y de MOD10CM; para MCD12C1 usa el de `DATA_YEAR` o, si todavía no salió, el último anterior. Escribe `data/interim/water_ice.parquet`. La precipitación queda nula al sur de 60° S, porque IMERG no mide la nieve sobre la Antártida (diseño 4.3).
 
+## Polvo y viento (paso 04_dust_wind, TAI-52)
+
+| Variable | Producto | Versión | Resolución | Formato | Cobertura polar | Tamaño (1 año) | Enlace | Decisión |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Espesor óptico del polvo a 550 nm (`dust_aod`) | MERRA-2 `M2TMNXAER`, variable `DUEXTTAU` (adimensional) | 5.12.4 | 0,5° × 0,625° | netCDF4, 1 archivo por mes | sí, sin huecos | 960 MB (12 archivos de 80 MB) | [doi:10.5067/FH9A0MLJPC7N](https://doi.org/10.5067/FH9A0MLJPC7N) (GES DISC) | Elegido: global y sin huecos sobre el hielo. Es un reanálisis (modelo), no una observación; el AOD de MODIS (MOD08_M3) no da dato sobre hielo ni trae viento |
+| Velocidad del viento en superficie (`wind_ms`) | MERRA-2 `M2TMNXFLX`, variable `SPEED` (m/s) | 5.12.4 | 0,5° × 0,625° | netCDF4, 1 archivo por mes | sí, sin huecos | 880 MB (12 archivos de ~74 MB) | [doi:10.5067/0JRLVL8YV2Y4](https://doi.org/10.5067/0JRLVL8YV2Y4) (GES DISC) | Elegido junto con el anterior; se baja con la misma cuenta de Earthdata |
+
+```bash
+make data-dust-wind   # o: python pipeline/fetch_earthdata.py m2aer m2flx
+```
+
+Destinos: `data/raw/04_dust_wind/m2tmnxaer/` y `.../m2tmnxflx/`. Después: `python pipeline/04_dust_wind.py` (requiere el paso 01); promedia los 12 meses y cada celda de 1° toma la media de los puntos de MERRA-2 cuyo centro cae adentro. Escribe `data/interim/dust_wind.parquet`.
+
+La dimensión solo existe para Jezero: la Luna no tiene atmósfera. Valores de Jezero (literatura, en `config/targets_base.json`): espesor óptico del polvo de 0,4 a 0,5 fuera de las tormentas (Mastcam-Z y MEDA; Rodriguez-Manfredi et al. 2023, Lemmon et al. 2022) y viento diurno medio de unos 4 m/s a 1,5 m (MEDA; Newman et al. 2022).
+
 ## NCBI BioSample (paso 05)
 
 No se descarga a mano: el paso 05 guarda cada lote crudo en `data/raw/05_biology/<tipo>_<inicio>.xml`.

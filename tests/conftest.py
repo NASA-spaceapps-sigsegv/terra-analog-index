@@ -82,6 +82,7 @@ def _similarity() -> pd.DataFrame:
         for v in PHYSICAL_VARS:
             df[f"sv_{v}"] = np.full(len(CELLS), NAN, dtype="float32")
         df["s_terrain"], df["s_temperature"], df["s_water_ice"], df["bio_score"] = (s[:, i] for i in range(4))
+        df["s_dust_wind"] = np.full(len(CELLS), NAN, dtype="float32")  # TAI-52: sin dato, no altera el orden
         df["bio_score"] = df["bio_score"].astype("float32")
         phys = df[["s_terrain", "s_temperature", "s_water_ice"]].notna().sum(axis=1)
         df["n_physical"] = phys.astype("int8")

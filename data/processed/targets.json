@@ -181,6 +181,28 @@
           "earth_p01": 0.0,
           "earth_p99": 1.0,
           "earth_std": 0.333
+        },
+        "dust_aod": {
+          "mean": 0.45,
+          "std": 0.15,
+          "unit": "",
+          "rule": "directional_high",
+          "source": "Mastcam-Z y MEDA (Perseverance): espesor óptico del polvo de 0,4 a 0,5 fuera de las tormentas en los primeros 250 soles (Rodriguez-Manfredi, J. A. et al. 2023, Nature Geoscience 16, 19-28, doi:10.1038/s41561-022-01084-0); hasta 1,4 en la tormenta de enero de 2022 (Lemmon, M. T. et al. 2022, Geophysical Research Letters, doi:10.1029/2022GL100126). Medido a 880 nm; el polvo marciano cambia apenas unos puntos entre el visible y 880 nm. Desvío estimado por el equipo",
+          "source_type": "literature",
+          "earth_p01": 0.002,
+          "earth_p99": 0.367,
+          "earth_std": 0.085
+        },
+        "wind_ms": {
+          "mean": 4.0,
+          "std": 2.0,
+          "unit": "m/s",
+          "rule": "overlap",
+          "source": "MEDA (Perseverance): viento diurno medio de unos 4 m/s a 1,5 m de altura (Newman, C. E. et al. 2022, Science Advances 8, eabn3783, doi:10.1126/sciadv.abn3783). En la Tierra, MERRA-2 da el viento a unos 10 m. Desvío estimado por el equipo",
+          "source_type": "literature",
+          "earth_p01": 1.759,
+          "earth_p99": 14.45,
+          "earth_std": 2.321
         }
       }
     }

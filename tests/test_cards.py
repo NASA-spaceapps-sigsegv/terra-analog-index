@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 from tai import cards, services
-from tai.constants import BIO_TYPES, DIFFERENT_MAX, PHYSICAL_VARS, SIMILAR_MIN
+from tai.constants import BIO_TYPES, CORE_VARS, DIFFERENT_MAX, SIMILAR_MIN
 from tai.errors import CellNotFoundError, InvalidWeightsError, TargetNotFoundError
 from tai.io import load_bundle
 from tai.models import KnownAnalog, Manifest, SiteCard, Target, Weights
@@ -105,7 +105,7 @@ def test_the_contract_example():
     assert card.header.known_analog.name == "Desierto de Atacama (Yungay)"
     assert card.header.known_analog.distance_km == 67.0
     assert card.scores.total == pytest.approx(0.770, abs=1e-3)  # (0,617 + 0,910 + 0,970 + 0,5·0,398) / 3,5
-    assert [v.variable for v in card.variables] == list(PHYSICAL_VARS)
+    assert [v.variable for v in card.variables] == list(CORE_VARS)  # el ejemplo no trae polvo y viento
     assert {v.variable: v.phrase for v in card.variables} == EXAMPLE_PHRASES
     assert [d.dimension for d in card.similar_in] == ["temperature", "water_ice"]
     assert card.different_in == [] and card.similar_empty_phrase is None
@@ -127,7 +127,7 @@ def test_sources_come_from_the_manifest_and_the_target():
     assert sources["NCBI BioSample"] == ["bio_records", "bio_types"]
     assert sources["Morgan et al. (2021)"] == ["ice_frac"]  # la cita detrás de "Derivado de has_ice"
     shown = {v for s in card.sources for v in s.used_for}
-    assert set(PHYSICAL_VARS) <= shown  # ninguna cifra sin fuente (RF-28)
+    assert set(CORE_VARS) <= shown  # ninguna cifra sin fuente (RF-28)
 
 
 # --- Las reglas de 12.1 ---------------------------------------------------------------------
@@ -277,7 +277,7 @@ def test_every_cell_of_the_test_data_gets_a_valid_card(bundle, target_id):
     for cell in bundle.similarity[target_id].index:
         card = services.get_site_card(bundle, cell, target_id, WEIGHTS, cards_dir=None)
         assert card.unreplicable and card.biology.sampling_note
-        assert len(card.variables) == 6
+        assert len(card.variables) == len(bundle.targets.targets[0].vars)  # las seis y, si el objetivo las tiene, polvo y viento
 
 
 def test_card_total_matches_the_ranking(bundle):

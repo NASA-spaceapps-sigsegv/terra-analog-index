@@ -3,6 +3,7 @@
 Reads:  data/interim/terrain.parquet      (step 02: slope_deg, roughness_m)
         data/interim/temperature.parquet  (step 03: tmin_c, trange_c)
         data/interim/water_ice.parquet    (step 04: precip_mm, ice_frac)
+        data/interim/dust_wind.parquet    (step 04_dust_wind: dust_aod, wind_ms; TAI-52)
         data/interim/biology.parquet      (step 05: bio_records, bio_types, bio_type_list)
         data/processed/grid.parquet       (step 01)
 Writes: data/processed/features.parquet   one row per grid cell (contract 3.2)
@@ -53,7 +54,7 @@ from pipeline.common import (  # noqa: E402
     write_step_manifest,
 )
 from tai import rules  # noqa: E402
-from tai.constants import DIMENSION_VARS, PHYSICAL_DIMENSIONS, PHYSICAL_VARS  # noqa: E402
+from tai.constants import CORE_DIMENSIONS, DIMENSION_VARS, PHYSICAL_VARS  # noqa: E402
 
 STEP = "06_features"
 OUTPUT = PROCESSED / "features.parquet"
@@ -63,6 +64,7 @@ SOURCES = {
     "terrain": ("02_terrain", INTERIM / "terrain.parquet", ["slope_deg", "roughness_m"]),
     "temperature": ("03_temperature", INTERIM / "temperature.parquet", ["tmin_c", "trange_c"]),
     "water_ice": ("04_water_ice", INTERIM / "water_ice.parquet", ["precip_mm", "ice_frac"]),
+    "dust_wind": ("04_dust_wind", INTERIM / "dust_wind.parquet", ["dust_aod", "wind_ms"]),
     "biology": ("05_biology_ncbi", INTERIM / "biology.parquet", ["bio_records", "bio_types", "bio_type_list"]),
 }
 BIO_COLUMNS = SOURCES["biology"][2]
@@ -99,8 +101,9 @@ def build_features(grid: pd.DataFrame, parts: dict[str, pd.DataFrame]) -> pd.Dat
 
     has = out[list(PHYSICAL_VARS)].notna()
     out["coverage"] = has.sum(axis=1).astype("int8")
+    # Core dimensions only: n_physical decides eligibility, and dust and wind (TAI-52) does not count.
     out["n_physical"] = sum(has[list(DIMENSION_VARS[d])].any(axis=1).astype(int)
-                            for d in PHYSICAL_DIMENSIONS).astype("int8")
+                            for d in CORE_DIMENSIONS).astype("int8")
     return out[["cell_id", *PHYSICAL_VARS, *BIO_COLUMNS, "coverage", "n_physical"]]
 
 

@@ -86,6 +86,7 @@ def get_ranking(
             s_terrain=_num(r.s_terrain),
             s_temperature=_num(r.s_temperature),
             s_water_ice=_num(r.s_water_ice),
+            s_dust_wind=_num(r.s_dust_wind),
             bio_score=float(r.bio_score),
             known_analog=analog(r.known_analog),
         )
@@ -134,6 +135,7 @@ def get_map_layer(bundle: DataBundle, target_id: str, weights: Weights | Mapping
             "s_terrain": sim["s_terrain"].to_numpy(),
             "s_temperature": sim["s_temperature"].to_numpy(),
             "s_water_ice": sim["s_water_ice"].to_numpy(),
+            "s_dust_wind": sim["s_dust_wind"].to_numpy(),
             "bio_score": sim["bio_score"].to_numpy(),
             "eligible": eligible.to_numpy(dtype=bool),
             "known_analog": sim["known_analog"].map(names).astype(object).to_numpy(),

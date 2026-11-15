@@ -21,7 +21,7 @@ def test_explore_shows_the_map_and_no_placeholder(app):
 
 
 def test_all_weights_zero_keeps_the_gray_map_and_shows_the_warning(app):
-    for dim in ("terrain", "temperature", "water_ice", "biology"):
+    for dim in ("terrain", "temperature", "water_ice", "dust_wind", "biology"):
         app.sidebar.slider(key=f"w_{dim}").set_value(0.0)
     app.run()
     assert not app.exception

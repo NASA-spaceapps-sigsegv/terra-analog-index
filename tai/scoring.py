@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from pydantic import ValidationError
 
-from tai.constants import DIMENSIONS, MIN_PHYSICAL_DIMS, PHYSICAL_DIMENSIONS
+from tai.constants import CORE_DIMENSIONS, DIMENSIONS, MIN_PHYSICAL_DIMS, OPTIONAL_DIMENSIONS
 from tai.errors import InvalidWeightsError, ZeroWeightsError
 from tai.models import Weights
 
@@ -27,6 +27,7 @@ SCORE_COLUMNS = {
     "terrain": "s_terrain",
     "temperature": "s_temperature",
     "water_ice": "s_water_ice",
+    "dust_wind": "s_dust_wind",
     "biology": "bio_score",
 }
 
@@ -46,11 +47,19 @@ def validate_weights(weights: Weights | Mapping[str, float]) -> Weights:
     return w
 
 
+def _scores(sim: pd.DataFrame, dim: str) -> np.ndarray:
+    """Puntajes de una dimensión. Una dimensión opcional sin columna (tabla anterior a TAI-52) es nula."""
+    col = SCORE_COLUMNS[dim]
+    if col not in sim.columns and dim in OPTIONAL_DIMENSIONS:
+        return np.full(len(sim), np.nan)
+    return sim[col].astype("float64").to_numpy()
+
+
 def combine(sim: pd.DataFrame, weights: Weights | Mapping[str, float]) -> pd.Series:
     """Puntaje total por celda (5.6). Las dimensiones nulas salen del denominador;
     si la suma de pesos con dato es 0, el total es nulo."""
     w = validate_weights(weights).as_dict()
-    scores = np.column_stack([sim[SCORE_COLUMNS[d]].astype("float64").to_numpy() for d in DIMENSIONS])
+    scores = np.column_stack([_scores(sim, d) for d in DIMENSIONS])
     wv = np.array([w[d] for d in DIMENSIONS], dtype="float64")
     has = ~np.isnan(scores)
     num = np.where(has, scores * wv, 0.0).sum(axis=1)
@@ -61,8 +70,10 @@ def combine(sim: pd.DataFrame, weights: Weights | Mapping[str, float]) -> pd.Ser
 
 
 def is_eligible(sim: pd.DataFrame) -> pd.Series:
-    """Dato en al menos MIN_PHYSICAL_DIMS de las 3 dimensiones físicas (5.7)."""
-    n = sum(sim[SCORE_COLUMNS[d]].notna().astype(int) for d in PHYSICAL_DIMENSIONS)
+    """Dato en al menos MIN_PHYSICAL_DIMS de las 3 dimensiones físicas centrales (5.7).
+
+    Polvo y viento (TAI-52) no cuenta: es opcional por objetivo, y contarla cambiaría qué celdas entran."""
+    n = sum(sim[SCORE_COLUMNS[d]].notna().astype(int) for d in CORE_DIMENSIONS)
     return n >= MIN_PHYSICAL_DIMS
 
 

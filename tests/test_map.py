@@ -140,7 +140,7 @@ def one_cell_layer(lat, lon, total=0.5) -> MapLayer:
     cells = pd.DataFrame(
         {
             "cell_id": np.array([1], dtype="int32"), "lat": [lat], "lon": [lon], "country": ["Chile"], "total": [total],
-            "s_terrain": [0.5], "s_temperature": [0.5], "s_water_ice": [0.5], "bio_score": [0.0], "eligible": [True],
+            "s_terrain": [0.5], "s_temperature": [0.5], "s_water_ice": [0.5], "s_dust_wind": [np.nan], "bio_score": [0.0], "eligible": [True],
             "known_analog": [None],
         }
     )
@@ -154,7 +154,7 @@ def spread_layer(totals) -> MapLayer:
     cells = pd.DataFrame(
         {
             "cell_id": np.arange(n, dtype="int32"), "lat": np.full(n, -60.5), "lon": 10.5 + 30.0 * np.arange(n), "country": ["Chile"] * n,
-            "total": total, "s_terrain": [0.5] * n, "s_temperature": [0.5] * n, "s_water_ice": [0.5] * n, "bio_score": [0.0] * n,
+            "total": total, "s_terrain": [0.5] * n, "s_temperature": [0.5] * n, "s_water_ice": [0.5] * n, "s_dust_wind": [np.nan] * n, "bio_score": [0.0] * n,
             "eligible": ~np.isnan(total), "known_analog": [None] * n,
         }
     )
@@ -423,6 +423,7 @@ def big_layer(n=21_357, seed=0) -> MapLayer:
             "s_terrain": rng.random(n).astype("float32"),
             "s_temperature": rng.random(n).astype("float32"),
             "s_water_ice": rng.random(n).astype("float32"),
+            "s_dust_wind": np.full(n, np.nan, dtype="float32"),
             "bio_score": rng.random(n).astype("float32"),
             "eligible": ~np.isnan(total),
             "known_analog": pd.array([None] * n, dtype=object),

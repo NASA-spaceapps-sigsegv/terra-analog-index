@@ -8,7 +8,9 @@ def test_grid_size():
 
 def test_dimensions_and_vars_consistent():
     assert set(C.DIMENSION_VARS) == set(C.PHYSICAL_DIMENSIONS)
-    assert len(C.PHYSICAL_VARS) == 6
+    assert len(C.CORE_VARS) == 6  # las que tiene todo objetivo
+    assert C.PHYSICAL_VARS == C.CORE_VARS + C.OPTIONAL_VARS
+    assert set(C.CORE_DIMENSIONS) | set(C.OPTIONAL_DIMENSIONS) == set(C.PHYSICAL_DIMENSIONS)
     assert set(C.DEFAULT_WEIGHTS) == set(C.DIMENSIONS)
     for var in C.PHYSICAL_VARS:
         assert var in C.VALID_RANGES

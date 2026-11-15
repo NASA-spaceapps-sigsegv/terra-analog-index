@@ -94,7 +94,9 @@ def variables_table(target: Target, earth_sources: dict[str, str] | None = None)
     earth_sources = earth_sources or {}
     rows = []
     for var in PHYSICAL_VARS:
-        spec = target.vars[var]
+        spec = target.vars.get(var)
+        if spec is None:  # variable opcional que el objetivo no tiene (polvo y viento en la Luna, TAI-52)
+            continue
         d = _decimals(spec.unit)
         source = spec.source
         if earth_sources.get(var):

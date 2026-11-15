@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from tai.constants import (
     BIO_TYPES,
+    CORE_VARS,
     DIMENSIONS,
     PHYSICAL_VARS,
     SCHEMA_VERSION,
@@ -39,8 +40,12 @@ def _check_snake_id(v: str) -> str:
 
 
 def _check_six_vars(v: dict) -> dict:
-    if set(v) != set(PHYSICAL_VARS):
-        raise ValueError(f"vars must have exactly {list(PHYSICAL_VARS)}, got {sorted(v)}")
+    """The six core variables are required; the optional ones (dust and wind, TAI-52) only where they apply."""
+    missing = [x for x in CORE_VARS if x not in v]
+    unknown = sorted(set(v) - set(PHYSICAL_VARS))
+    if missing or unknown:
+        raise ValueError(f"vars must have {list(CORE_VARS)} and may add {[x for x in PHYSICAL_VARS if x not in CORE_VARS]}; "
+                         f"missing {missing}, unknown {unknown}")
     return v
 
 
@@ -53,6 +58,8 @@ class Weights(_Model):
     terrain: float = Field(ge=0.0, le=1.0)
     temperature: float = Field(ge=0.0, le=1.0)
     water_ice: float = Field(ge=0.0, le=1.0)
+    # TAI-52. Optional so weights written before it (validation.json of an older run) still load: missing = 0.
+    dust_wind: float = Field(default=0.0, ge=0.0, le=1.0)
     biology: float = Field(ge=0.0, le=1.0)
 
     @field_validator("*")
@@ -342,6 +349,7 @@ class RankingItem(_Model):
     s_terrain: float | None = Field(ge=0, le=1)
     s_temperature: float | None = Field(ge=0, le=1)
     s_water_ice: float | None = Field(ge=0, le=1)
+    s_dust_wind: float | None = Field(default=None, ge=0, le=1)  # nulo si el objetivo no tiene la dimensión
     bio_score: float = Field(ge=0, le=1)
     known_analog: AnalogRef | None
 
@@ -359,7 +367,7 @@ class Ranking(_Model):
 
 MAP_CELL_COLUMNS = (
     "cell_id", "lat", "lon", "country", "total", "s_terrain", "s_temperature",
-    "s_water_ice", "bio_score", "eligible", "known_analog",
+    "s_water_ice", "s_dust_wind", "bio_score", "eligible", "known_analog",
 )
 
 
@@ -401,7 +409,7 @@ class MapLayer(BaseModel):
 
 # --- Respuesta de get_site_card (contracts 5) ----------------------------------
 
-PhysicalDimension = Literal["terrain", "temperature", "water_ice"]
+PhysicalDimension = Literal["terrain", "temperature", "water_ice", "dust_wind"]
 
 
 class CardAnalog(_Model):
@@ -425,6 +433,7 @@ class CardScores(_Model):
     terrain: float | None = Field(ge=0, le=1)
     temperature: float | None = Field(ge=0, le=1)
     water_ice: float | None = Field(ge=0, le=1)
+    dust_wind: float | None = Field(default=None, ge=0, le=1)  # nulo si el objetivo no tiene la dimensión
     biology: float = Field(ge=0, le=1)
 
 
@@ -497,8 +506,9 @@ class SiteCard(_Model):
 
     @model_validator(mode="after")
     def _rules(self):
-        if [v.variable for v in self.variables] != list(PHYSICAL_VARS):
-            raise ValueError(f"variables must be the six physical variables in order: {PHYSICAL_VARS}")
+        names = [v.variable for v in self.variables]
+        if names != [x for x in PHYSICAL_VARS if x in names] or not set(CORE_VARS) <= set(names):
+            raise ValueError(f"variables must be the six core variables plus the optional ones, in the order {PHYSICAL_VARS}")
         both = {d.dimension for d in self.similar_in} & {d.dimension for d in self.different_in}
         if both:
             raise ValueError(f"a dimension cannot be both similar and different: {sorted(both)}")

@@ -54,6 +54,7 @@ from pipeline.common import (  # noqa: E402
 )
 from tai import geo, models, rules, scoring  # noqa: E402
 from tai.constants import (  # noqa: E402
+    CORE_DIMENSIONS,
     DIMENSION_VARS,
     PHYSICAL_DIMENSIONS,
     PHYSICAL_VARS,
@@ -106,7 +107,10 @@ def target_similarity(target: models.Target, features: pd.DataFrame, area: np.nd
     """similarity rows of one target; `features`, `area`, `lat`, `lon` and `bio` are aligned by row."""
     sv = {}
     for v in PHYSICAL_VARS:
-        tv = target.vars[v]
+        tv = target.vars.get(v)
+        if tv is None:  # optional variable the target does not have: null in every cell, so the dimension is too
+            sv[v] = np.full(len(features), np.nan)
+            continue
         x = features[v].to_numpy(dtype=np.float64)
         sv[v] = np.clip(rules.score_variable(tv.rule, x, area, tv.mean, tv.std, tv.earth_std), 0.0, 1.0)
     out = pd.DataFrame({"cell_id": features["cell_id"].to_numpy(dtype="int32")})
@@ -118,7 +122,7 @@ def target_similarity(target: models.Target, features: pd.DataFrame, area: np.nd
     out["bio_score"] = bio
     for c in SCORE_COLUMNS:
         out[c] = out[c].round(SCORE_DECIMALS_FILE).astype("float32")
-    out["n_physical"] = out[list(DIM_COLUMN.values())].notna().sum(axis=1).astype("int8")
+    out["n_physical"] = out[[DIM_COLUMN[d] for d in CORE_DIMENSIONS]].notna().sum(axis=1).astype("int8")
     out["eligible"] = scoring.is_eligible(out).astype(bool)
     known, km = nearest_analog(lat, lon, [a for a in analogs if a.target_id == target.target_id])
     out["known_analog"] = known.to_numpy()  # already "string" dtype; positions match `out`

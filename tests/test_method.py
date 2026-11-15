@@ -294,7 +294,7 @@ def test_validation_summary_uses_the_numbers_of_the_report(report):
 
 def test_weights_summary_lists_the_four_dimensions(report):
     text = method.weights_summary(report, {d: d.upper() for d in DIMENSIONS})
-    assert text == "Pesos de la validación: TERRAIN 1, TEMPERATURE 1, WATER_ICE 1, BIOLOGY 0,5"
+    assert text == "Pesos de la validación: TERRAIN 1, TEMPERATURE 1, WATER_ICE 1, DUST_WIND 0, BIOLOGY 0,5"
 
 
 def test_result_legend_explains_every_result_and_the_cut(report):

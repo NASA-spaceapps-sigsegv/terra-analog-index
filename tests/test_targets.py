@@ -10,7 +10,7 @@ import pytest
 
 from pipeline.common import MissingInputError
 from tai import models
-from tai.constants import PHYSICAL_VARS
+from tai.constants import CORE_VARS, PHYSICAL_VARS
 
 rasterio = pytest.importorskip("rasterio")
 from rasterio.transform import from_origin  # noqa: E402
@@ -142,14 +142,14 @@ def test_build_targets_uses_measured_and_literature_values():
     assert jezero.vars["slope_deg"].source_type == "measured"
     assert jezero.vars["tmin_c"].mean == -83.0 and jezero.vars["tmin_c"].source_type == "literature"  # de la base
     assert jezero.vars["precip_mm"].mean == 0.0 and jezero.vars["precip_mm"].source_type == "definition"
-    assert all(jezero.vars[v].earth_p99 == 10.0 and jezero.vars[v].earth_std == 2.0 for v in PHYSICAL_VARS)
-    assert set(jezero.vars) == set(PHYSICAL_VARS)
+    assert all(jezero.vars[v].earth_p99 == 10.0 and jezero.vars[v].earth_std == 2.0 for v in jezero.vars)
+    assert set(jezero.vars) == set(CORE_VARS)  # la base de prueba no trae polvo y viento: no se inventa
 
 
 def test_build_targets_asks_the_rule_with_the_target_mean_and_has_ice():
     calls = []
     step07.build_targets(base_file(), MEASURED, earth(), recording_rule(calls))
-    assert [c[0] for c in calls] == list(PHYSICAL_VARS)
+    assert [c[0] for c in calls] == list(CORE_VARS)
     by_var = {c[0]: c for c in calls}
     assert by_var["slope_deg"][1] == 4.5 and by_var["tmin_c"][1] == -83.0
     assert all(c[4] is False for c in calls)  # Jezero: has_ice = false

@@ -137,7 +137,8 @@ def finalist_candidates(sim: pd.DataFrame, grid: pd.DataFrame, weights=DEFAULT_W
     """The `n` best eligible cells that are not a known analog (design 12.2, TAI-20)."""
     ranked = scoring.rank(sim, scoring.combine(sim, weights), hide_known=True).head(n)
     g = grid.set_index("cell_id").loc[ranked["cell_id"], ["lat", "lon", "country"]].reset_index(drop=True)
-    out = pd.concat([ranked[["cell_id", "total", "s_terrain", "s_temperature", "s_water_ice", "bio_score"]]
+    out = pd.concat([ranked[[c for c in ("cell_id", "total", "s_terrain", "s_temperature", "s_water_ice", "s_dust_wind", "bio_score")
+                if c in ranked.columns]]
                      .reset_index(drop=True), g], axis=1)
     out.insert(0, "rank", range(1, len(out) + 1))
     return out

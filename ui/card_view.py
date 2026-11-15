@@ -51,9 +51,14 @@ def _score_text(x: float | None) -> str:
 
 
 def radar_axes(card: SiteCard) -> tuple[list[str], list[float]]:
-    """Etiquetas y valores de los cuatro ejes. Una dimensión nula va en 0 con "(sin dato)" en la etiqueta."""
+    """Etiquetas y valores de los ejes: uno por dimensión del objetivo (polvo y viento solo si la tiene).
+
+    Una dimensión nula va en 0 con "(sin dato)" en la etiqueta."""
+    present = {v.dimension for v in card.variables} | {"biology"}
     labels, values = [], []
     for dim in DIMENSIONS:
+        if dim not in present:
+            continue
         score = getattr(card.scores, dim)
         labels.append(DIMENSION_LABELS[dim] + (f" ({NO_DATA})" if score is None else ""))
         values.append(0.0 if score is None else score)

@@ -1,10 +1,11 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-15T02:49:46Z",
+  "generated_at": "2026-11-15T06:23:38Z",
   "weights": {
     "terrain": 1.0,
     "temperature": 1.0,
     "water_ice": 1.0,
+    "dust_wind": 1.0,
     "biology": 0.5
   },
   "percentile_threshold": 90.0,
@@ -77,9 +78,9 @@
           "covered": "yes",
           "n_cells": 4,
           "best_cell_id": 23870,
-          "best_total": 0.751,
-          "best_rank": 31,
-          "percentile": 99.9,
+          "best_total": 0.683,
+          "best_rank": 193,
+          "percentile": 99.1,
           "result": "pass"
         },
         {
@@ -88,9 +89,9 @@
           "covered": "yes",
           "n_cells": 20,
           "best_cell_id": 4298,
-          "best_total": 0.377,
-          "best_rank": 13018,
-          "percentile": 39.1,
+          "best_total": 0.299,
+          "best_rank": 15021,
+          "percentile": 29.7,
           "result": "fail"
         },
         {
@@ -99,9 +100,9 @@
           "covered": "yes",
           "n_cells": 5,
           "best_cell_id": 23871,
-          "best_total": 0.794,
-          "best_rank": 3,
-          "percentile": 100.0,
+          "best_total": 0.688,
+          "best_rank": 158,
+          "percentile": 99.3,
           "result": "pass"
         },
         {
@@ -110,9 +111,9 @@
           "covered": "partial",
           "n_cells": 6,
           "best_cell_id": 45783,
-          "best_total": 0.743,
-          "best_rank": 46,
-          "percentile": 99.8,
+          "best_total": 0.681,
+          "best_rank": 204,
+          "percentile": 99.0,
           "result": "info"
         },
         {
@@ -121,9 +122,9 @@
           "covered": "no",
           "n_cells": 1,
           "best_cell_id": 45893,
-          "best_total": 0.583,
-          "best_rank": 2052,
-          "percentile": 90.4,
+          "best_total": 0.584,
+          "best_rank": 2079,
+          "percentile": 90.3,
           "result": "info"
         }
       ]

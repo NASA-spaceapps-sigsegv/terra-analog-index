@@ -24,10 +24,14 @@ DATA_YEAR = 2024  # assumption: year of the Earth data (IMERG Final ends at 2025
 SIGMA_FLOOR_FRAC = 0.10  # overlap rule: sigma floor as a fraction of Earth std
 SIMILAR_MIN = 0.70  # a dimension at or above this "looks alike"
 DIFFERENT_MAX = 0.30  # a dimension below this "differs"
-MIN_PHYSICAL_DIMS = 2  # physical dimensions with data needed to be eligible
+MIN_PHYSICAL_DIMS = 2  # core physical dimensions with data needed to be eligible
 
 # --- Dimensions and variables (design 4) -------------------------------------
-PHYSICAL_DIMENSIONS = ("terrain", "temperature", "water_ice")
+# Core dimensions apply to every target and decide eligibility (design 5.7). Optional ones apply only to
+# the targets that define their variables: dust and wind (TAI-52) needs an atmosphere, so the Moon has none.
+CORE_DIMENSIONS = ("terrain", "temperature", "water_ice")
+OPTIONAL_DIMENSIONS = ("dust_wind",)
+PHYSICAL_DIMENSIONS = CORE_DIMENSIONS + OPTIONAL_DIMENSIONS
 DIMENSIONS = PHYSICAL_DIMENSIONS + ("biology",)
 
 DIMENSION_VARS = MappingProxyType(
@@ -35,9 +39,12 @@ DIMENSION_VARS = MappingProxyType(
         "terrain": ("slope_deg", "roughness_m"),
         "temperature": ("tmin_c", "trange_c"),
         "water_ice": ("precip_mm", "ice_frac"),
+        "dust_wind": ("dust_aod", "wind_ms"),
     }
 )
 PHYSICAL_VARS = tuple(v for dim in PHYSICAL_DIMENSIONS for v in DIMENSION_VARS[dim])
+CORE_VARS = tuple(v for dim in CORE_DIMENSIONS for v in DIMENSION_VARS[dim])  # every target has these six
+OPTIONAL_VARS = tuple(v for dim in OPTIONAL_DIMENSIONS for v in DIMENSION_VARS[dim])
 
 # Valid ranges (design 3.3). None means unbounded on that side.
 # Out-of-range values make the producing step fail without writing output.
@@ -49,6 +56,8 @@ VALID_RANGES = MappingProxyType(
         "trange_c": (0.0, None),
         "precip_mm": (0.0, None),
         "ice_frac": (0.0, 1.0),
+        "dust_aod": (0.0, None),  # dust optical depth at 550 nm (MERRA-2 DUEXTTAU)
+        "wind_ms": (0.0, None),  # surface wind speed, m/s (MERRA-2 SPEED)
         "bio_records": (0, None),
         "bio_types": (0, 6),
         "area_km2": (0.0, None),  # strictly > 0, checked separately
@@ -61,8 +70,8 @@ SOURCE_TYPES = ("measured", "literature", "definition")
 
 # --- Weights (design 5.6) ----------------------------------------------------
 DEFAULT_WEIGHTS = MappingProxyType(
-    {"terrain": 1.0, "temperature": 1.0, "water_ice": 1.0, "biology": 0.5}
-)  # assumption
+    {"terrain": 1.0, "temperature": 1.0, "water_ice": 1.0, "dust_wind": 1.0, "biology": 0.5}
+)  # assumption; dust_wind (TAI-52) weighs like the other physical dimensions
 WEIGHT_STEP = 0.05
 
 # --- Targets (design 2.2) ----------------------------------------------------

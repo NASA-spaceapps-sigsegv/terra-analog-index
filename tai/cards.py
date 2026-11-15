@@ -73,11 +73,14 @@ VAR_LABELS = {
     "trange_c": "Rango térmico diario",
     "precip_mm": "Precipitación anual",
     "ice_frac": "Nieve o hielo",
+    "dust_aod": "Polvo en suspensión",
+    "wind_ms": "Viento en superficie",
 }
 DIMENSION_LABELS = {
     "terrain": "Terreno",
     "temperature": "Temperatura",
     "water_ice": "Agua y hielo",
+    "dust_wind": "Polvo y viento",
     "biology": "Interés astrobiológico",
 }
 # Copia de las etiquetas de config/bio_terms.json (la app no lee config/); una prueba las mantiene iguales.
@@ -91,7 +94,7 @@ BIO_TYPE_LABELS = {
 }
 
 # Decimales con que se escribe cada unidad en las frases.
-UNIT_DECIMALS = {"mm/año": 0, "fracción": 2}
+UNIT_DECIMALS = {"mm/año": 0, "fracción": 2, "": 2}  # "": espesor óptico, sin unidad
 DEFAULT_DECIMALS = 1
 
 # De qué entrada del manifiesto sale cada variable terrestre: (paso, prefijo del producto).
@@ -102,6 +105,8 @@ EARTH_SOURCE = {
     "trange_c": ("03_temperature", ""),
     "precip_mm": ("04_water_ice", "GPM"),
     "ice_frac": ("04_water_ice", "MOD10"),
+    "dust_aod": ("04_dust_wind", "M2TMNXAER"),
+    "wind_ms": ("04_dust_wind", "M2TMNXFLX"),
 }
 BIO_STEP = "05_biology_ncbi"
 BIO_SOURCE = "NCBI BioSample"
@@ -153,19 +158,25 @@ def _pct(x: float) -> int:
 # --- Frases ----------------------------------------------------------------------------
 
 
+def _no_double_space(text: str) -> str:
+    """Una variable sin unidad (el espesor óptico) deja "0,12  frente a" o "(0,45 )"; se limpia."""
+    return text.replace("  ", " ").replace(" )", ")")
+
+
 def variable_phrase(variable: str, rule: str, earth_value, score, mean: float, std: float, unit: str) -> str:
     """La frase de 11.2 que corresponde a la regla. Sin dato: PHRASE_NO_DATA."""
     if _missing(earth_value) or _missing(score):
         return PHRASE_NO_DATA
     if rule == "overlap":
-        return PHRASE_OVERLAP.format(
+        return _no_double_space(PHRASE_OVERLAP.format(
             value=unit_value(earth_value, unit), unit=unit, mean=unit_value(mean, unit), std=unit_value(std, unit)
-        )
+        ))
     if rule == "directional_low":
         adjective = DIRECTIONAL_ADJECTIVE.get(variable, "baja")
-        return PHRASE_DIRECTIONAL_LOW.format(adjective=adjective, pct=_pct(score), mean=unit_value(mean, unit), unit=unit)
+        return _no_double_space(PHRASE_DIRECTIONAL_LOW.format(
+            adjective=adjective, pct=_pct(score), mean=unit_value(mean, unit), unit=unit))
     if rule == "directional_high":
-        return PHRASE_DIRECTIONAL_HIGH.format(pct=_pct(score), mean=unit_value(mean, unit), unit=unit)
+        return _no_double_space(PHRASE_DIRECTIONAL_HIGH.format(pct=_pct(score), mean=unit_value(mean, unit), unit=unit))
     if rule == "presence":
         return PHRASE_PRESENCE.format(pct=_pct(earth_value))
     if rule == "absence":
@@ -310,7 +321,9 @@ def build_card(
     variables = []
     for dim in PHYSICAL_DIMENSIONS:
         for var in DIMENSION_VARS[dim]:
-            t = target.vars[var]
+            t = target.vars.get(var)
+            if t is None:  # variable opcional que el objetivo no tiene (polvo y viento en la Luna)
+                continue
             earth = None if _missing(features_row.get(var)) else float(features_row[var])
             score = _round(sim_row.get(f"sv_{var}"))
             variables.append(

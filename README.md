@@ -1,10 +1,10 @@
 # Terra Analog Index
 
 Which places on Earth look most like the lunar south pole or Jezero crater on Mars? Terra Analog Index
-splits Earth's land into 1° cells (about 110 km), measures each one on terrain, temperature, and water
-and ice, and scores how close it comes to each target. You choose how much each dimension weighs and
+splits Earth's land into 1° cells (about 110 km), measures each one on terrain, temperature, water and
+ice, and (for Mars) dust and wind, and scores how close it comes to each target. You choose how much each dimension weighs and
 the app ranks the best Earth analogs, explaining where each one matches the target and where the
-analogy breaks down. A fourth dimension, astrobiological interest, counts records of extremophile life
+analogy breaks down. A last dimension, astrobiological interest, counts records of extremophile life
 in NCBI BioSample.
 
 Built for NASA Space Apps Challenge 2026.
@@ -30,7 +30,7 @@ make app           # opens http://localhost:8501
 
 The app's interface is in Spanish. In the sidebar you pick the target (*Sitio objetivo*) and the
 weights; the map colors every cell by its total score; selecting a row of the ranking (*Mejores
-celdas*) opens that cell's card (*Ficha*), with a radar of the four dimensions, Earth against target for
+celdas*) opens that cell's card (*Ficha*), with a radar of its dimensions, Earth against target for
 each variable, the sources, and the limits that no place on Earth can replicate.
 
 The *Método* tab shows how the numbers are made: what the tool does, the variables of each target with
@@ -47,7 +47,7 @@ with its percentile and `pass`, `fail` or `info`), the limits and the credits. I
 ## Regenerate the data, step by step
 
 The app only reads `data/processed/`. Everything in it comes from an offline pipeline of nine steps
-that runs on a laptop. A full run downloads about 4.1 GB.
+that runs on a laptop. A full run downloads about 5.9 GB.
 
 **1. Accounts and credentials.** Put them in a `.env` file at the repository root (it is git-ignored;
 one `NAME=value` per line, no quotes). The `Makefile` loads it.
@@ -88,6 +88,7 @@ make pipeline BBOX="-30 -20 -75 -65"   # quick test on a region (lat min, lat ma
 | `01_grid` | Natural Earth land and countries | `data/processed/grid.parquet`, land mask |
 | `02_terrain` | ETOPO 2022 elevation | slope and roughness per cell |
 | `03_temperature` | MODIS MOD11C3 monthly land surface temperature | minimum temperature and daily range per cell |
+| `04_dust_wind` | MERRA-2 monthly dust optical depth and surface wind speed | dust and wind per cell |
 | `04_water_ice` | GPM IMERG precipitation, MODIS MOD10CM snow cover, MCD12C1 land cover | precipitation and snow/ice fraction per cell |
 | `05_biology_ncbi` | NCBI BioSample (network) | `data/processed/bio_samples.parquet`, records per cell |
 | `06_features` | steps 02 to 05 | `data/processed/features.parquet` and Earth statistics |
@@ -112,7 +113,11 @@ anything on Earth (−223 °C at the lunar south pole), the score says how extre
 land: 0.95 means "colder than 95% of the land area", not "95% like the Moon". Ice scores presence or
 absence, depending on whether the target has surface ice. A dimension is the mean of its variables, and
 the total is the weighted mean of the dimensions that have data. A cell needs data in at least two of
-the three physical dimensions to be ranked.
+the three core physical dimensions (terrain, temperature, water and ice) to be ranked.
+
+Dust and wind applies only to Mars: the Moon has no atmosphere, so its total leaves that dimension out.
+Jezero's dust optical depth (about 0.45) is beyond almost all of Earth, so dustier cells score higher;
+its daytime wind (about 4 m/s) is within Earth's range, so the score measures closeness.
 
 To validate the method, the known analogs in `config/known_analogs.csv` (field sites that research
 teams already use) should land in the top 10% of their target's ranking. The results, including the
@@ -128,6 +133,8 @@ ones that fail and why, are in `data/processed/validation.json` and in the app's
 | GPM IMERG Final monthly V07, 2024 | Earth precipitation | [GES DISC](https://disc.gsfc.nasa.gov/datasets/GPM_3IMERGM_07/summary) | NASA open data |
 | MODIS/Terra MOD10CM v061, 2024 | Earth snow cover | [NSIDC, doi:10.5067/MODIS/MOD10CM.061](https://doi.org/10.5067/MODIS/MOD10CM.061) | NASA open data |
 | MODIS MCD12C1 v061, 2024 | Permanent snow and ice | [LP DAAC, doi:10.5067/MODIS/MCD12C1.061](https://doi.org/10.5067/MODIS/MCD12C1.061) | NASA open data |
+| MERRA-2 M2TMNXAER v5.12.4, 2024 | Earth dust optical depth | [GES DISC, doi:10.5067/FH9A0MLJPC7N](https://doi.org/10.5067/FH9A0MLJPC7N) | NASA open data |
+| MERRA-2 M2TMNXFLX v5.12.4, 2024 | Earth surface wind speed | [GES DISC, doi:10.5067/0JRLVL8YV2Y4](https://doi.org/10.5067/0JRLVL8YV2Y4) | NASA open data |
 | NCBI BioSample | Extremophile records | [NCBI](https://www.ncbi.nlm.nih.gov/biosample) | Public NCBI data ([policies](https://www.ncbi.nlm.nih.gov/home/about/policies/)) |
 | LOLA LDEM_80S_80MPP_ADJ (LRO) | Lunar south pole terrain | [NASA PGDA](https://pgda.gsfc.nasa.gov/products/90) | NASA open data |
 | MOLA global mosaic, 463 m (MGS) | Jezero terrain | [USGS Astrogeology](https://planetarymaps.usgs.gov/mosaic/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif) | Public domain (U.S. Government) |
@@ -137,6 +144,8 @@ Target values that cannot be measured from a map come from the literature:
 - Lunar south pole temperatures: Williams, J.-P. et al. (2017). The global surface temperatures of the Moon as measured by the Diviner Lunar Radiometer Experiment. *Icarus* 283, 300–325. doi:10.1016/j.icarus.2016.08.012
 - Lunar surface ice: Li, S. et al. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. *PNAS* 115(36), 8907–8912. doi:10.1073/pnas.1802345115
 - Jezero temperatures (MEDA, Perseverance): Savijärvi, H. et al. (2023), *JGR Planets*, doi:10.1029/2022JE007438; Atri, D. et al. (2022), *MNRAS*, arXiv:2204.12850
+- Jezero dust: Rodriguez-Manfredi, J. A. et al. (2023). The diverse meteorology of Jezero crater over the first 250 sols of Perseverance on Mars. *Nature Geoscience* 16, 19–28. doi:10.1038/s41561-022-01084-0; Lemmon, M. T. et al. (2022), *Geophysical Research Letters*, doi:10.1029/2022GL100126
+- Jezero wind: Newman, C. E. et al. (2022). The dynamic atmospheric and aeolian environment of Jezero crater, Mars. *Science Advances* 8, eabn3783. doi:10.1126/sciadv.abn3783
 - Ice on Mars: Morgan, G. A. et al. (2021). Availability of subsurface water-ice resources in the northern mid-latitudes of Mars. *Nature Astronomy* 5, 230–236
 
 Each known analog cites its source in `config/known_analogs.csv`. The site card in the app cites the
@@ -151,8 +160,9 @@ source of every value it shows.
   famous sites score higher and unexplored ones score 0. It uses a logarithm, starts at half weight,
   and every card says that missing records may mean nobody sampled there.
 - **Cells of about 110 km.** A crater, a salt flat or a cave is averaged out within its cell.
-- **Missing dimensions.** Geology and mineralogy, dust and wind, subsurface and rover operations are
-  out of scope.
+- **Missing dimensions.** Geology and mineralogy, subsurface and rover operations are out of scope.
+- **Dust and wind on Earth come from a reanalysis** (MERRA-2, a model), not an observation, and Earth's
+  wind is at about 10 m while Perseverance measures it at 1.5 m.
 - **One year of data** (2024), and **surface temperature**, not air temperature.
 - **The lunar day lasts about 29.5 Earth days**, so the lunar "daily range" is the range over a lunar
   cycle.
@@ -164,7 +174,6 @@ source of every value it shows.
 
 - Download the ranking as CSV.
 - Refine the finalist areas to 0.5° cells.
-- A dust and wind dimension.
 - A map layer of known caves and lava tubes.
 - More targets beyond the lunar south pole and Jezero.
 
