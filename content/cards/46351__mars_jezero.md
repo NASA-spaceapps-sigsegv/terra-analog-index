@@ -1,6 +1,6 @@
 # Playa de Dalangtan, cuenca de Qaidam (Qinghai, China)
 
-Esta celda es la primera del ranking de Jezero fuera de los análogos conocidos (0,86); su vecina, la 46350, es la segunda [1]. Contiene la playa salina de Dalangtan, en el noroeste de la cuenca de Qaidam: la literatura la ubica entre 38°0′ y 38°40′ N y entre 91°10′ y 92°10′ E [2].
+Esta celda es la primera del ranking de Jezero fuera de los análogos conocidos (0,84); su vecina, la 46350, es la segunda [1]. Contiene la playa salina de Dalangtan, en el noroeste de la cuenca de Qaidam: la literatura la ubica entre 38°0′ y 38°40′ N y entre 91°10′ y 92°10′ E [2].
 
 **Qué se sabe.** No es un hallazgo: se la estudia como posible análogo de Marte desde 2008, por sus sulfatos de magnesio, cloruros y percloratos [2]. Sus depósitos hipersalinos, su clima árido y su radiación ultravioleta alta la hacen un análogo por su geomorfología y por la preservación de vida [3]. Bajo las rocas hay comunidades microbianas que podrían servir de refugio [4].
 

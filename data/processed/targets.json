@@ -99,10 +99,10 @@
       "label": "Marte, cráter Jezero",
       "body": "mars",
       "bounds": {
-        "lat_min": 17.9,
-        "lat_max": 18.9,
-        "lon_min": 77.0,
-        "lon_max": 78.0
+        "lat_min": 18.01,
+        "lat_max": 18.81,
+        "lon_min": 77.27,
+        "lon_max": 78.11
       },
       "has_ice": false,
       "has_ice_source": "Morgan, G. A. et al. (2021). Availability of subsurface water-ice resources in the northern mid-latitudes of Mars. Nature Astronomy 5, 230-236. El hielo accesible está al norte de unos 35-40° N; Jezero (18,4° N) queda fuera",
@@ -117,22 +117,22 @@
       "notes": [],
       "vars": {
         "slope_deg": {
-          "mean": 2.2830611106729837,
-          "std": 2.4466391419588307,
+          "mean": 2.7621814606642072,
+          "std": 3.0527098945285642,
           "unit": "°",
           "rule": "overlap",
-          "source": "MOLA, mosaico global de 463 m (USGS Astrogeology), degradado a 1 km",
+          "source": "Mars MGS MOLA DEM 463m",
           "source_type": "measured",
           "earth_p01": 0.042,
           "earth_p99": 11.979,
           "earth_std": 2.51
         },
         "roughness_m": {
-          "mean": 52.64079638597292,
-          "std": 49.99142133720651,
+          "mean": 64.15936526518962,
+          "std": 61.1335552506331,
           "unit": "m",
           "rule": "overlap",
-          "source": "MOLA, mosaico global de 463 m (USGS Astrogeology), degradado a 1 km",
+          "source": "Mars MGS MOLA DEM 463m",
           "source_type": "measured",
           "earth_p01": 0.842,
           "earth_p99": 235.612,
