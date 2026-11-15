@@ -12,8 +12,7 @@ Built for NASA Space Apps Challenge 2026.
 <!-- TODO (TAI-36): link to the deployed app -->
 **Live app:** _coming soon_
 
-<!-- TODO: save a screenshot as docs/img/app.png and uncomment the next line -->
-<!-- ![Terra Analog Index: map, ranking and site card](docs/img/app.png) -->
+![Terra Analog Index: map, ranking and site card](docs/img/app.png)
 
 ## Run the app
 
@@ -33,6 +32,11 @@ The app's interface is in Spanish. In the sidebar you pick the target (*Sitio ob
 weights; the map colors every cell by its total score; selecting a row of the ranking (*Mejores
 celdas*) opens that cell's card (*Ficha*), with a radar of the four dimensions, Earth against target for
 each variable, the sources, and the limits that no place on Earth can replicate.
+
+The *Método* tab shows how the numbers are made: what the tool does, the variables of each target with
+their sources, the data and its licenses, the scoring rules, the validation table (every known analog
+with its percentile and `pass`, `fail` or `info`), the limits and the credits. Its text is in
+`content/method.md`; every figure and table comes from `data/processed/`.
 
 **Windows:** run `make` from Git Bash or WSL. Without `make`, the same commands are in the
 `Makefile`: `python -m venv .venv`, `.venv\Scripts\python -m pip install -r requirements.txt`,
@@ -168,11 +172,12 @@ source of every value it shows.
 
 | Folder | Contents |
 | --- | --- |
-| `tai/` | Shared core: constants, grid geometry, contract models, scoring rules, site cards. No Streamlit, no network, no file writes |
+| `tai/` | Shared core: constants, grid geometry, contract models, scoring rules, site cards, *Método* tables. No Streamlit, no network, no file writes |
 | `pipeline/` | Steps `01_grid.py` to `09_validation.py` and shared utilities in `common.py` |
-| `ui/` | Streamlit views: sidebar, map, ranking, site card |
+| `ui/` | Streamlit views: sidebar, map, ranking, site card, *Método* tab |
 | `config/` | Hand-edited inputs: target profiles, known analogs, NCBI search terms |
 | `content/cards/` | Hand-written text for finalist cards, `<cell_id>__<target_id>.md` |
+| `content/method.md` | Fixed text of the *Método* tab, one `## ` heading per section |
 | `data/raw/`, `data/interim/` | Downloads and intermediate files (not versioned; see `data/raw/README.md`) |
 | `data/processed/` | What the app reads (versioned) |
 | `scripts/` | Control maps, card and secret checks |
