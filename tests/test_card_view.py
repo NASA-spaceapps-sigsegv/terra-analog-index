@@ -31,6 +31,17 @@ def test_variables_table_shows_earth_against_target():
     assert df.iloc[2]["Tierra"] == "sin dato" and np.isnan(df.iloc[2]["Puntaje"])
 
 
+def test_variables_html_wraps_long_readings_and_keeps_bars():
+    card = example_card(feature_changes={"tmin_c": np.nan}, sim_changes={"sv_tmin_c": np.nan})
+    out = card_view.variables_html(card, "#123456")
+    assert out.count("<tr>") == 7  # encabezado y 6 variables
+    assert 'class="reading"' in out and "overflow-wrap: anywhere" in out
+    assert "white-space: nowrap" not in out.split(".tai-vars td.reading")[1].split("}")[0]
+    assert out.count("background:#123456") == 5  # una barra por variable con puntaje
+    assert "sin dato" in out
+    assert "Más fría" not in out  # la temperatura mínima sin dato no tiene frase direccional
+
+
 @pytest.fixture
 def app(data_dir, monkeypatch):
     monkeypatch.setenv("TAI_DATA_DIR", str(data_dir))
@@ -50,7 +61,9 @@ def test_selected_cell_shows_its_card_with_limits_and_sampling_note(app):
     assert "Límites que ningún sitio terrestre replica" in text and "gravedad" in text
     assert "La falta de registros puede deberse" in text
     assert len(app.get("plotly_chart")) == 2  # mapa y radar
-    assert len(app.dataframe) == 2  # ranking y variables
+    assert len(app.dataframe) == 1  # el ranking; la tabla de variables va en HTML
+    table = [h for h in app.get("html") if "tai-vars" in h.proto.body]
+    assert len(table) == 1 and "Pendiente media" in table[0].proto.body
 
 
 def test_card_updates_when_the_weights_change(app):

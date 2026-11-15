@@ -8,6 +8,7 @@ se aleja en, interés astrobiológico, límites y fuentes.
 
 from __future__ import annotations
 
+import html
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -24,6 +25,26 @@ NO_DATA = "sin dato"
 MANUAL_HEADING = "Para qué sirve en la exploración"
 LIMITS_HEADING = "Límites que ningún sitio terrestre replica"
 RADAR_COLOR = "#21918c"  # verde de la escala Viridis del mapa
+BAR_FALLBACK = "#E07A3F"  # primaryColor de .streamlit/config.toml, si la opción no está
+
+# La tabla de variables va en HTML y no en st.dataframe: la grilla de st.dataframe solo parte el texto
+# si todas las filas tienen la misma altura fija, y la columna "Lectura" necesita que cada fila crezca
+# lo que necesite su frase. Los colores usan currentColor para seguir el tema claro u oscuro.
+TABLE_CSS = """
+<style>
+.tai-vars { width: 100%; border-collapse: collapse; font-size: 0.875rem; line-height: 1.35; }
+.tai-vars th, .tai-vars td { padding: 0.45rem 0.6rem; text-align: left; vertical-align: top;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
+.tai-vars th { font-weight: 400; opacity: 0.7; white-space: nowrap; }
+.tai-vars td.num { white-space: nowrap; }
+.tai-vars td.reading { overflow-wrap: anywhere; }
+.tai-bar { display: flex; align-items: center; gap: 0.5rem; min-width: 7rem; }
+.tai-bar .track { flex: 1; height: 0.4rem; border-radius: 0.2rem;
+  background: color-mix(in srgb, currentColor 15%, transparent); }
+.tai-bar .fill { height: 100%; border-radius: 0.2rem; }
+.tai-bar .value { font-size: 0.8rem; min-width: 2.2rem; text-align: right; }
+</style>
+"""
 
 VARIABLE_COLUMNS = ("Variable", "Tierra", "Objetivo", "Puntaje", "Lectura")
 
@@ -76,6 +97,31 @@ def variables_table(card: SiteCard) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=list(VARIABLE_COLUMNS))
 
 
+def _bar(score: float | None, color: str) -> str:
+    if score is None or score != score:  # nulo o NaN
+        return f'<span style="opacity:0.6">{NO_DATA}</span>'
+    pct = max(0.0, min(1.0, score)) * 100
+    return (
+        f'<div class="tai-bar"><div class="track"><div class="fill" style="width:{pct:.0f}%;background:{color}">'
+        f'</div></div><span class="value">{_score_text(score)}</span></div>'
+    )
+
+
+def variables_html(card: SiteCard, bar_color: str = BAR_FALLBACK) -> str:
+    """La tabla de variables como HTML: el texto largo se parte y la fila crece."""
+    df = variables_table(card)
+    e = html.escape
+    head = "".join(f"<th>{e(c)}</th>" for c in VARIABLE_COLUMNS)
+    rows = "".join(
+        "<tr>"
+        f"<td>{e(r.Variable)}</td><td class=\"num\">{e(r.Tierra)}</td><td class=\"num\">{e(r.Objetivo)}</td>"
+        f"<td>{_bar(r.Puntaje, bar_color)}</td><td class=\"reading\">{e(r.Lectura)}</td>"
+        "</tr>"
+        for r in df.itertuples(index=False)
+    )
+    return f'{TABLE_CSS}<table class="tai-vars"><thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table>'
+
+
 def _dimension_list(title: str, items, empty_phrase: str | None) -> None:
     st.markdown(f"**{title}**")
     if items:
@@ -108,17 +154,7 @@ def render_card(card: SiteCard) -> None:
     st.plotly_chart(radar_figure(card), width="stretch", config={"displayModeBar": False})
 
     # 4. Tabla de variables
-    st.dataframe(
-        variables_table(card),
-        hide_index=True,
-        placeholder=NO_DATA,
-        column_config={
-            "Puntaje": st.column_config.ProgressColumn(
-                "Puntaje", format=f"%.{SCORE_DECIMALS_UI}f", min_value=0.0, max_value=1.0
-            ),
-            "Lectura": st.column_config.TextColumn("Lectura", width="large"),
-        },
-    )
+    st.html(variables_html(card, st.get_option("theme.primaryColor") or BAR_FALLBACK))
     for note in card.notes:
         st.caption(note)
 
