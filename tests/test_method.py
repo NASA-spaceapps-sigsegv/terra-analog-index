@@ -177,6 +177,19 @@ def test_the_method_file_lives_in_content():
     assert services.METHOD_PATH == Path(__file__).resolve().parents[1] / "content" / "method.md"
 
 
+def test_the_real_method_file_has_the_six_sections_with_text():
+    """content/method.md es lo que lee la pestaña: si alguien deja una sección vacía, esta prueba lo avisa."""
+    sections = method.read_method(services.METHOD_PATH)
+    assert method.pending_sections(sections) == [], "faltan o están vacías: " + ", ".join(method.pending_sections(sections))
+    assert set(sections) == set(method.SECTIONS)  # ningún encabezado de más ni mal escrito
+
+
+def test_the_real_method_file_has_no_wiki_style_quotes_or_placeholders():
+    text = services.METHOD_PATH.read_text(encoding="utf-8")
+    assert "''" not in text, "en Markdown la cursiva es *así*, no ''así''"
+    assert "TODO" not in text and "texto pendiente" not in text.lower()
+
+
 # --- Tabla de variables -----------------------------------------------------------------------------------
 
 
