@@ -170,6 +170,13 @@ def test_real_known_analogs_csv_validates():
         models.KnownAnalog.model_validate(row)
 
 
+def test_real_caves_csv_validates():
+    df = pd.read_csv(_real("caves.csv"))
+    assert tuple(df.columns) == schemas.CAVES_COLUMNS
+    for row in df.to_dict(orient="records"):
+        models.Cave.model_validate(row)
+
+
 def test_real_similarity_has_one_row_per_cell_and_target_with_scores_in_range():
     grid = pd.read_parquet(_real("grid.parquet"))
     sim = pd.read_parquet(_real("similarity.parquet"))

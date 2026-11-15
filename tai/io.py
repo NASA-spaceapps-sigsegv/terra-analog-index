@@ -14,8 +14,8 @@ import pandas as pd
 
 from tai import schemas
 from tai.errors import DataNotAvailableError
-from tai.models import KnownAnalog, Manifest, TargetsFile, ValidationReport
-from tai.schemas import KNOWN_ANALOGS_COLUMNS
+from tai.models import Cave, KnownAnalog, Manifest, TargetsFile, ValidationReport
+from tai.schemas import CAVES_COLUMNS, KNOWN_ANALOGS_COLUMNS
 
 # archivo -> paso del pipeline que lo genera
 REQUIRED_FILES = MappingProxyType(
@@ -26,6 +26,7 @@ REQUIRED_FILES = MappingProxyType(
         "targets.json": "07_targets",
         "similarity.parquet": "08_similarity",
         "known_analogs.csv": "08_similarity",
+        "caves.csv": "08_similarity",
         "validation.json": "09_validation",
         "manifest.json": "cualquier paso del pipeline",
     }
@@ -42,6 +43,7 @@ class DataBundle:
     similarity: Mapping[str, pd.DataFrame]  # target_id -> tabla indexada por cell_id
     targets: TargetsFile
     known_analogs: tuple[KnownAnalog, ...]
+    caves: tuple[Cave, ...]  # capa informativa del mapa (TAI-53)
     validation: ValidationReport
     manifest: Manifest
 
@@ -90,20 +92,24 @@ def _read_json(path: Path, name: str, model):
         raise _fail(name, f"no valida contra su modelo ({exc})") from exc
 
 
-def _read_known_analogs(path: Path) -> tuple[KnownAnalog, ...]:
-    name = "known_analogs.csv"
+def _read_csv_rows(path: Path, name: str, columns: tuple[str, ...], model) -> tuple:
+    """Filas de un CSV de configuración ya validado por el paso 08, una por instancia de `model`."""
     f = _require(path, name)
     try:
         df = pd.read_csv(f)
-        if tuple(df.columns) != KNOWN_ANALOGS_COLUMNS:
-            raise ValueError(f"columnas {list(df.columns)}, se esperaban {list(KNOWN_ANALOGS_COLUMNS)}")
-        return tuple(KnownAnalog.model_validate(r) for r in df.to_dict(orient="records"))
+        if tuple(df.columns) != columns:
+            raise ValueError(f"columnas {list(df.columns)}, se esperaban {list(columns)}")
+        return tuple(model.model_validate(r) for r in df.to_dict(orient="records"))
     except (OSError, ValueError) as exc:
         raise _fail(name, f"no es válido ({exc})") from exc
 
 
+def _read_known_analogs(path: Path) -> tuple[KnownAnalog, ...]:
+    return _read_csv_rows(path, "known_analogs.csv", KNOWN_ANALOGS_COLUMNS, KnownAnalog)
+
+
 def load_bundle(path: Path | str) -> DataBundle:
-    """Lee los 8 archivos de `path`, los valida y arma el DataBundle."""
+    """Lee los 9 archivos de `path`, los valida y arma el DataBundle."""
     path = Path(path)
     grid = _read_table(path, "grid.parquet", "grid")
     features = _read_table(path, "features.parquet", "features")
@@ -111,6 +117,7 @@ def load_bundle(path: Path | str) -> DataBundle:
     sim = _read_table(path, "similarity.parquet", "similarity")
     targets = _read_json(path, "targets.json", TargetsFile)
     analogs = _read_known_analogs(path)
+    caves = _read_csv_rows(path, "caves.csv", CAVES_COLUMNS, Cave)
     validation = _read_json(path, "validation.json", ValidationReport)
     manifest = _read_json(path, "manifest.json", Manifest)
 
@@ -131,6 +138,7 @@ def load_bundle(path: Path | str) -> DataBundle:
         similarity=MappingProxyType(by_target),
         targets=targets,
         known_analogs=analogs,
+        caves=caves,
         validation=validation,
         manifest=manifest,
     )

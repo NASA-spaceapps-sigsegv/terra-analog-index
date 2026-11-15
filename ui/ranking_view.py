@@ -98,7 +98,8 @@ def render_ranking(ranking: Ranking, selected_cell_id: int | None, csv_text: str
         return
 
     cell_ids = tuple(item.cell_id for item in ranking.items)
-    key = table_key(ranking.target_id, cell_ids)
+    # Con la celda elegida en la clave, la fila marcada sigue a la ficha aunque se elija desde la tabla de cuevas.
+    key = f"{table_key(ranking.target_id, cell_ids)}_{selected_cell_id}"
     table = ranking_table(ranking)
     st.dataframe(
         table,

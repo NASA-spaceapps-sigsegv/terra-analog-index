@@ -32,7 +32,9 @@ The app's interface is in Spanish. In the sidebar you pick the target (*Sitio ob
 weights; the map colors every cell by its total score; selecting a row of the ranking (*Mejores
 celdas*) opens that cell's card (*Ficha*), with a radar of its dimensions, Earth against target for
 each variable, the sources, and the limits that no place on Earth can replicate. *Descargar CSV*, under
-the ranking, saves the table as it is shown (same rows and columns).
+the ranking, saves the table as it is shown (same rows and columns). *Mostrar cuevas y tubos de lava*,
+off by default, adds known caves and lava tubes studied as Moon and Mars analogs to the map, with
+the reason and the source on hover. It is informative only and changes no score.
 
 The *Método* tab shows how the numbers are made: what the tool does, the variables of each target with
 their sources, the data and its licenses, the scoring rules, the validation table (every known analog
@@ -94,7 +96,7 @@ make pipeline BBOX="-30 -20 -75 -65"   # quick test on a region (lat min, lat ma
 | `05_biology_ncbi` | NCBI BioSample (network) | `data/processed/bio_samples.parquet`, records per cell |
 | `06_features` | steps 02 to 05 | `data/processed/features.parquet` and Earth statistics |
 | `07_targets` | `config/targets_base.json`, LOLA and MOLA elevation | `data/processed/targets.json` |
-| `08_similarity` | features, targets, `config/known_analogs.csv` | `data/processed/similarity.parquet`, `known_analogs.csv` |
+| `08_similarity` | features, targets, `config/known_analogs.csv`, `config/caves.csv` | `data/processed/similarity.parquet`, `known_analogs.csv`, `caves.csv` |
 | `09_validation` | similarity and known analogs | `data/processed/validation.json` |
 
 Every step records its inputs, outputs and timing in `data/processed/manifest.json`.
@@ -149,7 +151,9 @@ Target values that cannot be measured from a map come from the literature:
 - Jezero wind: Newman, C. E. et al. (2022). The dynamic atmospheric and aeolian environment of Jezero crater, Mars. *Science Advances* 8, eabn3783. doi:10.1126/sciadv.abn3783
 - Ice on Mars: Morgan, G. A. et al. (2021). Availability of subsurface water-ice resources in the northern mid-latitudes of Mars. *Nature Astronomy* 5, 230–236
 
-Each known analog cites its source in `config/known_analogs.csv`. The site card in the app cites the
+Each known analog cites its source in `config/known_analogs.csv`, and each cave or lava tube in
+`config/caves.csv` (among them NASA BRAILLE, NASA SSERVI FINESSE, ESA PANGAEA-X, CHILL-ICE and Sauro, F.
+et al. (2020), Lava tubes on Earth, Moon and Mars, *Earth-Science Reviews* 209, 103288). The site card in the app cites the
 source of every value it shows.
 
 ## Limitations
@@ -160,7 +164,8 @@ source of every value it shows.
 - **Biological sampling bias.** Astrobiological interest reflects where people have taken samples:
   famous sites score higher and unexplored ones score 0. It uses a logarithm, starts at half weight,
   and every card says that missing records may mean nobody sampled there.
-- **Cells of about 110 km.** A crater, a salt flat or a cave is averaged out within its cell.
+- **Cells of about 110 km.** A crater, a salt flat or a cave is averaged out within its cell; that is why
+  caves and lava tubes are shown as points on the map, without a score.
 - **Missing dimensions.** Geology and mineralogy, subsurface and rover operations are out of scope.
 - **Dust and wind on Earth come from a reanalysis** (MERRA-2, a model), not an observation, and Earth's
   wind is at about 10 m while Perseverance measures it at 1.5 m.
@@ -174,7 +179,6 @@ source of every value it shows.
 ## Future work
 
 - Refine the finalist areas to 0.5° cells.
-- A map layer of known caves and lava tubes.
 - More targets beyond the lunar south pole and Jezero.
 
 ## Development
@@ -184,7 +188,7 @@ source of every value it shows.
 | `tai/` | Shared core: constants, grid geometry, contract models, scoring rules, site cards, *Método* tables. No Streamlit, no network, no file writes |
 | `pipeline/` | Steps `01_grid.py` to `09_validation.py` and shared utilities in `common.py` |
 | `ui/` | Streamlit views: sidebar, map, ranking, site card, *Método* tab |
-| `config/` | Hand-edited inputs: target profiles, known analogs, NCBI search terms |
+| `config/` | Hand-edited inputs: target profiles, known analogs, caves and lava tubes, NCBI search terms |
 | `content/cards/` | Hand-written text for finalist cards, `<cell_id>__<target_id>.md` |
 | `content/method.md` | Fixed text of the *Método* tab, one `## ` heading per section |
 | `data/raw/`, `data/interim/` | Downloads and intermediate files (not versioned; see `data/raw/README.md`) |
@@ -206,7 +210,7 @@ created from `develop` and merged back with the tests passing. Commits follow
 
 ## Team
 
-- **Juanma**: repository and grid, terrain, temperature, water and ice, known analogs, similarity, ranking, site card, deployment
+- **Juanma**: repository and grid, terrain, temperature, water and ice, known analogs, similarity, ranking, site card, caves and lava tubes layer, deployment
 - **Alan**: NCBI layer, target profiles, scoring, validation, map, *Método* tab
 - **Santino**: scientific criteria, data sources, target values, NCBI search terms, method text, card texts, pitch
 - **Santiago**: app skeleton, control maps, README, video

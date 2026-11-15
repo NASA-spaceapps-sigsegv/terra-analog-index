@@ -40,6 +40,10 @@ COLUMN_WIDTHS = {"Variable": 140, "Tierra": 90, "Objetivo": 115, "Puntaje": 120,
 TABLE_BORDERS = 2
 
 
+CAVES_HEADING = "Cuevas y tubos de lava en esta celda"
+CAVES_NOTE = "Estudiados como análogos de la Luna y Marte. Son informativos: no cambian el puntaje de la celda."
+
+
 def table_height(n_rows: int, row_height: int = VARIABLE_ROW_HEIGHT) -> int:
     return HEADER_HEIGHT + n_rows * row_height + TABLE_BORDERS
 
@@ -177,6 +181,14 @@ def render_card(card: SiteCard) -> None:
     st.markdown("**Interés astrobiológico**")
     st.markdown(card.biology.phrase)
     st.caption(card.biology.sampling_note)
+
+    # 7b. Cuevas y tubos de lava de la celda (TAI-53): informativo, no cambia el puntaje
+    if card.caves:
+        st.markdown(f"**{CAVES_HEADING}**")
+        st.markdown("\n".join(
+            f"- **{c.name}** ({c.kind_label.lower()}). {c.relevance}. *Fuente: {c.source}*" for c in card.caves
+        ))
+        st.caption(CAVES_NOTE)
 
     # 8. Límites, siempre
     st.markdown(f"**{LIMITS_HEADING}**")

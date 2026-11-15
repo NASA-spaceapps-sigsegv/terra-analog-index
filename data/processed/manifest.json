@@ -528,16 +528,16 @@
     },
     {
       "step": "08_similarity",
-      "ran_at": "2026-11-15T06:23:37Z",
+      "ran_at": "2026-11-15T07:25:12Z",
       "duration_s": 0.1,
-      "git_commit": "2689d54",
+      "git_commit": "aed02d0",
       "inputs": [
         {
-          "name": "Variables por celda, perfiles objetivo y análogos conocidos",
-          "product": "features.parquet, targets.json, known_analogs.csv",
-          "portal": "Pipeline del proyecto (pasos 06 y 07; config de TAI-17)",
+          "name": "Variables por celda, perfiles objetivo, análogos conocidos y cuevas",
+          "product": "features.parquet, targets.json, known_analogs.csv, caves.csv",
+          "portal": "Pipeline del proyecto (pasos 06 y 07; config de TAI-17 y TAI-53)",
           "url": "https://github.com/NASA-spaceapps-sigsegv/terra-analog-index",
-          "files": 4,
+          "files": 5,
           "size_mb": 1.2,
           "license_note": "Datos derivados del proyecto"
         }
@@ -550,6 +550,11 @@
         },
         {
           "path": "data/processed/known_analogs.csv",
+          "rows": 9,
+          "size_mb": 0.0
+        },
+        {
+          "path": "data/processed/caves.csv",
           "rows": 9,
           "size_mb": 0.0
         }
