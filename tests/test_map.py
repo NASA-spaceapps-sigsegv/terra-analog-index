@@ -171,8 +171,8 @@ def pixels_of_cells(layer: MapLayer) -> list[tuple]:
     return [tuple(int(v) for v in rgba[r, c, :3]) for r, c in zip(row, col)]
 
 
-def figure(bundle, projection="world", weights=DEFAULT_WEIGHTS, selected=None):
-    return map_view.build_figure(layer_of(bundle, weights), projection, selected)
+def figure(bundle, projection="world", weights=DEFAULT_WEIGHTS, selected=None, **kwargs):
+    return map_view.build_figure(layer_of(bundle, weights), projection, selected, **kwargs)
 
 
 # World -----------------------------------------------------------------------
@@ -204,15 +204,14 @@ def test_world_uses_viridis_from_0_to_1_with_a_color_bar(bundle):
     assert len(heat.colorscale) >= 8 and heat.colorbar.title.text == "Total score"  # Viridis
 
 
-def test_world_hover_shows_location_total_and_the_four_dimensions(bundle):
+def test_world_hover_shows_place_location_and_total(bundle):
     heat = trace(figure(bundle), "Eligible cells")
-    for piece in ("%{x", "%{y", "Total score", "%{z", "%{text}", "%{customdata}"):
+    for piece in ("%{x", "%{y", "Total score", "%{z", "%{text}"):
         assert piece in heat.hovertemplate
     assert heat.hoverongaps is False  # hover only where there is a cell
-    cells = by_cell(layer_of(bundle))
-    li, lj = cell_pos(cells.loc[104, "lat"], cells.loc[104, "lon"])  # 104 has no temperature
-    tail = heat.customdata[li][lj]
-    assert "Terrain: 0.60" in tail and "Temperature: no data" in tail and "Water and ice: 0.60" in tail and "Astrobiology: 0.10" in tail
+    # The five scores are not sent for every cell (it was most of the bytes of each rerun): they are in the card, in the
+    # ranking and in the hover of the numbered dots.
+    assert heat.customdata is None and "Terrain" not in heat.hovertemplate
 
 
 def test_world_hover_names_the_analog_and_the_country(bundle):
@@ -315,14 +314,16 @@ def test_polar_image_is_cached_for_the_same_totals(monkeypatch):
 
 
 def test_polar_hover_has_one_transparent_webgl_marker_per_visible_cell(bundle):
-    cursor = trace(figure(bundle, "south_pole"), "Eligible cells")
-    assert cursor.type == "scattergl" and len(cursor.x) == 6  # the six test cells are in the southern hemisphere
-    assert cursor.marker.color == map_view.HOVER_FILL == "rgba(0,0,0,0)" and cursor.hoverinfo == "text"
-    gray = next(t for t in cursor.hovertext if "Insufficient data" in t)  # 103 is not eligible
-    assert "Lat -89.5" in gray and "Total score" not in gray
-    ok = next(t for t in cursor.hovertext if "Terrain: 0.60" in t)  # 104
-    assert "Total score" in ok and "Temperature: no data" in ok and "Chile" in ok
-    assert any("Atacama" in t for t in cursor.hovertext)
+    fig = figure(bundle, "south_pole")
+    cursor = trace(fig, "Eligible cells")
+    assert cursor.type == "scattergl" and len(cursor.x) == 5  # the five eligible cells of the southern hemisphere
+    assert cursor.marker.color == map_view.HOVER_FILL == "rgba(0,0,0,0)"
+    assert "%{text}" in cursor.hovertemplate and "Total score" in cursor.hovertemplate
+    assert "Chile" in list(cursor.text) and any("Atacama" in t for t in cursor.text)
+    assert cursor.customdata.shape == (5, 3) and str(cursor.customdata.dtype) == "float32"  # lat, lon and total: numbers, not text
+    gray = trace(fig, map_view.NO_SCORE_NAME)  # 103 is not eligible: its own trace, with a text
+    assert len(gray.x) == 1 and "Insufficient data" in gray.hovertext[0] and "Lat -89.5" in gray.hovertext[0]
+    assert "Total score" not in gray.hovertext[0]
 
 
 def test_north_view_hides_the_cells_of_the_southern_hemisphere(bundle):
@@ -452,7 +453,7 @@ def test_polar_image_is_computed_in_under_a_second_when_the_totals_change(projec
 @pytest.mark.parametrize("projection", ["world", "south_pole", "north_pole"])
 def test_the_whole_grid_is_a_handful_of_traces_not_one_per_cell(projection):
     # Few traces is what makes panning and zooming smooth: the browser draws a raster, not thousands of polygons.
-    assert len(map_view.build_figure(big_layer(), projection, 5).data) <= 10
+    assert len(map_view.build_figure(big_layer(), projection, 5).data) <= 12
 
 
 def _timed(fn, *args) -> float:
@@ -469,3 +470,72 @@ def test_zoom_out_stops_at_the_whole_map(bundle, projection, x_limits, y_limits)
     fig = figure(bundle, projection)
     assert (fig.layout.xaxis.minallowed, fig.layout.xaxis.maxallowed) == x_limits
     assert (fig.layout.yaxis.minallowed, fig.layout.yaxis.maxallowed) == y_limits
+
+
+# --- numbered dots, selection, phone layout, weight (TAI-40) ---------------------------------------------------------
+
+
+@pytest.mark.parametrize("view", ["world", "south_pole"])
+def test_best_cells_are_numbered_dots_with_all_their_scores_on_hover(bundle, view):
+    dots = trace(figure(bundle, view, top_cells=[104, 100, 105]), "Top 3")
+    assert list(dots.text) == ["1", "2", "3"] and list(dots.customdata) == [104, 100, 105]
+    assert dots.mode == "markers+text" and dots.hoverinfo == "text"
+    first = dots.hovertext[0]  # 104 has no temperature
+    assert "#1" in first and "Total score" in first and "Terrain: 0.60" in first and "Temperature: no data" in first
+    assert "Water and ice: 0.60" in first and "Astrobiology: 0.10" in first and "Tap or click" in first
+    assert "Known analog: Atacama" in dots.hovertext[2]
+
+
+def test_the_numbers_are_the_rank_even_if_a_cell_is_not_drawn(bundle):
+    dots = trace(figure(bundle, "world", top_cells=[999999, 104]), "Top 2")  # the first one is not in the layer
+    assert list(dots.text) == ["2"] and list(dots.customdata) == [104]
+
+
+def test_the_north_view_draws_no_numbered_dots_for_southern_cells(bundle):
+    assert "Top 1" not in [t.name for t in figure(bundle, "north_pole", top_cells=[104]).data]
+
+
+def test_without_top_cells_there_are_no_numbered_dots(bundle):
+    assert not [t for t in figure(bundle).data if t.name.startswith("Top ")]
+
+
+def test_a_selection_does_not_fade_the_rings_and_the_dots(bundle):
+    fig = figure(bundle, top_cells=[104])
+    assert trace(fig, "Known analog").unselected.marker.opacity == 1
+    assert trace(fig, "Top 1").unselected.marker.opacity == 1
+
+
+def test_cell_from_selection_reads_the_tapped_numbered_dot():
+    sel = {"selection": {"points": [{"curve_number": 3, "point_index": 1}], "point_indices": [1]}}
+    assert map_view.cell_from_selection(sel, 3, [10, 20, 30]) == 20
+    assert map_view.cell_from_selection(sel, 4, [10, 20, 30]) is None  # a point of another trace
+    assert map_view.cell_from_selection(sel, 3, [10]) is None  # out of range
+    assert map_view.cell_from_selection({"selection": {"points": []}}, 3, [10]) is None  # a click on the empty map
+    assert map_view.cell_from_selection(None, None, []) is None
+
+
+@pytest.mark.parametrize("view", ["world", "south_pole"])
+def test_the_phone_layout_is_shorter_with_the_color_bar_below_and_one_finger_scrolling(bundle, view):
+    full, phone = figure(bundle, view), figure(bundle, view, compact=True)
+    assert phone.layout.height < full.layout.height and full.layout.dragmode == "pan" and phone.layout.dragmode is False
+    bar = (lambda f: trace(f, "Eligible cells").colorbar) if view == "world" else (lambda f: trace(f, "Total score").marker.colorbar)
+    assert bar(phone).orientation == "h"  # below the map, not a column that eats the width
+    assert (bar(full).orientation == "h") == (view == "world")  # on a wide screen only the poles keep the column
+    assert phone.layout.showlegend is False and full.layout.showlegend is not False  # the phone has the key under the map instead
+
+
+def test_changing_view_rev_resets_the_zoom(bundle):
+    assert figure(bundle).layout.uirevision == "world-0" and figure(bundle, view_rev=2).layout.uirevision == "world-2"
+    assert figure(bundle, "south_pole", view_rev=2).layout.uirevision == "south_pole-2"
+
+
+@pytest.mark.parametrize("projection, limit", [("world", 1_200_000), ("south_pole", 900_000), ("north_pole", 900_000)])
+def test_the_figure_sent_on_every_rerun_stays_light(projection, limit):
+    """Each rerun resends the figure. It was 4-5 MB (world) and about 3 MB (poles): the free server and a phone felt it."""
+    import plotly.io as pio
+
+    layer = big_layer()  # like the real data, every cell has a total: no gray layer
+    cells = layer.cells.assign(total=layer.cells["total"].fillna(0.4))
+    layer = MapLayer(target_id=MOON, weights=layer.weights, n_cells=layer.n_cells, n_eligible=layer.n_cells, cells=cells)
+    fig = map_view.build_figure(layer, projection, 5, top_cells=range(20))
+    assert len(pio.to_json(fig)) < limit

@@ -95,6 +95,12 @@ def cell_from_rows(rows: Sequence[int], cell_ids: Sequence[int]) -> int | None:
     return int(cell_ids[row]) if 0 <= row < len(cell_ids) else None
 
 
+def select_cell(cell_id: int) -> None:
+    """Open this cell's card (from a top card or a numbered dot on the map) and scroll to it."""
+    st.session_state[SELECTED_KEY] = int(cell_id)
+    st.session_state[SCROLL_KEY] = True
+
+
 def _on_select(key: str, cell_ids: tuple[int, ...]) -> None:
     state = st.session_state.get(key)
     rows = state["selection"]["rows"] if state else []
@@ -105,10 +111,10 @@ def _on_select(key: str, cell_ids: tuple[int, ...]) -> None:
 def render_ranking(
     ranking: Ranking,
     selected_cell_id: int | None,
-    csv_text: str | None = None,
+    csv_text: str | Callable[[], str] | None = None,
     csv_long: Callable[[], str] | None = None,
 ) -> None:
-    """`csv_text`: the table as CSV. `csv_long`: builds the top-CSV_TOP_N CSV; called only on click."""
+    """`csv_text`: the table as CSV (text, or a function that builds it on click). `csv_long`: builds the top-CSV_TOP_N CSV; called only on click."""
     if not ranking.items:
         st.info(EMPTY_FILTER)
         return

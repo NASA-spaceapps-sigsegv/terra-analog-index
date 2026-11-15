@@ -11,7 +11,8 @@ map is smooth, and when zoomed in the cells are still squares with no gaps.
   pole (each pixel looks up its cell), with transparent WebGL markers on top for the hover text.
   Mercator does not work: it cuts off near 85° and the southernmost Antarctic cells would not show.
 
-Selection is done from the ranking, not by clicking on the map.
+The best cells are drawn as numbered dots (the rank): tapping one opens its card, like picking its row in the
+ranking. The cells themselves are not selectable: at world scale one is a pixel.
 
 `build_figure` only builds the figure (tested without Streamlit); `render_map` draws it.
 """
@@ -23,7 +24,7 @@ import html
 import struct
 import textwrap
 import zlib
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -51,6 +52,17 @@ CAVE_SIZE = 13
 CAVES_NAME = "Caves and lava tubes"
 HOVER_WRAP = 60  # characters per line in a cave's hover
 SELECTED_SIZE = 28
+RANK_SIZE = 17  # numbered dots on the best cells; smaller than the ring (20) so a known analog keeps its ring
+RANK_FILL = "rgba(16,18,22,0.88)"
+HINT_PICKABLE = "Tap or click to open its card"
+HINT_LIST = "Open its card from the list below"  # the phone: see render_map
+NO_SCORE_NAME = "Cells without a score"
+MAP_KEY = "map_chart"  # session key of the chart: its selection (a tap on a numbered dot) is read in a callback
+TOP_KEY = "map_top_trace"  # (curve number, cell_ids) of the numbered dots drawn in the last run
+# Figure height, in px. The map sits beside the best cells, so it is narrower than the page: the world view (2:1) needs
+# less height than the poles (square). On a phone it is narrower still.
+HEIGHT = {"world": 400, "south_pole": 500, "north_pole": 500}
+COMPACT_HEIGHT = {"world": 330, "south_pole": 420, "north_pole": 420}
 
 PROJECTIONS = ("world", "south_pole", "north_pole")
 _HEMISPHERE = {"south_pole": -1, "north_pole": 1}
@@ -213,7 +225,15 @@ def _globe_outline(hemisphere: int) -> go.Scatter:
 # --- Common traces --------------------------------------------------------------
 
 
-def _colorbar_trace() -> go.Scatter:
+def _colorbar(horizontal: bool) -> dict:
+    """Settings of the color bar: a column on the right, or a strip below the map (the world view and the phone: a column would eat the width)."""
+    if horizontal:
+        return dict(title=dict(text="Total score", side="top"), orientation="h", thickness=9, len=0.9, x=0.5, xanchor="center",
+                    y=-0.1, yanchor="top", ypad=14, tickfont=dict(size=10))
+    return dict(title=dict(text="Total score"), thickness=12, len=0.7)
+
+
+def _colorbar_trace(horizontal: bool = False) -> go.Scatter:
     """Color bar of the polar views: a one-point trace off the map that only contributes the scale."""
     return go.Scatter(
         x=[None],
@@ -225,7 +245,7 @@ def _colorbar_trace() -> go.Scatter:
             cmin=0,
             cmax=1,
             showscale=True,
-            colorbar=dict(title=dict(text="Total score"), thickness=12, len=0.7),
+            colorbar=_colorbar(horizontal),
         ),
         hoverinfo="skip",
         showlegend=False,
@@ -281,16 +301,53 @@ def _selected_traces(x_outline, y_outline, x, y) -> list[go.Scatter]:
     ]
 
 
+def _top_trace(cells, top_cells: Sequence[int], hemisphere: int = 0, pickable: bool = True) -> go.Scatter | None:
+    """Numbered dots on the best cells: the number is the rank. Each carries its cell_id so a tap can open the card.
+
+    `hemisphere` 0 is the world view (x = lon, y = lat); -1 and 1 are the polar views, which only show their own hemisphere."""
+    if not len(top_cells):
+        return None
+    by_id = cells.set_index("cell_id")
+    picked = [(rank, int(c)) for rank, c in enumerate(top_cells, start=1) if c in by_id.index]
+    if hemisphere:
+        picked = [(r, c) for r, c in picked if by_id.at[c, "lat"] * hemisphere > 0]
+    if not picked:
+        return None
+    ranks = [r for r, _ in picked]
+    ids = np.array([c for _, c in picked], dtype="int32")
+    rows = by_id.loc[ids].reset_index()
+    lat = rows["lat"].to_numpy(dtype="float64")
+    lon = rows["lon"].to_numpy(dtype="float64")
+    x, y = (lon, lat) if hemisphere == 0 else _project(lat, lon, hemisphere)
+    country = rows["country"].fillna("No country").astype(str)
+    analog = rows["known_analog"].fillna("")
+    total = rows["total"].to_numpy(dtype="float64")
+    scores = _scores_text(rows)
+    hover = [
+        f"<b>#{r} · {country.iat[i]}</b>" + (f"<br>Known analog: {analog.iat[i]}" if analog.iat[i] else "")
+        + f"<br>Lat {lat[i]:.1f}°, lon {lon[i]:.1f}°<br>Total score: <b>{NO_DATA if np.isnan(total[i]) else f'{total[i]:.2f}'}</b>"
+        + scores[i] + f"<br><i>{HINT_PICKABLE if pickable else HINT_LIST}</i>"
+        for i, r in enumerate(ranks)
+    ]
+    return go.Scatter(
+        x=x, y=y, mode="markers+text", name=f"Top {len(top_cells)}", text=[str(r) for r in ranks], textposition="middle center",
+        textfont=dict(color="#ffffff", size=9), customdata=ids, hovertext=hover, hoverinfo="text",
+        marker=dict(symbol="circle", size=RANK_SIZE, color=RANK_FILL, line=dict(width=1.5, color="#ffffff")),
+        unselected=dict(marker=dict(opacity=1), textfont=dict(color="#ffffff")), showlegend=True,
+    )
+
+
 # --- Figure ---------------------------------------------------------------------
 
 
-def _world(fig: go.Figure, cells, selected_cell_id, caves: Sequence[Cave] = ()) -> None:
+def _world(fig: go.Figure, cells, selected_cell_id, caves: Sequence[Cave] = (), top_cells: Sequence[int] = (),
+           compact: bool = False) -> None:
     lat = cells["lat"].to_numpy(dtype="float64")
     lon = cells["lon"].to_numpy(dtype="float64")
     total = cells["total"].to_numpy(dtype="float64")
     has_total = ~np.isnan(total)
     li, lj = _index(lat, lon)
-    head = _place_text(cells)
+    head = _place_text(cells).astype("U")  # a unicode array, not object: Plotly copies it in one go instead of string by string
 
     xs = np.arange(N_LON) * GRID_RES_DEG - 180 + GRID_RES_DEG / 2
     ys = np.arange(N_LAT) * GRID_RES_DEG - 90 + GRID_RES_DEG / 2
@@ -301,20 +358,21 @@ def _world(fig: go.Figure, cells, selected_cell_id, caves: Sequence[Cave] = ()) 
     if gray.any():
         fig.add_trace(
             go.Heatmap(
-                name=INSUFFICIENT, x=xs, y=ys, z=_grid(li[gray], lj[gray], 1.0), zmin=0, zmax=1,
+                name=INSUFFICIENT, x=xs, y=ys, z=_grid(li[gray], lj[gray], 1.0, dtype="float32"), zmin=0, zmax=1,
                 colorscale=[[0, GRAY], [1, GRAY]], showscale=False, hoverongaps=False,
-                text=_grid(li[gray], lj[gray], head[gray], fill="", dtype=object),
+                text=_grid(li[gray], lj[gray], head[gray], fill="", dtype=head.dtype),
                 hovertemplate=_HOVER_ROW + f"<br>{INSUFFICIENT}<extra></extra>",
             )
         )
+    # The hover is the place, the coordinates and the total: what moves with the weights. The five scores are in the
+    # card, in the ranking and in the hover of the numbered markers, so each rerun sends about a quarter of the bytes.
     fig.add_trace(
         go.Heatmap(
-            name="Eligible cells", x=xs, y=ys, z=_grid(li[has_total], lj[has_total], total[has_total]), zmin=0, zmax=1,
-            colorscale=COLORSCALE, hoverongaps=False,
-            text=_grid(li[has_total], lj[has_total], head[has_total], fill="", dtype=object),
-            customdata=_grid(li[has_total], lj[has_total], _scores_text(cells)[has_total], fill="", dtype=object),
-            hovertemplate=_HOVER_ROW + "<br>Total score: <b>%{z:.2f}</b>%{customdata}<extra></extra>",
-            colorbar=dict(title=dict(text="Total score"), thickness=12, len=0.7),
+            name="Eligible cells", x=xs, y=ys, z=_grid(li[has_total], lj[has_total], total[has_total], dtype="float32"),
+            zmin=0, zmax=1, colorscale=COLORSCALE, hoverongaps=False,
+            text=_grid(li[has_total], lj[has_total], head[has_total], fill="", dtype=head.dtype),
+            hovertemplate=_HOVER_ROW + "<br>Total score: <b>%{z:.2f}</b><extra></extra>",
+            colorbar=_colorbar(True),  # below the map: the width goes to the map
         )
     )
     if gray.any():
@@ -324,6 +382,9 @@ def _world(fig: go.Figure, cells, selected_cell_id, caves: Sequence[Cave] = ()) 
     fig.add_trace(_rings_trace(a_lon, a_lat))
     if caves:
         fig.add_trace(_caves_trace([c.lon for c in caves], [c.lat for c in caves], caves))
+    top = _top_trace(cells, top_cells, pickable=not compact)
+    if top is not None:
+        fig.add_trace(top)
 
     chosen = cells["cell_id"].to_numpy() == selected_cell_id if selected_cell_id is not None else np.zeros(len(cells), bool)
     if chosen.any():
@@ -350,7 +411,8 @@ def _world(fig: go.Figure, cells, selected_cell_id, caves: Sequence[Cave] = ()) 
     fig.update_layout(plot_bgcolor=OCEAN)
 
 
-def _polar(fig: go.Figure, cells, projection: str, selected_cell_id, caves: Sequence[Cave] = ()) -> None:
+def _polar(fig: go.Figure, cells, projection: str, selected_cell_id, caves: Sequence[Cave] = (),
+           top_cells: Sequence[int] = (), compact: bool = False) -> None:
     hemi = _HEMISPHERE[projection]
     lat = cells["lat"].to_numpy(dtype="float64")
     lon = cells["lon"].to_numpy(dtype="float64")
@@ -369,27 +431,34 @@ def _polar(fig: go.Figure, cells, projection: str, selected_cell_id, caves: Sequ
     )
     fig.add_trace(_globe_outline(hemi))
 
-    # Hover: transparent WebGL markers, only on the cells of the visible hemisphere.
+    # Hover: transparent WebGL markers, only on the cells of the visible hemisphere. Numbers travel as float32
+    # arrays and the template formats them in the browser; only the place travels as text.
     visible = lat * hemi > 0
     x, y = _project(lat, lon, hemi)
-    head = _place_text(cells)
-    tail = _scores_text(cells)
-    lat_s, lon_s = np.char.mod("%.1f", lat), np.char.mod("%.1f", lon)
-    place = "<b>" + head + "</b><br>Lat " + lat_s + "°, lon " + lon_s + "°"
-    text = np.where(
-        has_total,
-        place + "<br>Total score: <b>" + np.char.mod("%.2f", np.where(has_total, total, 0.0)) + "</b>" + tail,
-        place + f"<br>{INSUFFICIENT}",
-    )
+    head = _place_text(cells).astype("U")
+    show = visible & has_total
     fig.add_trace(
         go.Scattergl(
-            x=x[visible], y=y[visible], mode="markers", name="Eligible cells", hovertext=text[visible], hoverinfo="text",
+            x=x[show].astype("float32"), y=y[show].astype("float32"), mode="markers", name="Eligible cells",
+            text=head[show], customdata=np.column_stack([lat[show], lon[show], total[show]]).astype("float32"),
+            hovertemplate="<b>%{text}</b><br>Lat %{customdata[0]:.1f}°, lon %{customdata[1]:.1f}°"
+                          "<br>Total score: <b>%{customdata[2]:.2f}</b><extra></extra>",
             marker=dict(symbol="square", size=10, color=HOVER_FILL), showlegend=False,
         )
     )
+    no_total = visible & ~has_total
+    if no_total.any():
+        place = "<b>" + head[no_total] + "</b><br>Lat " + np.char.mod("%.1f", lat[no_total]) + "°, lon " + \
+            np.char.mod("%.1f", lon[no_total]) + f"°<br>{INSUFFICIENT}"
+        fig.add_trace(
+            go.Scattergl(
+                x=x[no_total].astype("float32"), y=y[no_total].astype("float32"), mode="markers", name=NO_SCORE_NAME,
+                hovertext=place, hoverinfo="text", marker=dict(symbol="square", size=10, color=HOVER_FILL), showlegend=False,
+            )
+        )
     if (~has_total).any():
         fig.add_trace(_legend_gray_trace())
-    fig.add_trace(_colorbar_trace())
+    fig.add_trace(_colorbar_trace(compact))  # a column on the side, except on a phone
 
     a_lat, a_lon = _analog_centers(cells)
     keep = a_lat * hemi > 0
@@ -399,6 +468,9 @@ def _polar(fig: go.Figure, cells, projection: str, selected_cell_id, caves: Sequ
     if shown:
         cx, cy = _project(np.array([c.lat for c in shown]), np.array([c.lon for c in shown]), hemi)
         fig.add_trace(_caves_trace(cx, cy, shown))
+    top = _top_trace(cells, top_cells, hemi, pickable=not compact)
+    if top is not None:
+        fig.add_trace(top)
 
     chosen = (cells["cell_id"].to_numpy() == selected_cell_id) & visible if selected_cell_id is not None else np.zeros(len(cells), bool)
     if chosen.any():
@@ -429,34 +501,74 @@ def _png_uri_cached(total_grid, painted, hemisphere) -> str:
 
 
 def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: int | None = None,
-                 caves: Sequence[Cave] = ()) -> go.Figure:
+                 caves: Sequence[Cave] = (), top_cells: Sequence[int] = (), compact: bool = False,
+                 view_rev: int = 0) -> go.Figure:
     """World: a longitude/latitude Heatmap. Poles: an image with the orthographic projection.
 
-    `caves`: the caves and lava tubes layer (TAI-53); if empty, the map does not draw it."""
+    `caves`: the caves and lava tubes layer (TAI-53); if empty, the map does not draw it.
+    `top_cells`: cell_ids in ranking order; they are drawn as numbered dots you can tap to open the card.
+    `compact`: the phone layout: a shorter figure, the color bar below the map and the legend below that.
+    `view_rev`: changing it resets the zoom (the "Back to full view" button)."""
     if projection not in PROJECTIONS:
         raise ValueError(f"projection must be one of {list(PROJECTIONS)}, not {projection!r}")
     fig = go.Figure()
     if projection == "world":
-        _world(fig, layer.cells, selected_cell_id, caves)
+        _world(fig, layer.cells, selected_cell_id, caves, top_cells, compact)
     else:
-        _polar(fig, layer.cells, projection, selected_cell_id, caves)
+        _polar(fig, layer.cells, projection, selected_cell_id, caves, top_cells, compact)
+    # With a selection (a tap on a numbered dot) Plotly fades every other marker; the rings and caves must stay as they are.
+    fig.update_traces(
+        unselected=dict(marker=dict(opacity=1)), selected=dict(marker=dict(opacity=1)),
+        selector=lambda t: t.type in ("scatter", "scattergl"),
+    )
     fig.update_layout(
-        height=520,
-        margin=dict(l=0, r=0, t=28, b=0),
+        height=(COMPACT_HEIGHT if compact else HEIGHT)[projection],
+        margin=dict(l=0, r=0, t=34 if compact else 28, b=0),
         paper_bgcolor="rgba(0,0,0,0)",
+        showlegend=not compact,  # on a phone the key under the map says it all
         legend=dict(orientation="h", yanchor="bottom", y=1.0, xanchor="left", x=0.0),
         hoverlabel=dict(align="left"),
-        dragmode="pan",
-        uirevision=projection,  # keeps the zoom when moving weights; the view resets when changing projection
+        # On a phone one finger scrolls the page; panning is a button in the toolbar (pan2d).
+        dragmode=False if compact else "pan",
+        uirevision=f"{projection}-{view_rev}",  # keeps the zoom when moving weights; the view resets when changing projection
     )
     return fig
 
 
-def render_map(layer: MapLayer, projection: str, selected_cell_id: int | None, caves: Sequence[Cave] = ()) -> None:
+def render_map(layer: MapLayer, projection: str, selected_cell_id: int | None, caves: Sequence[Cave] = (),
+               top_cells: Sequence[int] = (), compact: bool = False, view_rev: int = 0,
+               on_pick: Callable[[int], None] | None = None) -> None:
+    """Draws the map. With `on_pick`, tapping a numbered dot calls it with that cell's id.
+
+    Not on a phone: Streamlit forces drag-to-pan on a chart that can be selected, and a map that pans under one finger
+    traps the scroll of the page. There the dots are only a key, and the cards below open the cell."""
     import streamlit as st
 
-    st.plotly_chart(
-        build_figure(layer, projection, selected_cell_id, caves),
-        width="stretch",
-        config={"displaylogo": False, "scrollZoom": True, "modeBarButtonsToRemove": ["select2d", "lasso2d"]},
-    )
+    fig = build_figure(layer, projection, selected_cell_id, caves, top_cells, compact, view_rev)
+    remove = ["select2d", "lasso2d"] + (["toImage", "zoom2d", "autoScale2d"] if compact else [])
+    config = {"displaylogo": False, "scrollZoom": not compact, "modeBarButtonsToRemove": remove}
+    if on_pick is None or compact:
+        st.plotly_chart(fig, width="stretch", config=config)
+        return
+    # What the numbered dots are, as plotted (the polar views only draw their own hemisphere): the callback needs it.
+    curve = next((i for i, t in enumerate(fig.data) if t.name == f"Top {len(top_cells)}"), None)
+    st.session_state[TOP_KEY] = (curve, [int(c) for c in fig.data[curve].customdata] if curve is not None else [])
+
+    def picked() -> None:
+        cell_id = cell_from_selection(st.session_state.get(MAP_KEY), *st.session_state.get(TOP_KEY, (None, [])))
+        if cell_id is not None:
+            on_pick(cell_id)
+
+    st.plotly_chart(fig, key=MAP_KEY, on_select=picked, selection_mode="points", width="stretch", config=config)
+
+
+def cell_from_selection(state, top_curve: int | None, plotted_ids: Sequence[int]) -> int | None:
+    """The cell of the tapped numbered dot, from the chart's selection state; None if nothing useful was picked.
+
+    Only points of the numbered-dots trace count (`top_curve`); the cell is the one plotted at that position."""
+    points = ((state or {}).get("selection") or {}).get("points") or []
+    for p in points:
+        idx = p.get("point_index", p.get("point_number"))
+        if top_curve is not None and p.get("curve_number") == top_curve and isinstance(idx, int) and 0 <= idx < len(plotted_ids):
+            return int(plotted_ids[idx])
+    return None

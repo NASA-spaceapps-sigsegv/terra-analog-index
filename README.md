@@ -35,14 +35,23 @@ make app           # opens http://localhost:8501
 
 `make app-demo` runs the app on the small hand-made test data in `tests/fixtures/` instead.
 
-In the sidebar you pick the *Target site* and the weights; the map colors every cell by its total
-score; selecting a row of the ranking (*Best cells*) opens that cell's *Card*, with a radar of its
+In the sidebar you pick the *Target site* and the weights (or one of three presets: *Default*, *Physical*
+and *Biology*); the map colors every cell by its total score and marks the best 20 with numbered dots.
+Tapping a numbered dot, a *Top 5 cells* card or a row of the ranking (*Best cells*) opens that cell's *Card*, with a radar of its
 dimensions, Earth against target for each variable, the sources, and the limits that no place on Earth
 can replicate. *Download CSV*, under the ranking, saves the table as it is shown (same rows and
 columns); *Download top 2,000 (CSV)*, next to it, saves the best 2,000 eligible cells with the same
 columns, weights and filter. *Show caves and lava tubes*, off by default, adds known caves and lava tubes studied as Moon
 and Mars analogs to the map, with the reason and the source on hover. It is informative only and
 changes no score.
+
+*Compare with* (above the card) lays the same cell's radar for the other target over the first one, to see
+at a glance how a place resembles the Moon and Mars. *Copy link to this view* copies an address that reopens exactly
+what is on screen (target, weights, map view, filters and the open cell), so a view can be shared or put in a QR code.
+
+On a phone the layout changes by itself: a shorter map with the color bar below it, one finger scrolls the page
+instead of moving the map (the toolbar has zoom and a pan button), the sidebar starts closed (open it with the
+**»** at the top left) and the best cells are vertical cards. Adding `?view=phone` or `?view=desktop` to the address forces one layout.
 
 The *Method* tab shows how the numbers are made: what the tool does, the variables of each target with
 their sources, the data and its licenses, the scoring rules, the validation table (every known analog
@@ -70,7 +79,10 @@ The live app runs on [Render](https://render.com) as a free web service, built f
 
 The app only reads `data/processed/` and `requirements.txt` holds just the runtime packages, so no environment variables or
 secrets are needed. On the free plan the instance goes to sleep after about 15 minutes without visits, so the next visit can
-take a minute to load, and each interaction takes 3 to 4 seconds (0.3 seconds when run locally). For a demo, open the link a few
+take a minute to load (the app shows "Loading data…" and the free server's own page says it is waking up), and each
+interaction takes a few seconds while the free server's 0.1 CPU recalculates the map (0.3 seconds when run locally). To keep that
+short, each recalculation sends the browser under 1 MB for the world map and about 0.5 MB for the polar views (it was 4 to 5 MB
+and about 3 MB), and a "Calculating…" notice appears if it lasts more than half a second. For a demo, open the link a few
 minutes before or run the app locally with `make app`.
 
 ## Regenerate the data, step by step
