@@ -44,6 +44,26 @@ RESULT_LEGEND = {
     "no_data": "there are no cells with data within the analog's radius",
 }
 
+# What each column of the validation table means, shown under the tables.
+COLUMN_LEGEND = {
+    "Covered": "whether the index measures what the analog is known for (only \"Yes\" counts toward the result)",
+    "Cells": "cells within the analog's radius",
+    "Best score, Rank and Percentile": "those of the best of those cells among all eligible cells",
+}
+
+# Why a known analog fails, by analog_id. Shown only while its result is "fail", so a text that the data
+# no longer backs disappears by itself.
+FAIL_REASONS = {
+    "haughton_crater": (
+        "a near miss. Colder, icier Antarctic cells fill the top of the lunar ranking, and a 23 km crater "
+        "is lost in a 110 km cell."
+    ),
+    "mcmurdo_dry_valleys": (
+        "its ice-free valleys are too small for a 110 km cell, which is mostly glacier, so ice scores 0 "
+        "against an ice-free Jezero. It also has almost no dust and much stronger wind."
+    ),
+}
+
 VARIABLE_COLUMNS = ("Variable", "Unit", "Value (mean ± std)", "Rule", "Range on Earth", "Sources", "Source type")
 SOURCE_COLUMNS = ("Data", "Product", "Portal", "License", "Size (MB)", "Link")
 VALIDATION_COLUMNS = ("Analog", "Covered", "Cells", "Best score", "Rank", "Percentile", "Result")
@@ -205,9 +225,25 @@ def result_legend(report: ValidationReport) -> str:
     return f"Cutoff percentile: {threshold}. " + "; ".join(parts) + "."
 
 
+def column_legend() -> str:
+    """"Columns. Covered: ...; Cells: ...": what each column of the validation table means."""
+    return "Columns. " + "; ".join(f"{k}: {v}" for k, v in COLUMN_LEGEND.items()) + "."
+
+
+def fail_notes(target: TargetValidation) -> list[str]:
+    """"Why Haughton Crater (Devon Island) fails: ..." for each failed analog with a reason in FAIL_REASONS."""
+    return [
+        f"Why {a.name} fails: {FAIL_REASONS[a.analog_id]}"
+        for a in target.analogs
+        if a.result == "fail" and a.analog_id in FAIL_REASONS
+    ]
+
+
 __all__ = [
     "METHOD_PATH",
     "SECTIONS",
+    "column_legend",
+    "fail_notes",
     "earth_source_names",
     "grid_summary",
     "parse_method",
