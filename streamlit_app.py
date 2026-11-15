@@ -19,7 +19,7 @@ from tai.errors import (
     ZeroWeightsError,
 )
 from tai.io import DataBundle, data_signature, load_bundle
-from ui import card_view, map_view, ranking_view
+from ui import card_view, map_view, method_view, ranking_view
 from ui.ranking_view import SELECTED_KEY
 from ui.sidebar import SidebarState, render_sidebar
 
@@ -91,6 +91,15 @@ def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
                 card_view.render_card(services.get_site_card(bundle, selected, state.target_id, state.weights))
 
 
+def method_tab(bundle: DataBundle) -> None:
+    """Pestaña Método (design 10.7): textos de content/method.md y tablas de los archivos del pipeline."""
+    with handle_tai_errors():
+        targets = [services.get_target(bundle, t.target_id) for t in services.list_targets(bundle)]
+        method_view.render_method(
+            services.get_method_text(), targets, services.get_validation(bundle), services.get_manifest(bundle)
+        )
+
+
 def main() -> None:
     with handle_tai_errors(fatal=True):
         bundle = get_bundle(str(DATA_DIR), data_signature(DATA_DIR))
@@ -100,7 +109,7 @@ def main() -> None:
     with tab_explore:
         explore_tab(bundle, state)
     with tab_method:
-        st.info("La pestaña Método llega el domingo (TAI-34).")
+        method_tab(bundle)
 
 
 main()

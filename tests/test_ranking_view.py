@@ -110,7 +110,7 @@ def test_selection_survives_when_the_cell_leaves_the_ranking(app):
     app.session_state[rv.SELECTED_KEY] = 103  # no elegible: nunca está en el ranking
     app.sidebar.slider(key="w_biology").set_value(0.0).run()
     assert _selected(app) == 103
-    assert not app.exception and not app.warning
+    assert not app.exception and not app.tabs[0].warning  # Método puede avisar de una validación insuficiente
 
 
 def test_changing_the_target_clears_the_selection(app):
