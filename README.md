@@ -9,8 +9,8 @@ in NCBI BioSample.
 
 Built for NASA Space Apps Challenge 2026.
 
-<!-- TODO (TAI-36): link to the deployed app -->
-**Live app:** _coming soon_
+**Live app:** <https://terra-analog-index.onrender.com> (hosted on Render's free plan: after about 15 minutes without visits it
+goes to sleep and the next visit takes up to a minute to load; every push to `develop` redeploys it)
 
 ![Terra Analog Index: map, ranking and site card](docs/img/app.png)
 
