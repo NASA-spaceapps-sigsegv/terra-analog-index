@@ -486,9 +486,9 @@
     },
     {
       "step": "07_targets",
-      "ran_at": "2026-11-15T06:23:37Z",
-      "duration_s": 23.7,
-      "git_commit": "2689d54",
+      "ran_at": "2026-11-15T16:16:34Z",
+      "duration_s": 30.1,
+      "git_commit": "b0272c6",
       "inputs": [
         {
           "name": "Elevación de la Luna y Marte (LOLA y MOLA)",
@@ -528,9 +528,9 @@
     },
     {
       "step": "08_similarity",
-      "ran_at": "2026-11-15T07:25:12Z",
-      "duration_s": 0.1,
-      "git_commit": "aed02d0",
+      "ran_at": "2026-11-15T16:16:38Z",
+      "duration_s": 0.2,
+      "git_commit": "b0272c6",
       "inputs": [
         {
           "name": "Variables por celda, perfiles objetivo, análogos conocidos y cuevas",
@@ -563,13 +563,13 @@
         "sv_slope_deg": {
           "non_null": 42714,
           "null": 0,
-          "min": 0.0,
+          "min": 0.003,
           "max": 1.0
         },
         "sv_roughness_m": {
           "non_null": 42714,
           "null": 0,
-          "min": 0.001,
+          "min": 0.004,
           "max": 1.0
         },
         "sv_tmin_c": {
@@ -611,8 +611,8 @@
         "s_terrain": {
           "non_null": 42714,
           "null": 0,
-          "min": 0.001,
-          "max": 0.997
+          "min": 0.003,
+          "max": 0.993
         },
         "s_temperature": {
           "non_null": 42714,
@@ -647,9 +647,9 @@
     },
     {
       "step": "09_validation",
-      "ran_at": "2026-11-15T06:43:04Z",
+      "ran_at": "2026-11-15T16:16:39Z",
       "duration_s": 0.1,
-      "git_commit": "ff44270",
+      "git_commit": "b0272c6",
       "inputs": [
         {
           "name": "Similitud por celda y análogos conocidos",

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-15T06:43:04Z",
+  "generated_at": "2026-11-15T16:16:39Z",
   "weights": {
     "terrain": 1.0,
     "temperature": 1.0,
@@ -77,10 +77,10 @@
           "name": "Desierto de Atacama (Yungay)",
           "covered": "yes",
           "n_cells": 4,
-          "best_cell_id": 23870,
-          "best_total": 0.713,
-          "best_rank": 77,
-          "percentile": 99.6,
+          "best_cell_id": 23510,
+          "best_total": 0.722,
+          "best_rank": 52,
+          "percentile": 99.8,
           "result": "pass"
         },
         {
@@ -88,10 +88,10 @@
           "name": "Valles Secos de McMurdo (Antártida)",
           "covered": "yes",
           "n_cells": 20,
-          "best_cell_id": 4298,
-          "best_total": 0.333,
-          "best_rank": 14446,
-          "percentile": 32.4,
+          "best_cell_id": 5020,
+          "best_total": 0.335,
+          "best_rank": 14565,
+          "percentile": 31.8,
           "result": "fail"
         },
         {
@@ -100,9 +100,9 @@
           "covered": "yes",
           "n_cells": 5,
           "best_cell_id": 23871,
-          "best_total": 0.734,
-          "best_rank": 31,
-          "percentile": 99.9,
+          "best_total": 0.698,
+          "best_rank": 127,
+          "percentile": 99.4,
           "result": "pass"
         },
         {
@@ -110,10 +110,10 @@
           "name": "Valle de la Muerte (cráter Ubehebe)",
           "covered": "partial",
           "n_cells": 6,
-          "best_cell_id": 45783,
-          "best_total": 0.708,
-          "best_rank": 96,
-          "percentile": 99.6,
+          "best_cell_id": 45423,
+          "best_total": 0.701,
+          "best_rank": 115,
+          "percentile": 99.5,
           "result": "info"
         },
         {
@@ -122,9 +122,9 @@
           "covered": "no",
           "n_cells": 1,
           "best_cell_id": 45893,
-          "best_total": 0.584,
-          "best_rank": 2006,
-          "percentile": 90.6,
+          "best_total": 0.568,
+          "best_rank": 2705,
+          "percentile": 87.3,
           "result": "info"
         }
       ]

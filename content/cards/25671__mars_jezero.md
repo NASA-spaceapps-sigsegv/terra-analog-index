@@ -1,12 +1,12 @@
 # Altiplano norte: Parque Nacional Sajama (Bolivia)
 
-Esta celda está en el altiplano boliviano e incluye el Parque Nacional Sajama [3]. Es la 16.ª del ranking de Jezero fuera de los análogos conocidos, con 0,74 [1].
+Esta celda está en el altiplano boliviano e incluye el Parque Nacional Sajama [3]. Es la 50.ª del ranking de Jezero fuera de los análogos conocidos, con 0,72 [1].
 
 **Qué se sabe.** El parque ocupa alturas de 4.200 a 6.542 m [3], y su clima es seco y frío todo el año, con nevadas ocasionales [2]. No encontramos este sitio descrito como análogo de Marte. El análogo declarado más cercano es el volcán Licancabur y sus lagos de altura, a unos 490 km [1][4].
 
 **Para qué serviría (hipótesis).** Ensayar instrumentos y operaciones a gran altura, con radiación ultravioleta alta y fuerte amplitud térmica, que son las razones por las que el equipo usa Licancabur como análogo [4].
 
-**Dónde falla la analogía.** Llueve mucho más que en Jezero: el parque registra unos 400 mm por año [3] y nuestro dato satelital da 267 mm, contra 0 mm del objetivo [1]. Es una puna con humedales de altura llamados bofedales [2], y su temperatura mínima es de −5 °C, frente a −80 °C en Jezero [1]. El 0,74 de puntaje total sale en buena parte de que el terreno coincide, con pendiente y rugosidad altas, y baja porque su dimensión de polvo y viento puntúa solo 0,39 [1].
+**Dónde falla la analogía.** Llueve mucho más que en Jezero: el parque registra unos 400 mm por año [3] y nuestro dato satelital da 267 mm, contra 0 mm del objetivo [1]. Es una puna con humedales de altura llamados bofedales [2], y su temperatura mínima es de −5 °C, frente a −80 °C en Jezero [1]. El 0,72 de puntaje total sale en buena parte de que el terreno coincide, con pendiente y rugosidad altas, y baja porque su dimensión de polvo y viento puntúa solo 0,39 [1].
 
 **Qué verificar en el terreno.** Si los suelos de las zonas más secas del altiplano y de los salares cercanos tienen una química comparable, y si hay datos meteorológicos de estaciones más precisos que los del satélite.
 
