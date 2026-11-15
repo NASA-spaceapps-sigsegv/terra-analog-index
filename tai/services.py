@@ -10,23 +10,27 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from tai import cards, scoring
+from tai import cards, method, scoring
 from tai.constants import RANKING_LIMIT_MAX, TOP_N
 from tai.errors import CellNotFoundError, TargetNotFoundError, ZeroWeightsError
 from tai.io import DataBundle
 from tai.models import (
     MAP_CELL_COLUMNS,
     AnalogRef,
+    Manifest,
     MapLayer,
     Ranking,
     RankingItem,
     SiteCard,
+    Target,
     TargetSummary,
+    ValidationReport,
     Weights,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CARDS_DIR = REPO_ROOT / cards.CARDS_DIR
+METHOD_PATH = REPO_ROOT / method.METHOD_PATH
 
 
 def _num(x) -> float | None:
@@ -179,6 +183,39 @@ def get_site_card(
         cards_dir=cards_dir,
         root=REPO_ROOT,
     )
+
+
+def _target(bundle: DataBundle, target_id: str) -> Target:
+    target = next((t for t in bundle.targets.targets if t.target_id == target_id), None)
+    if target is None:
+        raise TargetNotFoundError(f"No existe el sitio objetivo {target_id!r}")
+    return target
+
+
+def get_target(bundle: DataBundle, target_id: str) -> Target:
+    """El sitio objetivo completo, con sus variables y fuentes (design 9.2). Lanza TargetNotFoundError."""
+    return _target(bundle, target_id)
+
+
+def get_validation(bundle: DataBundle, target_id: str | None = None) -> ValidationReport:
+    """El informe de validation.json. Con `target_id`, solo ese objetivo. Lanza TargetNotFoundError."""
+    report = bundle.validation
+    if target_id is None:
+        return report
+    kept = [t for t in report.targets if t.target_id == target_id]
+    if not kept:
+        raise TargetNotFoundError(f"No hay validación del sitio objetivo {target_id!r}")
+    return report.model_copy(update={"targets": kept})
+
+
+def get_manifest(bundle: DataBundle) -> Manifest:
+    """El manifiesto de la corrida del pipeline (manifest.json), fuente de la tabla "Datos usados"."""
+    return bundle.manifest
+
+
+def get_method_text(path: Path | None = None) -> dict[str, str]:
+    """Los textos fijos de la pestaña Método, por encabezado ({} si content/method.md todavía no existe)."""
+    return method.read_method(METHOD_PATH if path is None else path)
 
 
 def _as_dict(weights) -> dict[str, float]:
