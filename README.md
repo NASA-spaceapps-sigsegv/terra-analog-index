@@ -31,7 +31,8 @@ make app           # opens http://localhost:8501
 The app's interface is in Spanish. In the sidebar you pick the target (*Sitio objetivo*) and the
 weights; the map colors every cell by its total score; selecting a row of the ranking (*Mejores
 celdas*) opens that cell's card (*Ficha*), with a radar of its dimensions, Earth against target for
-each variable, the sources, and the limits that no place on Earth can replicate.
+each variable, the sources, and the limits that no place on Earth can replicate. *Descargar CSV*, under
+the ranking, saves the table as it is shown (same rows and columns).
 
 The *Método* tab shows how the numbers are made: what the tool does, the variables of each target with
 their sources, the data and its licenses, the scoring rules, the validation table (every known analog
@@ -172,7 +173,6 @@ source of every value it shows.
 
 ## Future work
 
-- Download the ranking as CSV.
 - Refine the finalist areas to 0.5° cells.
 - A map layer of known caves and lava tubes.
 - More targets beyond the lunar south pole and Jezero.

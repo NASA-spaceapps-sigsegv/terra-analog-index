@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from tai import cards, method, scoring
+from tai import cards, method, scoring, tables
 from tai.constants import RANKING_LIMIT_MAX, TOP_N
 from tai.errors import CellNotFoundError, TargetNotFoundError, ZeroWeightsError
 from tai.io import DataBundle
@@ -100,6 +100,26 @@ def get_ranking(
         total_eligible=len(ranked),
         items=items,
     )
+
+
+CSV_DECIMALS = 3  # los puntajes del archivo, como en data/processed (la tabla muestra 2)
+
+
+def export_ranking_csv(
+    bundle: DataBundle,
+    target_id: str,
+    weights: Weights | Mapping[str, float],
+    hide_known: bool = False,
+    limit: int = TOP_N,
+) -> str:
+    """El ranking actual como texto CSV con encabezado: las mismas filas y columnas que la tabla (RF-34).
+
+    Mismos argumentos y errores que get_ranking. Una columna opcional vacía (polvo y viento en la Luna) no va,
+    como en la tabla. Separador coma y punto decimal; un dato faltante queda vacío."""
+    ranking = get_ranking(bundle, target_id, weights, hide_known=hide_known, limit=limit)
+    table = tables.ranking_table(ranking)
+    shown = table[tables.visible_columns(table)].round({"Lat": 1, "Lon": 1, **{c: CSV_DECIMALS for c in tables.SCORE_COLUMNS}})
+    return shown.to_csv(index=False, lineterminator="\n")
 
 
 def get_map_layer(bundle: DataBundle, target_id: str, weights: Weights | Mapping[str, float]) -> MapLayer:

@@ -25,6 +25,7 @@ import pandas as pd
 import streamlit as st
 
 from tai.constants import SCORE_DECIMALS_UI
+from tai.tables import COLUMNS, OPTIONAL_COLUMNS, SCORE_COLUMNS, ranking_table, visible_columns  # noqa: F401
 
 if TYPE_CHECKING:
     from tai.models import Ranking
@@ -33,38 +34,10 @@ SELECTED_KEY = "selected_cell_id"
 NO_DATA = "sin dato"
 EMPTY_FILTER = "No quedan celdas con este filtro."
 
-COLUMNS = {
-    "rank": "Puesto",
-    "lat": "Lat",
-    "lon": "Lon",
-    "country": "País",
-    "total": "Total",
-    "s_terrain": "Terreno",
-    "s_temperature": "Temperatura",
-    "s_water_ice": "Agua y hielo",
-    "s_dust_wind": "Polvo y viento",
-    "bio_score": "Astrobiología",
-    "known_analog": "Análogo conocido",
-}
-SCORE_COLUMNS = ("Total", "Terreno", "Temperatura", "Agua y hielo", "Polvo y viento", "Astrobiología")
-OPTIONAL_COLUMNS = ("Polvo y viento",)  # se ocultan si el objetivo no tiene la dimensión (la Luna)
 
-
-def ranking_table(ranking: Ranking) -> pd.DataFrame:
-    """Una fila por celda, en el orden del ranking, con los nombres de columna de la interfaz.
-
-    Los puntajes nulos quedan como NaN: la tabla los muestra como "sin dato"."""
-    rows = [item.model_dump() for item in ranking.items]
-    df = pd.DataFrame(rows, columns=list(COLUMNS))
-    df["known_analog"] = [a["name"] if a else None for a in df["known_analog"]]
-    for col in ("total", "s_terrain", "s_temperature", "s_water_ice", "s_dust_wind", "bio_score"):
-        df[col] = pd.to_numeric(df[col], errors="coerce").astype("float64")
-    return df.rename(columns=COLUMNS).reset_index(drop=True)
-
-
-def visible_columns(table: pd.DataFrame) -> list[str]:
-    """Las columnas a mostrar: una dimensión opcional vacía en toda la tabla (polvo y viento en la Luna) se oculta."""
-    return [c for c in table.columns if not (c in OPTIONAL_COLUMNS and table[c].isna().all())]
+def csv_filename(ranking: Ranking) -> str:
+    """ranking_mars_jezero.csv; con el filtro de análogos conocidos, ranking_mars_jezero_sin_conocidos.csv."""
+    return f"ranking_{ranking.target_id}{'_sin_conocidos' if ranking.hide_known else ''}.csv"
 
 
 def column_config() -> dict:
@@ -103,7 +76,7 @@ def _on_select(key: str, cell_ids: tuple[int, ...]) -> None:
     st.session_state[SELECTED_KEY] = cell_from_rows(rows, cell_ids)
 
 
-def render_ranking(ranking: Ranking, selected_cell_id: int | None) -> None:
+def render_ranking(ranking: Ranking, selected_cell_id: int | None, csv_text: str | None = None) -> None:
     if not ranking.items:
         st.info(EMPTY_FILTER)
         return
@@ -126,3 +99,12 @@ def render_ranking(ranking: Ranking, selected_cell_id: int | None) -> None:
         f"Las {len(ranking.items)} mejores de {ranking.total_eligible} celdas elegibles. "
         "Elegí una fila para ver su ficha."
     )
+    if csv_text is not None:
+        st.download_button(
+            "Descargar CSV",
+            # Con BOM: Excel lo abre como UTF-8 y se ven bien los acentos (País, Análogo conocido).
+            data=csv_text.encode("utf-8-sig"),
+            file_name=csv_filename(ranking),
+            mime="text/csv",
+            icon=":material/download:",
+        )

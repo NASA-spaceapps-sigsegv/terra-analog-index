@@ -80,7 +80,8 @@ def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
         st.subheader("Mejores celdas")
         with handle_tai_errors():
             ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)
-            ranking_view.render_ranking(ranking, st.session_state.get(SELECTED_KEY))
+            csv_text = services.export_ranking_csv(bundle, state.target_id, state.weights, hide_known=state.hide_known)
+            ranking_view.render_ranking(ranking, st.session_state.get(SELECTED_KEY), csv_text)
     with right:
         st.subheader("Ficha")
         with handle_tai_errors():
