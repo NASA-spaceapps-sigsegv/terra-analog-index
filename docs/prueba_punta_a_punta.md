@@ -29,8 +29,16 @@ bloquean.
 **No bloquean:**
 
 1. **El ranking y la ficha quedan debajo de la primera pantalla en 1366 × 768 y en 1024 × 768.** Hay que bajar con la
-   rueda para verlos. Para el ensayo: bajar el zoom del navegador al 80 o 90 % o reducir la altura del mapa (520 px en
-   `ui/map_view.py`). Para reproducirlo: abrir la app y achicar la ventana a ese tamaño.
+   rueda para verlos. Para el ensayo: bajar el zoom del navegador al 80 o 90 %. Para reproducirlo: abrir la app y achicar
+   la ventana a ese tamaño.
+
+   *TAI-40, decisión:* se midió y **no se cambió la altura del mapa** (520 px en `ui/map_view.py`). A 1366 × 768 el
+   dibujo del mapa mide 750 × 375 dentro de un contenedor de 520 de alto, o sea que sobran unos 145 px. Bajar el alto
+   fijo a 440 sube el ranking 80 px sin achicar el mapa en esa pantalla, pero en 1920 × 1080 el mapa pasa de unos
+   984 × 490 a 764 × 382 (22 % más chico), que es la pantalla del proyector y del video. Una altura que siga a la
+   ventana (contenedor con alto en `vh` y `height="stretch"`) no se aplicó de forma confiable en Streamlit 1.67: el
+   contenedor quedó en 450 px aunque se forzara el estilo. Sin una solución sin riesgos antes del congelamiento, se
+   deja el mapa como está y se usa el zoom del navegador.
 2. **En 1024 × 768 el mapa mide 564 px de ancho.** Se lee, pero es chico. Es lo que se vería en un proyector de 4:3.
 3. **`scripts/check_cards.py` se rompe en consolas de Windows con la codificación por defecto,** porque imprime «✓». Se
    resuelve con `PYTHONIOENCODING=utf-8` o corriéndolo desde Git Bash. No afecta a la app.
