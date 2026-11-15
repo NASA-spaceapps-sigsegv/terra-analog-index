@@ -303,6 +303,24 @@ def test_result_legend_explains_every_result_and_the_cut(report):
     assert all(f"{code}:" in legend for code in method.RESULT_LEGEND)
 
 
+def test_column_legend_explains_the_columns_that_need_it():
+    legend = method.column_legend()
+    assert legend.startswith("Columns. ")
+    assert all(f"{col}:" in legend for col in method.COLUMN_LEGEND)
+
+
+def test_fail_notes_only_for_failed_analogs_with_a_reason():
+    target = TargetValidation(
+        target_id=MOON, result="pass", covered_total=3, covered_passed=1, n_eligible=100,
+        analogs=[
+            _analog("haughton_crater", "Haughton Crater", "yes", "fail", 86.4),
+            _analog("mcmurdo_dry_valleys", "McMurdo", "yes", "pass", 95.0),  # passes: no note
+            _analog("c", "Analog C", "yes", "fail", 39.1),  # no reason written: no note
+        ],
+    )
+    assert method.fail_notes(target) == [f"Why Haughton Crater fails: {method.FAIL_REASONS['haughton_crater']}"]
+
+
 # --- services ---------------------------------------------------------------------------------------------
 
 

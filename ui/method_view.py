@@ -101,12 +101,15 @@ def render_target_validation(target: TargetValidation, label: str, report: Valid
             "Percentile": st.column_config.NumberColumn(format="%.1f"),
         },
     )
+    for note in method.fail_notes(target):
+        st.caption(note)
 
 
 def render_validation(report: ValidationReport, labels: dict[str, str]) -> None:
     st.caption(method.weights_summary(report, DIMENSION_LABELS))
     for target in report.targets:
         render_target_validation(target, labels.get(target.target_id, target.target_id), report)
+    st.caption(method.column_legend())
     st.caption(method.result_legend(report))
 
 
