@@ -80,7 +80,8 @@ BODIES = ("moon", "mars")
 
 # --- UI ----------------------------------------------------------------------
 TOP_N = 20
-RANKING_LIMIT_MAX = 200
+CSV_TOP_N = 2000  # rows in the long CSV download, built only when its button is clicked
+RANKING_LIMIT_MAX = CSV_TOP_N
 
 # --- Known analogs and validation --------------------------------------------
 KNOWN_ANALOG_RADIUS_KM = 150  # assumption: default radius

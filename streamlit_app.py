@@ -11,6 +11,7 @@ from pathlib import Path
 import streamlit as st
 
 from tai import services
+from tai.constants import CSV_TOP_N
 from tai.errors import (
     CellNotFoundError,
     DataNotAvailableError,
@@ -85,7 +86,12 @@ def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
     with handle_tai_errors():
         ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)
         csv_text = services.export_ranking_csv(bundle, state.target_id, state.weights, hide_known=state.hide_known)
-        ranking_view.render_ranking(ranking, st.session_state.get(SELECTED_KEY), csv_text)
+
+        def csv_long() -> str:  # built only when its button is clicked
+            return services.export_ranking_csv(bundle, state.target_id, state.weights, hide_known=state.hide_known,
+                                               limit=CSV_TOP_N)
+
+        ranking_view.render_ranking(ranking, st.session_state.get(SELECTED_KEY), csv_text, csv_long)
     st.subheader("Card", anchor=CARD_ANCHOR)
     with handle_tai_errors():
         selected = st.session_state.get(SELECTED_KEY)
