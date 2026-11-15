@@ -22,6 +22,13 @@ def test_radar_has_four_axes_and_a_null_dimension_sits_at_zero_with_its_label():
     assert list(trace.r) == values + values[:1]  # polígono cerrado
 
 
+def test_radar_labels_are_readable_on_the_theme_background():
+    polar = card_view.radar_figure(example_card()).layout.polar
+    assert polar.bgcolor == "rgba(0,0,0,0)"  # no un disco blanco bajo texto claro
+    assert list(polar.radialaxis.ticktext) == ["0,30", "0,70", "1,00"]
+    assert polar.radialaxis.angle % 90 != 0  # los números no van sobre un eje
+
+
 def test_variables_table_shows_earth_against_target():
     df = card_view.variables_table(example_card(feature_changes={"tmin_c": np.nan}, sim_changes={"sv_tmin_c": np.nan}))
     assert list(df.columns) == list(card_view.VARIABLE_COLUMNS) and len(df) == 6
