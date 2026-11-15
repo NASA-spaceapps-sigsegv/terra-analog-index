@@ -34,6 +34,11 @@ SELECTED_KEY = "selected_cell_id"
 NO_DATA = "sin dato"
 EMPTY_FILTER = "No quedan celdas con este filtro."
 
+# Anchos en px. Los puntajes alcanzan con la barra corta y el número; lo que sobra va al análogo,
+# para que entre el nombre más largo de known_analogs.csv (57 caracteres, Licancabur).
+SCORE_WIDTH = 110
+KNOWN_ANALOG_WIDTH = 420
+
 
 def csv_filename(ranking: Ranking) -> str:
     """ranking_mars_jezero.csv; con el filtro de análogos conocidos, ranking_mars_jezero_sin_conocidos.csv."""
@@ -43,10 +48,12 @@ def csv_filename(ranking: Ranking) -> str:
 def column_config() -> dict:
     fmt = f"%.{SCORE_DECIMALS_UI}f"
     config = {
-        c: st.column_config.ProgressColumn(c, format=fmt, min_value=0.0, max_value=1.0) for c in SCORE_COLUMNS
+        c: st.column_config.ProgressColumn(c, format=fmt, min_value=0.0, max_value=1.0, width=SCORE_WIDTH)
+        for c in SCORE_COLUMNS
     }
     config["Lat"] = st.column_config.NumberColumn("Lat", format="%.1f°")
     config["Lon"] = st.column_config.NumberColumn("Lon", format="%.1f°")
+    config["Análogo conocido"] = st.column_config.TextColumn("Análogo conocido", width=KNOWN_ANALOG_WIDTH)
     return config
 
 
