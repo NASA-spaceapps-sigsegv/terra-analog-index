@@ -14,7 +14,7 @@ HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parents[1]))  # repo root, so `tai` imports without installing
 
 from tai import geo  # noqa: E402
-from tai.constants import PHYSICAL_VARS, TARGET_IDS  # noqa: E402
+from tai.constants import OPTIONAL_VARS, PHYSICAL_VARS, TARGET_IDS  # noqa: E402
 
 # cell_id, land_frac, country
 CELLS = [
@@ -45,11 +45,11 @@ def grid() -> pd.DataFrame:
 
 def features() -> pd.DataFrame:
     rows = {
-        #        slope roughness  tmin  trange precip  ice
-        1620: (1.2, 15.0, -62.0, 12.0, None, 1.0),
-        23510: (3.5, 38.0, -4.2, 31.6, 3.0, 0.05),
-        40870: (2.1, 25.0, 4.5, 28.0, 20.0, 0.0),
-        45893: (None, None, 6.0, 14.5, 650.0, 0.0),
+        #        slope roughness  tmin  trange precip  ice   dust_aod wind_ms
+        1620: (1.2, 15.0, -62.0, 12.0, None, 1.0, 0.003, 12.0),
+        23510: (3.5, 38.0, -4.2, 31.6, 3.0, 0.05, 0.05, 5.5),
+        40870: (2.1, 25.0, 4.5, 28.0, 20.0, 0.0, 0.35, 6.0),
+        45893: (None, None, 6.0, 14.5, 650.0, 0.0, 0.08, 3.5),
     }
     df = pd.DataFrame.from_dict(rows, orient="index", columns=list(PHYSICAL_VARS))
     df.index.name = "cell_id"
@@ -97,10 +97,13 @@ def similarity() -> pd.DataFrame:
                 f"sv_{v}": (None if pd.isna(f[v]) else round(0.2 + 0.6 * ((base + i / 7) % 1), 3))
                 for i, v in enumerate(PHYSICAL_VARS)
             }
+            # targets.json de ejemplo no trae polvo y viento (TAI-52, opcional): sin puntaje en ningún objetivo.
+            sv |= {f"sv_{v}": None for v in OPTIONAL_VARS}
             dims = {
                 "s_terrain": ("sv_slope_deg", "sv_roughness_m"),
                 "s_temperature": ("sv_tmin_c", "sv_trange_c"),
                 "s_water_ice": ("sv_precip_mm", "sv_ice_frac"),
+                "s_dust_wind": ("sv_dust_aod", "sv_wind_ms"),
             }
             sd = {}
             for name, cols in dims.items():

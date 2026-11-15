@@ -59,6 +59,7 @@ SIMILARITY = Schema(
         "s_terrain": ("float32", True),
         "s_temperature": ("float32", True),
         "s_water_ice": ("float32", True),
+        "s_dust_wind": ("float32", True),
         "bio_score": ("float32", False),
         "n_physical": ("int8", False),
         "eligible": ("bool", False),

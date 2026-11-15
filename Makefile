@@ -2,7 +2,7 @@
 #
 #   make install   entorno .venv con todo (pipeline, pruebas y app)
 #   make app       la app con los datos de data/processed/
-#   make data      bajar los datos crudos que falten (~4,1 GB)
+#   make data      bajar los datos crudos que falten (~5,9 GB)
 #   make pipeline  correr los pasos 01 a 09 (los que están al día se saltean)
 #   make check     todo lo que tiene que pasar antes de integrar a main
 #
@@ -65,7 +65,7 @@ define download_sized
 endef
 
 .PHONY: help venv install install-app app app-demo test fixtures \
-	data data-grid data-terrain data-earthdata data-moon data-temperature data-water-ice \
+	data data-grid data-terrain data-earthdata data-moon data-temperature data-water-ice data-dust-wind \
 	pipeline maps cards check-data check-secrets check clean clean-partial
 
 help:
@@ -78,18 +78,19 @@ help:
 	@echo "  make app-demo         la app con los datos de prueba (no hace falta bajar nada)"
 	@echo ""
 	@echo "Datos crudos"
-	@echo "  make data             todos los datos crudos (~4,1 GB)"
+	@echo "  make data             todos los datos crudos (~5,9 GB)"
 	@echo "  make data-grid        paso 01: Natural Earth, tierra y países (~5 MB)"
 	@echo "  make data-terrain     paso 02: elevación ETOPO 2022, 30 segundos de arco (~1,6 GB)"
-	@echo "  make data-earthdata   pasos 03 y 04, necesita usuario de Earthdata (~2,3 GB)"
+	@echo "  make data-earthdata   pasos 03 y 04, necesita usuario de Earthdata (~4,1 GB)"
 	@echo "  make data-temperature paso 03: MOD11C3, temperatura mensual (~0,8 GB)"
 	@echo "  make data-water-ice   paso 04: IMERG, MOD10CM, MCD12C1 (~1,4 GB)"
+	@echo "  make data-dust-wind   paso 04: MERRA-2, polvo y viento (~1,8 GB)"
 	@echo "  make data-moon        paso 07: elevación del polo sur lunar, LOLA 80 m (~190 MB)"
 	@echo "                        (Marte, MOLA, se lee por HTTP: no hace falta bajarlo)"
 	@echo ""
 	@echo "Pipeline"
 	@echo "  make pipeline         pasos 01 a 09 en orden; se detiene en el primero que falla"
-	@echo "  make step-08          un solo paso (cualquier número de 01 a 09)"
+	@echo "  make step-08          un solo paso (de 01 a 09; step-04 corre los dos pasos 04)"
 	@echo "                        FORCE=1 corre aunque esté al día; BBOX=\"LATMIN LATMAX LONMIN LONMAX\" limita la región"
 	@echo "  make maps             mapas de control de los pasos 01 a 04 en $(MAPS_DIR)"
 	@echo "                        (MAPS_ARGS=\"--only terrain\" para pasar otras opciones)"
@@ -151,6 +152,9 @@ data-temperature:
 data-water-ice:
 	$(PYTHON) pipeline/fetch_earthdata.py imerg mod10cm mcd12c1
 
+data-dust-wind:
+	$(PYTHON) pipeline/fetch_earthdata.py m2aer m2flx
+
 data-moon: $(MOON_FILES)
 
 $(RAW)/01_grid/%.geojson:
@@ -172,11 +176,14 @@ pipeline:
 	  $(PYTHON) $$s $(STEP_ARGS) || { code=$$?; echo "$$s terminó con código $$code"; exit $$code; }; \
 	done
 
+# step-04 corre los dos pasos 04 (04_dust_wind y 04_water_ice); step-04_water_ice, solo ese.
 step-%:
-	@s=$$(ls pipeline/$*_*.py 2>/dev/null | head -n 1); \
-	if [ -z "$$s" ]; then echo "No hay paso $* (van de 01 a 09)"; exit 1; fi; \
-	echo "== $$s $(STEP_ARGS)"; \
-	$(PYTHON) $$s $(STEP_ARGS)
+	@steps=$$(ls pipeline/$*.py pipeline/$*_*.py 2>/dev/null | sort -u); \
+	if [ -z "$$steps" ]; then echo "No hay paso $* (van de 01 a 09)"; exit 1; fi; \
+	for s in $$steps; do \
+	  echo "== $$s $(STEP_ARGS)"; \
+	  $(PYTHON) $$s $(STEP_ARGS) || exit $$?; \
+	done
 
 # Mapas de control (scripts/check_maps.py): un mapa por variable en tres proyecciones,
 # histogramas, index.html e informe.md.

@@ -15,9 +15,11 @@ WEIGHT_LABELS = {
     "terrain": "Terreno",
     "temperature": "Temperatura",
     "water_ice": "Agua y hielo",
+    "dust_wind": "Polvo y viento",
     "biology": "Interés astrobiológico",
 }
 BIOLOGY_NOTE = "No mide parecido con el objetivo: mide registros de vida en ambientes extremos."
+DUST_WIND_NOTE = "Solo Marte: la Luna no tiene atmósfera, ni viento ni polvo en suspensión."
 
 
 def weight_key(dim: str) -> str:
@@ -71,6 +73,8 @@ def render_sidebar(targets: list[TargetSummary]) -> SidebarState:
             st.slider(WEIGHT_LABELS[dim], 0.0, 1.0, step=WEIGHT_STEP, key=weight_key(dim))
             if dim == "biology":
                 st.caption(BIOLOGY_NOTE)
+            elif dim == "dust_wind":
+                st.caption(DUST_WIND_NOTE)
         st.button("Restablecer pesos", on_click=_reset_weights)
 
         st.checkbox("Ocultar análogos conocidos", key="hide_known")

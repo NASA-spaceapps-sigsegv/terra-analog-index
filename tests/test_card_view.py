@@ -76,7 +76,7 @@ def test_card_updates_when_the_weights_change(app):
 
 def test_all_weights_zero_keeps_the_card_with_a_null_total(app):
     app.session_state[SELECTED] = 100
-    for dim in ("terrain", "temperature", "water_ice", "biology"):
+    for dim in ("terrain", "temperature", "water_ice", "dust_wind", "biology"):
         app.sidebar.slider(key=f"w_{dim}").set_value(0.0)
     app.run()
     assert not app.exception

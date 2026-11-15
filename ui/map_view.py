@@ -84,12 +84,15 @@ def _scores_text(cells) -> np.ndarray:
         v = cells[col].to_numpy(dtype="float64")
         return np.where(np.isnan(v), NO_DATA, np.char.mod("%.2f", v))
 
-    return (
+    text = (
         np.char.add("<br>Terreno: ", two("s_terrain"))
         + np.char.add("<br>Temperatura: ", two("s_temperature"))
         + np.char.add("<br>Agua y hielo: ", two("s_water_ice"))
-        + np.char.add("<br>Astrobiología: ", two("bio_score"))
     )
+    # Polvo y viento (TAI-52) solo si el objetivo tiene la dimensión: en la Luna sería "sin dato" en todas.
+    if cells["s_dust_wind"].notna().any():
+        text = text + np.char.add("<br>Polvo y viento: ", two("s_dust_wind"))
+    return text + np.char.add("<br>Astrobiología: ", two("bio_score"))
 
 
 def _place_text(cells) -> np.ndarray:

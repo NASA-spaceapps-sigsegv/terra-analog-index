@@ -11,7 +11,7 @@ import pytest
 
 from pipeline.common import OutputValidationError
 from tai import geo, models, schemas
-from tai.constants import BIO_TYPES, PHYSICAL_VARS, TARGET_IDS
+from tai.constants import BIO_TYPES, CORE_VARS, PHYSICAL_VARS, TARGET_IDS
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -44,12 +44,14 @@ def make_grid(cells):
 def parts_for(grid, values, bio=None):
     """values: {variable: lista alineada con la grilla}. Los intermedios traen todas las celdas."""
     ids = grid["cell_id"]
-    part = lambda cols: pd.DataFrame({"cell_id": ids, **{c: pd.array(values[c], dtype="float32") for c in cols}})
+    part = lambda cols: pd.DataFrame({"cell_id": ids, **{c: pd.array(values.get(c, [NAN] * len(ids)), dtype="float32")
+                                                         for c in cols}})
     bio = bio or {}
     return {
         "terrain": part(["slope_deg", "roughness_m"]),
         "temperature": part(["tmin_c", "trange_c"]),
         "water_ice": part(["precip_mm", "ice_frac"]),
+        "dust_wind": part(["dust_aod", "wind_ms"]),
         "biology": pd.DataFrame({
             "cell_id": ids,
             "bio_records": np.array(bio.get("bio_records", [0] * len(ids)), dtype="int32"),
@@ -64,7 +66,8 @@ GRID3 = make_grid([(-24.1, -69.3), (10.5, 20.5), (-80.5, 0.5)])
 
 def values3(**over):
     v = {"slope_deg": [3.5, 1.0, 0.5], "roughness_m": [38.0, 5.0, 2.0], "tmin_c": [-4.0, 20.0, -60.0],
-         "trange_c": [30.0, 10.0, 5.0], "precip_mm": [3.0, 1200.0, NAN], "ice_frac": [0.05, 0.0, 1.0]}
+         "trange_c": [30.0, 10.0, 5.0], "precip_mm": [3.0, 1200.0, NAN], "ice_frac": [0.05, 0.0, 1.0],
+         "dust_aod": [0.05, 0.3, 0.003], "wind_ms": [5.5, 6.0, 12.0]}
     v.update(over)
     return v
 
@@ -80,9 +83,11 @@ def test_features_follow_the_contract():
 
 def test_coverage_and_n_physical_count_what_has_data():
     v = values3(slope_deg=[3.5, NAN, NAN], roughness_m=[38.0, NAN, NAN], tmin_c=[-4.0, NAN, -60.0],
-                trange_c=[30.0, NAN, NAN], precip_mm=[3.0, NAN, NAN], ice_frac=[0.05, NAN, 1.0])
+                trange_c=[30.0, NAN, NAN], precip_mm=[3.0, NAN, NAN], ice_frac=[0.05, NAN, 1.0],
+                dust_aod=[0.05, NAN, NAN], wind_ms=[NAN, 6.0, NAN])
     f = step06.build_features(GRID3, parts_for(GRID3, v))
-    assert list(f["coverage"]) == [6, 0, 2] and list(f["n_physical"]) == [3, 0, 2]
+    assert list(f["coverage"]) == [7, 1, 2]
+    assert list(f["n_physical"]) == [3, 0, 2]  # polvo y viento no cuenta: no decide la elegibilidad (TAI-52)
 
 
 def test_cells_missing_from_an_intermediate_stay_null_not_zero():
@@ -143,7 +148,7 @@ def target(target_id="mars_jezero", has_ice=False, rules_=None, earth_std=5.0):
         has_ice=has_ice, has_ice_source="x", summary="", unreplicable=[], notes=[],
         vars={v: {"mean": means[v], "std": 2.0, "unit": "u", "rule": rules_[v], "source": "x",
                   "source_type": "literature", "earth_p01": 0.0, "earth_p99": 1.0, "earth_std": earth_std}
-              for v in PHYSICAL_VARS})
+              for v in CORE_VARS})  # sin polvo y viento: es opcional (TAI-52)
 
 
 def analog(analog_id, lat, lon, radius_km=150.0, target_id="mars_jezero"):
@@ -247,7 +252,10 @@ def test_end_to_end_with_the_real_config_files():
     values = {"slope_deg": np.full(n, 3.0), "roughness_m": np.full(n, 40.0), "tmin_c": cold,
               "trange_c": np.r_[np.full(n_an, 30.0), np.full(n - n_an, 8.0)],
               "precip_mm": np.r_[np.full(n_an, 20.0), np.full(n - n_an, 2000.0)],
-              "ice_frac": np.r_[np.full(n_an, 0.3), np.zeros(n - n_an)]}
+              "ice_frac": np.r_[np.full(n_an, 0.3), np.zeros(n - n_an)],
+              # TAI-52: análogos polvorientos y con viento moderado, como Jezero
+              "dust_aod": np.r_[np.full(n_an, 0.3), np.full(n - n_an, 0.02)],
+              "wind_ms": np.r_[np.full(n_an, 4.0), np.full(n - n_an, 8.0)]}
     f = step06.build_features(grid, parts_for(grid, values))
     earth = {v: models.EarthStats(**s) for v, s in step06.earth_stats(f, grid).items()}
 

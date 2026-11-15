@@ -173,6 +173,8 @@ def build_targets(base: TargetsBaseFile, measured: dict, earth: dict, choose_rul
     for t in base.targets:
         out_vars = {}
         for var in PHYSICAL_VARS:
+            if var not in t.vars:  # optional variable the target does not have (dust and wind on the Moon)
+                continue
             bv = t.vars[var]
             if bv.source_type == "measured":
                 if var not in TERRAIN_VARS:
@@ -259,7 +261,7 @@ def main() -> None:
     atomic_write_json(targets.model_dump(mode="json"), OUTPUT)
     notes = [
         f"{t.target_id}.{v}: {t.vars[v].source_type}, regla {t.vars[v].rule}"
-        for t in targets.targets for v in PHYSICAL_VARS
+        for t in targets.targets for v in PHYSICAL_VARS if v in t.vars
     ]
     for line in notes:
         log.info(line)

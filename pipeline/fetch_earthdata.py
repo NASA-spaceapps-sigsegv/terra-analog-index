@@ -1,4 +1,4 @@
-"""Download the NASA Earthdata products for steps 03 and 04 (TAI-04).
+"""Download the NASA Earthdata products for steps 03, 04 and 04_dust_wind (TAI-04, TAI-52).
 
 Looks up the granules of each product in CMR (public) and downloads them with
 an Earthdata Login account. Products and versions are the ones confirmed
@@ -61,6 +61,9 @@ PRODUCTS = {
     "imerg": Product("GPM_3IMERGM", "07", START, END, "04_water_ice/imerg", ".HDF5", 12),
     "mod10cm": Product("MOD10CM", "61", START, END, "04_water_ice/mod10cm", ".hdf", 12),
     "mcd12c1": Product("MCD12C1", "061", START, END, "04_water_ice/mcd12c1", ".hdf", 1),
+    # MERRA-2 monthly means (TAI-52): dust optical depth (DUEXTTAU) and surface wind speed (SPEED).
+    "m2aer": Product("M2TMNXAER", "5.12.4", START, END, "04_dust_wind/m2tmnxaer", ".nc4", 12),
+    "m2flx": Product("M2TMNXFLX", "5.12.4", START, END, "04_dust_wind/m2tmnxflx", ".nc4", 12),
 }
 
 
