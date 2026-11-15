@@ -57,12 +57,14 @@ el plan gratis de Render (0,1 CPU, 512 MB), cliente en Argentina, navegador Chro
 | # | Ítem | Resultado | Medida |
 |---|------|-----------|--------|
 | 1 | La app abre en menos de 10 s | **No pasa en frío, pasa en caliente** | Primera visita después de crear el servicio: unos 28 s hasta ver el mapa. Con la app despierta, la página carga en 4,1 s. No se midió el despertar tras 15 minutos sin visitas; Render avisa que puede tardar 50 s o más |
-| 3 | Cada slider recalcula en menos de 1 s | **No pasa en el plan gratis** | Se midió el caso más pesado, cambiar de objetivo, que rehace el mapa: 4,1 s, 2,7 s y 3,4 s (en local, 0,33 s). No se midió arrastrar un slider |
+| 3 | Cada slider recalcula en menos de 1 s | **No pasa en el plan gratis** | Slider real (flecha del teclado sobre «Terreno», de 1,00 a 0,95 y a 0,90): 3,57 s y 3,58 s hasta que termina el recálculo (en local, 0,22 s). Cambiar de objetivo, que rehace el mapa: 4,1 s, 2,7 s y 3,4 s (en local, 0,33 s) |
+| 4 | Todos los pesos en 0 muestran el aviso, sin error | Pasa | Con los cinco sliders en 0 aparece «Subí al menos un peso.», sin errores ni excepciones; al tocar «Restablecer pesos» vuelven a 1, 1, 1, 0,5 y 0,5 y el aviso desaparece |
 | 7 | La ficha de una finalista muestra su texto manual | Pasa | La celda 46351 (Dalangtan) abre su ficha con el texto y las fuentes, y el 0,86 del texto coincide con el del ranking |
 
-Sin comprobar todavía en la app desplegada: el ítem 4 (todos los pesos en 0), un slider real, el wifi apagado (el despliegue
-necesita internet; para eso queda el modo local) y un proyector real.
+Sin comprobar todavía, y solo se puede hacer en la laptop de la presentación: el wifi apagado de verdad (la app desplegada
+necesita internet; para eso está el modo local con `make app`) y un proyector real.
 
-**Qué hacer con esto.** El plan gratis alcanza para que el jurado entre y mire, pero se siente lento y se duerme. Para la
+**Qué hacer con esto.** Cada interacción tarda unos 3,6 s en el plan gratis (0,1 CPU), diez veces más que en local. Alcanza
+para que el jurado entre y mire, pero se siente lento y se duerme. Para la
 demostración conviene: abrir el enlace 5 minutos antes para despertarlo, o mostrar la app en local (`make app`, 0,33 s al
 cambiar de objetivo), o pasar el servicio al plan Starter de Render (unos 7 USD por mes, 0,5 CPU, no se duerme).
