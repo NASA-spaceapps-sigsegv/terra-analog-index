@@ -18,13 +18,13 @@ The pure functions (table, key, rows) are tested without Streamlit; `render_rank
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING
 
 import pandas as pd
 import streamlit as st
 
-from tai.constants import SCORE_DECIMALS_UI
+from tai.constants import CSV_TOP_N, SCORE_DECIMALS_UI
 from tai.tables import COLUMNS, OPTIONAL_COLUMNS, SCORE_COLUMNS, ranking_table, visible_columns  # noqa: F401
 
 if TYPE_CHECKING:
@@ -45,9 +45,19 @@ KNOWN_ANALOG_WIDTH = 420
 SCROLL_KEY = "scroll_to_card"
 
 
-def csv_filename(ranking: Ranking) -> str:
-    """ranking_mars_jezero.csv; with the known-analogs filter, ranking_mars_jezero_no_known.csv."""
-    return f"ranking_{ranking.target_id}{'_no_known' if ranking.hide_known else ''}.csv"
+def csv_filename(ranking: Ranking, top: int | None = None) -> str:
+    """ranking_mars_jezero.csv; with the known-analogs filter, ranking_mars_jezero_no_known.csv.
+
+    With `top`, the long download: ranking_mars_jezero_top2000.csv."""
+    size = f"_top{top}" if top else ""
+    return f"ranking_{ranking.target_id}{size}{'_no_known' if ranking.hide_known else ''}.csv"
+
+
+def _utf8_bom(data: str | Callable[[], str]) -> bytes | Callable[[], bytes]:
+    """With a BOM, Excel opens the file as UTF-8 and accented names (Río Tinto, Mývatn) show correctly."""
+    if callable(data):
+        return lambda: data().encode("utf-8-sig")
+    return data.encode("utf-8-sig")
 
 
 def column_config() -> dict:
@@ -92,7 +102,13 @@ def _on_select(key: str, cell_ids: tuple[int, ...]) -> None:
     st.session_state[SCROLL_KEY] = st.session_state[SELECTED_KEY] is not None
 
 
-def render_ranking(ranking: Ranking, selected_cell_id: int | None, csv_text: str | None = None) -> None:
+def render_ranking(
+    ranking: Ranking,
+    selected_cell_id: int | None,
+    csv_text: str | None = None,
+    csv_long: Callable[[], str] | None = None,
+) -> None:
+    """`csv_text`: the table as CSV. `csv_long`: builds the top-CSV_TOP_N CSV; called only on click."""
     if not ranking.items:
         st.info(EMPTY_FILTER)
         return
@@ -116,12 +132,15 @@ def render_ranking(ranking: Ranking, selected_cell_id: int | None, csv_text: str
         f"The best {len(ranking.items)} of {ranking.total_eligible} eligible cells. "
         "Pick a row to see its card."
     )
+    buttons = []
     if csv_text is not None:
-        st.download_button(
-            "Download CSV",
-            # With a BOM: Excel opens it as UTF-8 and accented names (Río Tinto, Mývatn) show correctly.
-            data=csv_text.encode("utf-8-sig"),
-            file_name=csv_filename(ranking),
-            mime="text/csv",
-            icon=":material/download:",
-        )
+        buttons.append(("Download CSV", csv_text, csv_filename(ranking), "The rows of this table"))
+    if csv_long is not None:
+        buttons.append((f"Download top {CSV_TOP_N:,} (CSV)", csv_long, csv_filename(ranking, CSV_TOP_N),
+                        f"The best {CSV_TOP_N:,} eligible cells with the current weights and filter, same columns"))
+    if not buttons:
+        return
+    with st.container(horizontal=True):
+        for label, data, name, tip in buttons:
+            st.download_button(label, data=_utf8_bom(data), file_name=name, mime="text/csv",
+                               icon=":material/download:", help=tip, on_click="ignore")

@@ -32,7 +32,8 @@ In the sidebar you pick the *Target site* and the weights; the map colors every 
 score; selecting a row of the ranking (*Best cells*) opens that cell's *Card*, with a radar of its
 dimensions, Earth against target for each variable, the sources, and the limits that no place on Earth
 can replicate. *Download CSV*, under the ranking, saves the table as it is shown (same rows and
-columns). *Show caves and lava tubes*, off by default, adds known caves and lava tubes studied as Moon
+columns); *Download top 2,000 (CSV)*, next to it, saves the best 2,000 eligible cells with the same
+columns, weights and filter. *Show caves and lava tubes*, off by default, adds known caves and lava tubes studied as Moon
 and Mars analogs to the map, with the reason and the source on hover. It is informative only and
 changes no score.
 
