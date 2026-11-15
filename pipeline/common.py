@@ -182,6 +182,10 @@ def atomic_write_parquet(df: pd.DataFrame, path: Path) -> None:
     _atomic_replace(path, lambda tmp: df.to_parquet(tmp, index=False))
 
 
+def atomic_write_csv(df: pd.DataFrame, path: Path) -> None:
+    _atomic_replace(path, lambda tmp: df.to_csv(tmp, index=False, encoding="utf-8"))
+
+
 def atomic_write_json(obj, path: Path) -> None:
     """Strict JSON: NaN/Infinity raise instead of being written (contracts 1)."""
     text = json.dumps(obj, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
