@@ -77,9 +77,7 @@ def cell_label(bundle: DataBundle, cell_id: int) -> str:
 
 def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
     layer = services.get_map_layer(bundle, state.target_id, state.weights)
-    map_view.render_map(
-        layer, state.projection, st.session_state.get(SELECTED_KEY), show_analogs=not state.hide_known
-    )
+    map_view.render_map(layer, state.projection, st.session_state.get(SELECTED_KEY))
     left, right = st.columns([4, 6])
     with left:
         st.subheader("Mejores celdas")

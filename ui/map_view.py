@@ -255,7 +255,7 @@ def _selected_traces(x_outline, y_outline, x, y) -> list[go.Scatter]:
 # --- Figura ---------------------------------------------------------------------
 
 
-def _world(fig: go.Figure, cells, selected_cell_id, show_analogs: bool = True) -> None:
+def _world(fig: go.Figure, cells, selected_cell_id) -> None:
     lat = cells["lat"].to_numpy(dtype="float64")
     lon = cells["lon"].to_numpy(dtype="float64")
     total = cells["total"].to_numpy(dtype="float64")
@@ -291,9 +291,8 @@ def _world(fig: go.Figure, cells, selected_cell_id, show_analogs: bool = True) -
     if gray.any():
         fig.add_trace(_legend_gray_trace())
 
-    if show_analogs:
-        a_lat, a_lon = _analog_centers(cells)
-        fig.add_trace(_rings_trace(a_lon, a_lat))
+    a_lat, a_lon = _analog_centers(cells)
+    fig.add_trace(_rings_trace(a_lon, a_lat))
 
     chosen = cells["cell_id"].to_numpy() == selected_cell_id if selected_cell_id is not None else np.zeros(len(cells), bool)
     if chosen.any():
@@ -318,7 +317,7 @@ def _world(fig: go.Figure, cells, selected_cell_id, show_analogs: bool = True) -
     fig.update_layout(plot_bgcolor=OCEAN)
 
 
-def _polar(fig: go.Figure, cells, projection: str, selected_cell_id, show_analogs: bool = True) -> None:
+def _polar(fig: go.Figure, cells, projection: str, selected_cell_id) -> None:
     hemi = _HEMISPHERE[projection]
     lat = cells["lat"].to_numpy(dtype="float64")
     lon = cells["lon"].to_numpy(dtype="float64")
@@ -359,11 +358,10 @@ def _polar(fig: go.Figure, cells, projection: str, selected_cell_id, show_analog
         fig.add_trace(_legend_gray_trace())
     fig.add_trace(_colorbar_trace())
 
-    if show_analogs:
-        a_lat, a_lon = _analog_centers(cells)
-        keep = a_lat * hemi > 0
-        ax, ay = _project(a_lat[keep], a_lon[keep], hemi)
-        fig.add_trace(_rings_trace(ax, ay))
+    a_lat, a_lon = _analog_centers(cells)
+    keep = a_lat * hemi > 0
+    ax, ay = _project(a_lat[keep], a_lon[keep], hemi)
+    fig.add_trace(_rings_trace(ax, ay))
 
     chosen = (cells["cell_id"].to_numpy() == selected_cell_id) & visible if selected_cell_id is not None else np.zeros(len(cells), bool)
     if chosen.any():
@@ -392,20 +390,15 @@ def _png_uri_cached(total_grid, painted, hemisphere) -> str:
     return _IMAGE_CACHE[key]
 
 
-def build_figure(
-    layer: MapLayer, projection: str = "world", selected_cell_id: int | None = None, show_analogs: bool = True
-) -> go.Figure:
-    """Mundo: un Heatmap de longitud y latitud. Polos: una imagen con la proyección ortográfica.
-
-    show_analogs=False (casilla "Ocultar análogos conocidos") no dibuja los anillos ni su leyenda; el texto
-    del cursor sigue nombrando el análogo de la celda."""
+def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: int | None = None) -> go.Figure:
+    """Mundo: un Heatmap de longitud y latitud. Polos: una imagen con la proyección ortográfica."""
     if projection not in PROJECTIONS:
         raise ValueError(f"projection debe ser una de {list(PROJECTIONS)}, no {projection!r}")
     fig = go.Figure()
     if projection == "world":
-        _world(fig, layer.cells, selected_cell_id, show_analogs)
+        _world(fig, layer.cells, selected_cell_id)
     else:
-        _polar(fig, layer.cells, projection, selected_cell_id, show_analogs)
+        _polar(fig, layer.cells, projection, selected_cell_id)
     fig.update_layout(
         height=520,
         margin=dict(l=0, r=0, t=28, b=0),
@@ -418,11 +411,11 @@ def build_figure(
     return fig
 
 
-def render_map(layer: MapLayer, projection: str, selected_cell_id: int | None, show_analogs: bool = True) -> None:
+def render_map(layer: MapLayer, projection: str, selected_cell_id: int | None) -> None:
     import streamlit as st
 
     st.plotly_chart(
-        build_figure(layer, projection, selected_cell_id, show_analogs),
+        build_figure(layer, projection, selected_cell_id),
         width="stretch",
         config={"displaylogo": False, "scrollZoom": True, "modeBarButtonsToRemove": ["select2d", "lasso2d"]},
     )

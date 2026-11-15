@@ -1,6 +1,5 @@
 """TAI-30 dentro de la app: el mapa aparece en Explorar y sigue a los controles."""
 
-import json
 from pathlib import Path
 
 import pytest
@@ -39,13 +38,3 @@ def test_changing_the_projection_redraws_without_errors(app, view):
 def test_changing_the_target_redraws_the_map(app):
     app.sidebar.radio(key="target_id").set_value("mars_jezero").run()
     assert not app.exception and len(app.get("plotly_chart")) == 1
-
-
-def test_hide_known_also_hides_the_rings_on_the_map(app):
-    def rings():
-        fig = json.loads(app.get("plotly_chart")[0].proto.spec)
-        return any(t.get("name") == "Análogo conocido" for t in fig["data"])
-
-    assert rings()
-    app.sidebar.checkbox(key="hide_known").check().run()
-    assert not app.exception and not rings()
