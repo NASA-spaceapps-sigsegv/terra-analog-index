@@ -56,6 +56,7 @@ STEP = "07_targets"
 RAW_DIR = RAW / STEP
 BASE_PATH = CONFIG / "targets_base.json"
 OUTPUT = PROCESSED / "targets.json"
+FEATURES_PATH = PROCESSED / "features.parquet"  # step 06; written with earth_stats
 
 MOON_DEM = RAW_DIR / "LDEM_80S_80MPP_ADJ.TIF"
 MARS_DEM_NAME = "Mars_MGS_MOLA_DEM_mosaic_global_463m.tif"
@@ -90,7 +91,7 @@ def polar_colatitude_deg(x: np.ndarray, y: np.ndarray, radius_m: float = MOON_RA
 def lola_cut_stats(path, lat_max: float = -85.0, res_m: float = BASE_RES_M) -> dict[str, tuple[float, float, int]]:
     """slope_deg and roughness_m of the LOLA south polar DEM, south of `lat_max`.
 
-    The 80 m raster is averaged down to about `res_m` while it is read (so the
+    The 80 m raster is averaged down to `res_m` while it is read (so the
     whole 7600 x 7600 grid is never held at full resolution), then slope and
     roughness are computed at that resolution.
     """
@@ -99,8 +100,9 @@ def lola_cut_stats(path, lat_max: float = -85.0, res_m: float = BASE_RES_M) -> d
     from rasterio.transform import Affine
 
     with rasterio.open(path) as src:
-        step = max(1, round(res_m / abs(src.transform.a)))
-        h, w = src.height // step, src.width // step
+        # Exact output size, so the pixel is res_m (80 m does not divide 1 km evenly).
+        h = max(5, round(src.height * abs(src.transform.e) / res_m))
+        w = max(5, round(src.width * abs(src.transform.a) / res_m))
         z = src.read(1, out_shape=(h, w), resampling=Resampling.average, masked=True)
         z = np.ma.filled(z.astype("float64"), np.nan)
         tf = src.transform @ Affine.scale(src.width / w, src.height / h)
@@ -234,7 +236,12 @@ def main() -> None:
     started = time.monotonic()
 
     require_inputs([BASE_PATH])
-    if not args.force and is_up_to_date([OUTPUT], [BASE_PATH, MANIFEST_PATH, Path(__file__)]):
+    # earth_stats lives in the manifest, which every step (this one included) rewrites,
+    # so freshness follows features.parquet: step 06 writes it together with earth_stats.
+    root = Path(__file__).resolve().parents[1]
+    freshness = [BASE_PATH, FEATURES_PATH, Path(__file__), root / "tai" / "rules.py"]
+    freshness += [Path(p) for p in (args.moon_dem, args.mars_dem) if not str(p).startswith("http")]
+    if not args.force and is_up_to_date([OUTPUT], freshness):
         log.info("al día")
         return
 

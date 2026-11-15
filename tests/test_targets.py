@@ -69,6 +69,12 @@ def test_lola_is_averaged_down_to_1_km(tmp_path):
     assert fine["roughness_m"][0] == pytest.approx(STD_5PX * 100, abs=1.0)  # mismo plano a 1 km
 
 
+def test_lola_pixel_is_1_km_when_the_resolution_does_not_divide_it(tmp_path):
+    # 400 m, como los 80 m de LOLA, no divide 1 km: los píxeles tienen que medir 1 km igual
+    got = step07.lola_cut_stats(moon_plane(tmp_path, res_m=400), lat_max=-85.0)
+    assert got["slope_deg"][2] == pytest.approx(math.pi * 151.7**2, rel=0.02)  # km² = píxeles de 1 km
+
+
 def test_lola_ignores_missing_pixels(tmp_path):
     path = moon_plane(tmp_path, res_m=1000, nodata_hole=True)
     got = step07.lola_cut_stats(path, lat_max=-85.0)
