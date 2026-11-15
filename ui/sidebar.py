@@ -1,9 +1,11 @@
 """Sidebar (design 10.2). Draws the controls and returns their state.
 
-It reads no files and computes no scores: it receives the already loaded list of targets.
+It computes no scores and reads no data: it receives the already loaded list of targets. The only file it touches is the
+logo image shown at the top.
 """
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import streamlit as st
 
@@ -18,6 +20,7 @@ WEIGHT_LABELS = {
     "dust_wind": "Dust and wind",
     "biology": "Astrobiological interest",
 }
+LOGO_PATH = Path(__file__).resolve().parents[1] / "docs" / "img" / "logo" / "logo-dark.svg"
 BIOLOGY_NOTE = "It does not measure similarity to the target: it measures records of life in extreme environments."
 CAVES_HELP = "Underground sites studied as analogs of lava tubes on the Moon and Mars. Informational only: they do not change the scores."
 DUST_WIND_NOTE = "Mars only: the Moon has no atmosphere, no wind and no airborne dust."
@@ -62,7 +65,10 @@ def render_sidebar(targets: list[TargetSummary]) -> SidebarState:
     _init_session(list(labels))
 
     with st.sidebar:
-        st.header("Terra Analog Index")
+        if LOGO_PATH.is_file():  # logo with the name; the plain title is the fallback if the file is missing
+            st.image(str(LOGO_PATH), width="stretch")
+        else:
+            st.header("Terra Analog Index")
         st.radio(
             "Target site",
             options=list(labels),

@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/img/logo/logo-dark.svg">
+    <img alt="Terra Analog Index: terrestrial analogs of the Moon and Mars" src="docs/img/logo/logo-light.svg" width="520">
+  </picture>
+</p>
+
 # Terra Analog Index
 
 Which places on Earth look most like the lunar south pole or Jezero crater on Mars? Terra Analog Index
