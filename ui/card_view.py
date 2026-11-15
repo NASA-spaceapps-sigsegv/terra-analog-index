@@ -31,6 +31,10 @@ VARIABLE_ROW_HEIGHT = 84
 # se fija para que entren todas las filas: encabezado de 35 px (2.1875rem), las filas y el borde de 1 px
 # arriba y abajo.
 HEADER_HEIGHT = 35
+# Anchos de partida, en píxeles. La tabla ocupa todo el ancho y cada columna crece lo mismo hasta llenarlo,
+# así que la suma (725) tiene que entrar en la columna de la ficha para no desplazarse de costado.
+# Con 260 px o más, la frase más larga de "Lectura" ocupa tres líneas.
+COLUMN_WIDTHS = {"Variable": 140, "Tierra": 90, "Objetivo": 115, "Puntaje": 120, "Lectura": 260}
 TABLE_BORDERS = 2
 
 
@@ -127,10 +131,14 @@ def render_card(card: SiteCard) -> None:
         row_height=VARIABLE_ROW_HEIGHT,
         height=table_height(len(card.variables)),
         column_config={
+            "Variable": st.column_config.TextColumn("Variable", width=COLUMN_WIDTHS["Variable"]),
+            "Tierra": st.column_config.TextColumn("Tierra", width=COLUMN_WIDTHS["Tierra"]),
+            "Objetivo": st.column_config.TextColumn("Objetivo", width=COLUMN_WIDTHS["Objetivo"]),
             "Puntaje": st.column_config.ProgressColumn(
-                "Puntaje", format=f"%.{SCORE_DECIMALS_UI}f", min_value=0.0, max_value=1.0
+                "Puntaje", format=f"%.{SCORE_DECIMALS_UI}f", min_value=0.0, max_value=1.0,
+                width=COLUMN_WIDTHS["Puntaje"],
             ),
-            "Lectura": st.column_config.TextColumn("Lectura", width="large"),
+            "Lectura": st.column_config.TextColumn("Lectura", width=COLUMN_WIDTHS["Lectura"]),
         },
     )
     for note in card.notes:

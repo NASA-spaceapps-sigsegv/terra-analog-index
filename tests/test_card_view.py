@@ -53,6 +53,8 @@ def test_selected_cell_shows_its_card_with_limits_and_sampling_note(app):
     assert len(app.dataframe) == 2  # ranking y variables
     variables = app.dataframe[1].proto
     assert variables.row_height > 64  # con 64 px o menos st.dataframe no parte el texto
+    assert set(card_view.COLUMN_WIDTHS) == set(card_view.VARIABLE_COLUMNS)
+    assert sum(card_view.COLUMN_WIDTHS.values()) <= 760  # entra en la columna de la ficha sin desplazarse
     assert card_view.table_height(6) == 35 + 6 * variables.row_height + 2  # entran todas las filas, sin desplazarse
 
 
