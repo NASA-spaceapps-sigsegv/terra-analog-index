@@ -68,28 +68,25 @@ CARD_HINT = "Elegí una fila del ranking para ver su ficha."
 
 
 def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
-    """Mapa arriba; ranking (40%) y ficha (60%) abajo (design 10.1).
+    """Mapa arriba, después el ranking y la ficha debajo, los tres a todo el ancho.
 
     Cada parte atrapa sus propios errores: con todos los pesos en 0 el ranking avisa y la ficha
     elegida se sigue viendo, con el total nulo."""
     with handle_tai_errors():
         layer = services.get_map_layer(bundle, state.target_id, state.weights)
         map_view.render_map(layer, state.projection, st.session_state.get(SELECTED_KEY))
-    left, right = st.columns([4, 6])
-    with left:
-        st.subheader("Mejores celdas")
-        with handle_tai_errors():
-            ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)
-            csv_text = services.export_ranking_csv(bundle, state.target_id, state.weights, hide_known=state.hide_known)
-            ranking_view.render_ranking(ranking, st.session_state.get(SELECTED_KEY), csv_text)
-    with right:
-        st.subheader("Ficha")
-        with handle_tai_errors():
-            selected = st.session_state.get(SELECTED_KEY)
-            if selected is None:
-                st.info(CARD_HINT)
-            else:
-                card_view.render_card(services.get_site_card(bundle, selected, state.target_id, state.weights))
+    st.subheader("Mejores celdas")
+    with handle_tai_errors():
+        ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)
+        csv_text = services.export_ranking_csv(bundle, state.target_id, state.weights, hide_known=state.hide_known)
+        ranking_view.render_ranking(ranking, st.session_state.get(SELECTED_KEY), csv_text)
+    st.subheader("Ficha")
+    with handle_tai_errors():
+        selected = st.session_state.get(SELECTED_KEY)
+        if selected is None:
+            st.info(CARD_HINT)
+        else:
+            card_view.render_card(services.get_site_card(bundle, selected, state.target_id, state.weights))
 
 
 def method_tab(bundle: DataBundle) -> None:
