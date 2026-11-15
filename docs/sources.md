@@ -32,6 +32,15 @@
 
 ### New analogs
 
+Sources cited in the site cards (`content/cards/`). The cards also cite Lee et al. 2007, Jones, Bonaccorsi et al. 2013 and Fernández-Remolar et al. 2005, which are listed under Known analogs above.
+
+- Wikipedia, "Chocolate Mountains" (location, rugged terrain, rainfall, closure of part of the range). https://en.wikipedia.org/wiki/Chocolate_Mountains
+- Wikipedia, "Chocolate Mountain Aerial Gunnery Range" (operated by the U.S. Marine Corps; closed to the public). https://en.wikipedia.org/wiki/Chocolate_Mountain_Aerial_Gunnery_Range
+- Encyclopaedia Iranica, "Afghanistan i. Geography" (stony plains, loess, climate and precipitation of the Turkestan plains). https://www.iranicaonline.org/articles/afghanistan-i-geography
+- NASA Earth Observatory, "Dust Storm over Northern Afghanistan" (June 2011). https://science.nasa.gov/earth/earth-observatory/dust-storm-over-northern-afghanistan-51206/
+- Parks Canada, "Ecosystems and habitats", Quttinirpaaq National Park. https://parks.canada.ca/pn-np/nu/quttinirpaaq/nature/environnement-environment/habitats
+- NASA, "Haughton-Mars Project (HMP), Canadian Arctic". https://www.nasa.gov/mission/haughton-mars-project-hmp-canadian-arctic
+
 ### Cell data
 
 - Natural Earth
