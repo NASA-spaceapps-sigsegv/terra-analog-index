@@ -5,7 +5,12 @@
       "target_id": "moon_south_pole",
       "label": "Luna, polo sur",
       "body": "moon",
-      "bounds": { "lat_min": -90.0, "lat_max": -85.0, "lon_min": -180.0, "lon_max": 180.0 },
+      "bounds": {
+        "lat_min": -90.0,
+        "lat_max": -85.0,
+        "lon_min": -180.0,
+        "lon_max": 180.0
+      },
       "has_ice": true,
       "has_ice_source": "Li, S. et al. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115(36), 8907-8912. doi:10.1073/pnas.1802345115",
       "summary": "Región del polo sur lunar, al sur de 85° S: cráteres en sombra permanente con hielo de agua y zonas de iluminación casi continua. Destino de las misiones tripuladas Artemis.",
@@ -21,25 +26,51 @@
         "La fracción de hielo vale 1 por definición (el objetivo tiene hielo); no es la fracción de superficie cubierta"
       ],
       "vars": {
-        "slope_deg":   { "unit": "°", "source": "LOLA LDEM_80S_80MPP_ADJ (LRO), NASA PGDA, degradado a 1 km", "source_type": "measured" },
-        "roughness_m": { "unit": "m", "source": "LOLA LDEM_80S_80MPP_ADJ (LRO), NASA PGDA, degradado a 1 km", "source_type": "measured" },
-        "tmin_c":      { "mean": -223.0, "std": 20.0, "unit": "°C",
-                         "source": "Williams, J.-P. et al. (2017). The global surface temperatures of the Moon as measured by the Diviner Lunar Radiometer Experiment. Icarus 283, 300-325. doi:10.1016/j.icarus.2016.08.012. Mínima media al norte y sur de 85°: 50 K. Desvío estimado por el equipo (no publicado)",
-                         "source_type": "literature" },
-        "trange_c":    { "mean": 152.0, "std": 30.0, "unit": "°C",
-                         "source": "Williams, J.-P. et al. (2017), Icarus 283, 300-325. Máxima media 202 K y mínima media 50 K al norte y sur de 85°: 152 K. Desvío estimado por el equipo (no publicado)",
-                         "source_type": "literature" },
-        "precip_mm":   { "mean": 0.0, "std": 0.0, "unit": "mm/año",
-                         "source": "Por definición: sin atmósfera, no llueve", "source_type": "definition" },
-        "ice_frac":    { "mean": 1.0, "std": 0.0, "unit": "fracción",
-                         "source": "Derivado de has_ice", "source_type": "definition" }
+        "slope_deg": {
+          "unit": "°",
+          "source": "LOLA LDEM_80S_80MPP_ADJ (LRO), NASA PGDA, degradado a 1 km",
+          "source_type": "measured"
+        },
+        "roughness_m": {
+          "unit": "m",
+          "source": "LOLA LDEM_80S_80MPP_ADJ (LRO), NASA PGDA, degradado a 1 km",
+          "source_type": "measured"
+        },
+        "tmin_c": {
+          "mean": -223.0,
+          "std": 20.0,
+          "unit": "°C",
+          "source": "Williams, J.-P. et al. (2017). The global surface temperatures of the Moon as measured by the Diviner Lunar Radiometer Experiment. Icarus 283, 300-325. doi:10.1016/j.icarus.2016.08.012. Mínima media al norte y sur de 85°: 50 K. Desvío estimado por el equipo (no publicado)",
+          "source_type": "literature"
+        },
+        "trange_c": {
+          "mean": 152.0,
+          "std": 30.0,
+          "unit": "°C",
+          "source": "Williams, J.-P. et al. (2017), Icarus 283, 300-325. Máxima media 202 K y mínima media 50 K al norte y sur de 85°: 152 K. Desvío estimado por el equipo (no publicado)",
+          "source_type": "literature"
+        },
+        "precip_mm": {
+          "mean": 0.0,
+          "std": 0.0,
+          "unit": "mm/año",
+          "source": "Por definición: sin atmósfera, no llueve",
+          "source_type": "definition"
+        },
+        "ice_frac": {
+          "mean": 1.0,
+          "std": 0.0,
+          "unit": "fracción",
+          "source": "Derivado de has_ice",
+          "source_type": "definition"
+        }
       }
     },
     {
       "target_id": "mars_jezero",
       "label": "Marte, cráter Jezero",
       "body": "mars",
-            "bounds": {
+      "bounds": {
         "lat_min": 18.01,
         "lat_max": 18.81,
         "lon_min": 77.27,
@@ -57,11 +88,10 @@
       ],
       "notes": [],
       "vars": {
-                "slope_deg": {
+        "slope_deg": {
           "mean": 2.79,
           "std": 3.13,
           "unit": "°",
-          "rule": "overlap",
           "source": "Mars MGS MOLA DEM 463m",
           "source_type": "measured"
         },
@@ -69,26 +99,51 @@
           "mean": 60.6,
           "std": 51.8,
           "unit": "m",
-          "rule": "overlap",
           "source": "Mars MGS MOLA DEM 463m",
           "source_type": "measured"
         },
-        "tmin_c":      { "mean": -80.0, "std": 5.0, "unit": "°C",
-                         "source": "MEDA (Perseverance), temperatura del suelo: mínima de 191 K en el sol 189 (Savijärvi, H. et al. 2023, JGR Planets, doi:10.1029/2022JE007438) y de unos 200 K cerca del afelio, Ls 66-92 (Atri, D. et al. 2022, MNRAS, arXiv:2204.12850). Media 193 K; desvío estimado por el equipo",
-                         "source_type": "literature" },
-        "trange_c":    { "mean": 70.0, "std": 15.0, "unit": "°C",
-                         "source": "MEDA (Perseverance): amplitud diaria de 86 K en el sol 189 (191 a 277 K; Savijärvi et al. 2023) y de unos 60 K cerca del afelio (Atri et al. 2022). Desvío estimado por el equipo",
-                         "source_type": "literature" },
-        "precip_mm":   { "mean": 0.0, "std": 0.0, "unit": "mm/año",
-                         "source": "Por definición: no llueve", "source_type": "definition" },
-        "ice_frac":    { "mean": 0.0, "std": 0.0, "unit": "fracción",
-                         "source": "Derivado de has_ice", "source_type": "definition" },
-        "dust_aod":    { "mean": 0.45, "std": 0.15, "unit": "",
-                         "source": "Mastcam-Z y MEDA (Perseverance): espesor óptico del polvo de 0,4 a 0,5 fuera de las tormentas en los primeros 250 soles (Rodriguez-Manfredi, J. A. et al. 2023, Nature Geoscience 16, 19-28, doi:10.1038/s41561-022-01084-0); hasta 1,4 en la tormenta de enero de 2022 (Lemmon, M. T. et al. 2022, Geophysical Research Letters, doi:10.1029/2022GL100126). Medido a 880 nm; el polvo marciano cambia apenas unos puntos entre el visible y 880 nm. Desvío estimado por el equipo",
-                         "source_type": "literature" },
-        "wind_ms":     { "mean": 4.0, "std": 2.0, "unit": "m/s",
-                         "source": "MEDA (Perseverance): viento diurno medio de unos 4 m/s a 1,5 m de altura (Newman, C. E. et al. 2022, Science Advances 8, eabn3783, doi:10.1126/sciadv.abn3783). En la Tierra, MERRA-2 da el viento a unos 10 m. Desvío estimado por el equipo",
-                         "source_type": "literature" }
+        "tmin_c": {
+          "mean": -80.0,
+          "std": 5.0,
+          "unit": "°C",
+          "source": "MEDA (Perseverance), temperatura del suelo: mínima de 191 K en el sol 189 (Savijärvi, H. et al. 2023, JGR Planets, doi:10.1029/2022JE007438) y de unos 200 K cerca del afelio, Ls 66-92 (Atri, D. et al. 2022, MNRAS, arXiv:2204.12850). Media 193 K; desvío estimado por el equipo",
+          "source_type": "literature"
+        },
+        "trange_c": {
+          "mean": 70.0,
+          "std": 15.0,
+          "unit": "°C",
+          "source": "MEDA (Perseverance): amplitud diaria de 86 K en el sol 189 (191 a 277 K; Savijärvi et al. 2023) y de unos 60 K cerca del afelio (Atri et al. 2022). Desvío estimado por el equipo",
+          "source_type": "literature"
+        },
+        "precip_mm": {
+          "mean": 0.0,
+          "std": 0.0,
+          "unit": "mm/año",
+          "source": "Por definición: no llueve",
+          "source_type": "definition"
+        },
+        "ice_frac": {
+          "mean": 0.0,
+          "std": 0.0,
+          "unit": "fracción",
+          "source": "Derivado de has_ice",
+          "source_type": "definition"
+        },
+        "dust_aod": {
+          "mean": 0.45,
+          "std": 0.15,
+          "unit": "",
+          "source": "Mastcam-Z y MEDA (Perseverance): espesor óptico del polvo de 0,4 a 0,5 fuera de las tormentas en los primeros 250 soles (Rodriguez-Manfredi, J. A. et al. 2023, Nature Geoscience 16, 19-28, doi:10.1038/s41561-022-01084-0); hasta 1,4 en la tormenta de enero de 2022 (Lemmon, M. T. et al. 2022, Geophysical Research Letters, doi:10.1029/2022GL100126). Medido a 880 nm; el polvo marciano cambia apenas unos puntos entre el visible y 880 nm. Desvío estimado por el equipo",
+          "source_type": "literature"
+        },
+        "wind_ms": {
+          "mean": 4.0,
+          "std": 2.0,
+          "unit": "m/s",
+          "source": "MEDA (Perseverance): viento diurno medio de unos 4 m/s a 1,5 m de altura (Newman, C. E. et al. 2022, Science Advances 8, eabn3783, doi:10.1126/sciadv.abn3783). En la Tierra, MERRA-2 da el viento a unos 10 m. Desvío estimado por el equipo",
+          "source_type": "literature"
+        }
       }
     }
   ]
