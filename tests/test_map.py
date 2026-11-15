@@ -459,3 +459,13 @@ def _timed(fn, *args) -> float:
     t0 = time.perf_counter()
     fn(*args)
     return time.perf_counter() - t0
+
+
+@pytest.mark.parametrize(
+    "projection, x_limits, y_limits",
+    [("world", (-180, 180), (-90, 90)), ("south_pole", (-1.03, 1.03), (-1.03, 1.03)), ("north_pole", (-1.03, 1.03), (-1.03, 1.03))],
+)
+def test_zoom_out_stops_at_the_whole_map(bundle, projection, x_limits, y_limits):
+    fig = figure(bundle, projection)
+    assert (fig.layout.xaxis.minallowed, fig.layout.xaxis.maxallowed) == x_limits
+    assert (fig.layout.yaxis.minallowed, fig.layout.yaxis.maxallowed) == y_limits

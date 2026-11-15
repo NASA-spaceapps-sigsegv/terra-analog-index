@@ -335,13 +335,15 @@ def _world(fig: go.Figure, cells, selected_cell_id, caves: Sequence[Cave] = ()) 
 
     ticks_x = list(range(-180, 181, 60))
     fig.update_xaxes(
-        range=[-180, 180], tickvals=ticks_x, constrain="domain", showgrid=True, gridcolor="rgba(255,255,255,0.07)",
+        range=[-180, 180], minallowed=-180, maxallowed=180,  # zooming out stops at the whole world
+        tickvals=ticks_x, constrain="domain", showgrid=True, gridcolor="rgba(255,255,255,0.07)",
         ticktext=[f"{abs(v)}°{'W' if v < 0 else 'E' if v > 0 else ''}" for v in ticks_x], zeroline=False, showline=False,
         tickfont=dict(size=10, color="#8b929c"),
     )
     ticks_y = [-60, -30, 0, 30, 60]
     fig.update_yaxes(
-        range=[-90, 90], scaleanchor="x", scaleratio=1, tickvals=ticks_y, constrain="domain", showgrid=True,
+        range=[-90, 90], minallowed=-90, maxallowed=90, scaleanchor="x", scaleratio=1, tickvals=ticks_y, constrain="domain",
+        showgrid=True,
         gridcolor="rgba(255,255,255,0.07)", zeroline=False, showline=False, tickfont=dict(size=10, color="#8b929c"),
         ticktext=[f"{abs(v)}°{'S' if v < 0 else 'N' if v > 0 else ''}" for v in ticks_y],
     )
@@ -407,8 +409,9 @@ def _polar(fig: go.Figure, cells, projection: str, selected_cell_id, caves: Sequ
     for tr in _selected_traces(o_x, o_y, x[chosen], y[chosen]):
         fig.add_trace(tr)
 
-    fig.update_xaxes(range=[-1.03, 1.03], visible=False, constrain="domain")
-    fig.update_yaxes(range=[-1.03, 1.03], scaleanchor="x", scaleratio=1, visible=False, constrain="domain")
+    # minallowed and maxallowed: you can zoom in and pan, but zooming out stops at the whole globe (the map is never lost)
+    fig.update_xaxes(range=[-1.03, 1.03], minallowed=-1.03, maxallowed=1.03, visible=False, constrain="domain")
+    fig.update_yaxes(range=[-1.03, 1.03], minallowed=-1.03, maxallowed=1.03, scaleanchor="x", scaleratio=1, visible=False, constrain="domain")
     fig.update_layout(plot_bgcolor="rgba(0,0,0,0)")
 
 
