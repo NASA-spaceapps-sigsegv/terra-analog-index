@@ -72,9 +72,11 @@ def test_callback_saves_and_clears_the_cell(monkeypatch):
     monkeypatch.setattr(rv.st, "session_state", state)
     rv._on_select("k", (7, 8, 9))
     assert state[rv.SELECTED_KEY] == 9
+    assert state[rv.SCROLL_KEY] is True  # elegir una fila lleva a la ficha
     state["k"] = {"selection": {"rows": [], "columns": [], "cells": []}}
     rv._on_select("k", (7, 8, 9))
     assert state[rv.SELECTED_KEY] is None
+    assert state[rv.SCROLL_KEY] is False  # deseleccionar no mueve la página
 
 
 # --- En la app ---------------------------------------------------------------------
@@ -95,6 +97,26 @@ def test_table_shows_scores_as_progress_bars_and_nulls_as_sin_dato(app):
 def test_no_cell_selected_shows_the_hint(app):
     assert _selected(app) is None
     assert any("Elegí una fila del ranking" in i.value for i in app.info)
+
+
+def _scroll_scripts(app):
+    return [h for h in app.get("html") if "scrollIntoView" in h.proto.body]
+
+
+def test_picking_a_row_scrolls_to_the_card_once(app):
+    app.session_state[rv.SELECTED_KEY] = 102
+    app.session_state[rv.SCROLL_KEY] = True  # lo que deja el callback al elegir una fila
+    app.run()
+    assert not app.exception
+    assert len(_scroll_scripts(app)) == 1
+    assert rv.SCROLL_KEY not in app.session_state
+    app.sidebar.slider(key="w_terrain").set_value(0.5).run()  # mover un slider no vuelve a desplazar
+    assert _scroll_scripts(app) == []
+
+
+def test_total_is_wider_than_the_other_scores(app):
+    config = json.loads(app.dataframe[0].proto.columns)
+    assert config["Total"]["width"] > config["Terreno"]["width"]
 
 
 def test_selection_survives_moving_a_slider(app):

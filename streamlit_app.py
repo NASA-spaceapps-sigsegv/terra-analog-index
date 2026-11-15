@@ -20,7 +20,7 @@ from tai.errors import (
 )
 from tai.io import DataBundle, data_signature, load_bundle
 from ui import card_view, map_view, method_view, ranking_view
-from ui.ranking_view import SELECTED_KEY
+from ui.ranking_view import SCROLL_KEY, SELECTED_KEY
 from ui.sidebar import SidebarState, render_sidebar
 
 st.set_page_config(page_title="Terra Analog Index", page_icon="🛰️", layout="wide")
@@ -65,6 +65,7 @@ def handle_tai_errors(fatal: bool = False):
 
 
 CARD_HINT = "Elegí una fila del ranking para ver su ficha."
+CARD_ANCHOR = "ficha"
 
 
 def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
@@ -80,13 +81,24 @@ def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
         ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)
         csv_text = services.export_ranking_csv(bundle, state.target_id, state.weights, hide_known=state.hide_known)
         ranking_view.render_ranking(ranking, st.session_state.get(SELECTED_KEY), csv_text)
-    st.subheader("Ficha")
+    st.subheader("Ficha", anchor=CARD_ANCHOR)
     with handle_tai_errors():
         selected = st.session_state.get(SELECTED_KEY)
         if selected is None:
             st.info(CARD_HINT)
         else:
             card_view.render_card(services.get_site_card(bundle, selected, state.target_id, state.weights))
+    if st.session_state.pop(SCROLL_KEY, False):
+        scroll_to(CARD_ANCHOR)
+
+
+def scroll_to(anchor: str) -> None:
+    """Lleva la página hasta el título con ese anchor. Espera un momento para que la ficha ya esté dibujada."""
+    st.html(
+        f"<script>setTimeout(() => document.getElementById({anchor!r})"
+        "?.scrollIntoView({behavior: 'smooth', block: 'start'}), 150);</script>",
+        unsafe_allow_javascript=True,
+    )
 
 
 def method_tab(bundle: DataBundle) -> None:
