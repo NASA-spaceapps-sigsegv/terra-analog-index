@@ -47,6 +47,24 @@ with its percentile and `pass`, `fail` or `info`), the limits and the credits. I
 
 `make help` lists every command.
 
+## Deployment
+
+The live app runs on [Render](https://render.com) as a free web service, built from the `develop` branch; every push to
+`develop` redeploys it. The settings are:
+
+| Setting | Value |
+| --- | --- |
+| Repository and branch | this repository, `develop` |
+| Language | Python 3 (Render's default, 3.14 at the time of writing; tested locally on 3.13) |
+| Build command | `pip install -r requirements.txt` |
+| Start command | `streamlit run streamlit_app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true` |
+| Instance type | Free |
+
+The app only reads `data/processed/` and `requirements.txt` holds just the runtime packages, so no environment variables or
+secrets are needed. On the free plan the instance goes to sleep after about 15 minutes without visits, so the next visit can
+take a minute to load, and each interaction takes 3 to 4 seconds (0.3 seconds when run locally). For a demo, open the link a few
+minutes before or run the app locally with `make app`.
+
 ## Regenerate the data, step by step
 
 The app only reads `data/processed/`. Everything in it comes from an offline pipeline of nine steps
@@ -193,6 +211,7 @@ source of every value it shows.
 | `content/method.md` | Fixed text of the *Método* tab, one `## ` heading per section |
 | `data/raw/`, `data/interim/` | Downloads and intermediate files (not versioned; see `data/raw/README.md`) |
 | `data/processed/` | What the app reads (versioned) |
+| `docs/` | End-to-end test report, sources log and the screenshot and logo used here |
 | `scripts/` | Control maps, card and secret checks |
 | `tests/` | pytest; `tests/fixtures/` has one small file per contract |
 
