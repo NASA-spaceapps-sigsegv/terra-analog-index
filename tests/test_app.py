@@ -35,7 +35,7 @@ def test_all_weights_zero_shows_the_warning(app):
 
 def test_reset_button_restores_weights(app):
     app.sidebar.slider(key="w_terrain").set_value(0.0).run()
-    app.sidebar.button[0].click().run()
+    app.sidebar.button(key="preset_balanced").click().run()  # the default weights, which is also the reset
     assert app.sidebar.slider(key="w_terrain").value == 1.0
 
 

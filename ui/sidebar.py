@@ -13,6 +13,7 @@ import streamlit as st
 
 from tai.constants import DEFAULT_WEIGHTS, DIMENSIONS, WEIGHT_STEP
 from tai.models import TargetSummary
+from ui import share
 
 PROJECTIONS = {"world": "World", "south_pole": "South pole", "north_pole": "North pole"}
 WEIGHT_LABELS = {
@@ -26,6 +27,16 @@ LOGO_PATH = Path(__file__).resolve().parents[1] / "docs" / "img" / "logo" / "log
 BIOLOGY_NOTE = "It does not measure similarity to the target: it measures records of life in extreme environments."
 CAVES_HELP = "Underground sites studied as analogs of lava tubes on the Moon and Mars. Informational only: they do not change the scores."
 DUST_WIND_NOTE = "Mars only: the Moon has no atmosphere, no wind and no airborne dust."
+# One click sets the five weights (one rerun instead of five). The balanced one is the default, so it is also the reset.
+PRESETS = {
+    "balanced": ("Default", dict(DEFAULT_WEIGHTS), "The balanced default weights: also what resets the sliders."),
+    "physical": ("Physical", {**DEFAULT_WEIGHTS, "biology": 0.0}, "Physical similarity only: astrobiology at 0."),
+    "biology": (
+        "Biology",
+        {"terrain": 0.3, "temperature": 0.3, "water_ice": 0.5, "dust_wind": 0.2, "biology": 1.0},
+        "Astrobiological interest first, with the physical dimensions at a lower weight.",
+    ),
+}
 
 
 @lru_cache(maxsize=1)
@@ -55,6 +66,7 @@ class SidebarState:
 
 def _init_session(target_ids: list[str]) -> None:
     ss = st.session_state
+    share.apply_query_params(target_ids)  # the first time, what the address says (a shared link) goes first
     if ss.get("target_id") not in target_ids:  # first time, or a target that no longer exists
         ss["target_id"] = target_ids[0]
     for dim in DIMENSIONS:
@@ -65,9 +77,9 @@ def _init_session(target_ids: list[str]) -> None:
     ss.setdefault("selected_cell_id", None)
 
 
-def _reset_weights() -> None:
-    for dim in DIMENSIONS:
-        st.session_state[weight_key(dim)] = DEFAULT_WEIGHTS[dim]
+def _apply_preset(preset: str) -> None:
+    for dim, value in PRESETS[preset][1].items():
+        st.session_state[weight_key(dim)] = value
 
 
 def _clear_selection() -> None:
@@ -93,13 +105,14 @@ def render_sidebar(targets: list[TargetSummary]) -> SidebarState:
         )
 
         st.subheader("Weights")
+        for column, (preset, (label, _, tip)) in zip(st.columns(len(PRESETS)), PRESETS.items(), strict=True):
+            column.button(label, key=f"preset_{preset}", help=tip, on_click=_apply_preset, args=(preset,), width="stretch")
         for dim in DIMENSIONS:
             st.slider(WEIGHT_LABELS[dim], 0.0, 1.0, step=WEIGHT_STEP, key=weight_key(dim))
             if dim == "biology":
                 st.caption(BIOLOGY_NOTE)
             elif dim == "dust_wind":
                 st.caption(DUST_WIND_NOTE)
-        st.button("Reset weights", on_click=_reset_weights)
 
         st.checkbox("Hide known analogs", key="hide_known")
         st.checkbox("Show caves and lava tubes", key="show_caves", help=CAVES_HELP)

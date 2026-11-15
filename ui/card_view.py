@@ -8,6 +8,7 @@ astrobiological interest, limits and sources.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -24,6 +25,7 @@ NO_DATA = "no data"
 MANUAL_HEADING = "What it is good for in exploration"
 LIMITS_HEADING = "Limits no site on Earth replicates"
 RADAR_COLOR = "#21918c"  # green from the map's Viridis scale
+OTHER_COLOR = "#e8833a"  # the other target in the comparison: orange, which is not in Viridis
 RADAR_GRID = "rgba(128,128,128,0.45)"  # semi-transparent gray: visible in light and dark themes
 RADAR_TICKS = (0.3, 0.7, 1.0)  # the "different" and "similar" thresholds, and the maximum
 # Fixed row height of the variables table, in pixels. st.dataframe only wraps text if the height
@@ -54,14 +56,18 @@ def _score_text(x: float | None) -> str:
     return NO_DATA if x is None else f"{x:.{SCORE_DECIMALS_UI}f}"
 
 
-def radar_axes(card: SiteCard) -> tuple[list[str], list[float]]:
+def _present(card: SiteCard) -> set[str]:
+    return {v.dimension for v in card.variables} | {"biology"}
+
+
+def radar_axes(card: SiteCard, dims: Sequence[str] | None = None) -> tuple[list[str], list[float]]:
     """Axis labels and values: one per target dimension (dust and wind only if it has it).
 
-    A null dimension goes at 0 with "(no data)" in the label."""
-    present = {v.dimension for v in card.variables} | {"biology"}
+    A null dimension goes at 0 with "(no data)" in the label. `dims`: draw exactly these axes, so two cards can share them."""
+    present = _present(card)
     labels, values = [], []
-    for dim in DIMENSIONS:
-        if dim not in present:
+    for dim in DIMENSIONS if dims is None else dims:
+        if dims is None and dim not in present:
             continue
         score = getattr(card.scores, dim)
         labels.append(DIMENSION_LABELS[dim] + (f" ({NO_DATA})" if score is None else ""))
@@ -69,18 +75,30 @@ def radar_axes(card: SiteCard) -> tuple[list[str], list[float]]:
     return labels, values
 
 
-def radar_figure(card: SiteCard) -> go.Figure:
-    labels, values = radar_axes(card)
+def radar_figure(card: SiteCard, other: SiteCard | None = None) -> go.Figure:
+    """The radar of the card. With `other` (the same cell for the other target) both polygons share the axes (TAI-40)."""
+    dims = None if other is None else [d for d in DIMENSIONS if d in _present(card) | _present(other)]
+    labels, values = radar_axes(card, dims)
+    hover = "%{theta}: %{r:.2f}<extra></extra>"
     fig = go.Figure(
         go.Scatterpolar(
             r=values + values[:1],  # close the polygon
             theta=labels + labels[:1],
             fill="toself",
             line=dict(color=RADAR_COLOR),
-            hovertemplate="%{theta}: %{r:.2f}<extra></extra>",
-            name=card.header.label,
+            hovertemplate=hover,
+            name=card.header.label if other is None else card.target_label,
         )
     )
+    if other is not None:
+        _, other_values = radar_axes(other, dims)
+        fig.add_trace(
+            go.Scatterpolar(
+                r=other_values + other_values[:1], theta=labels + labels[:1], fill="toself",
+                line=dict(color=OTHER_COLOR, dash="dash"), fillcolor="rgba(232,131,58,0.18)", hovertemplate=hover,
+                name=other.target_label,
+            )
+        )
     fig.update_layout(
         polar=dict(
             # Transparent background: it takes the theme's, so the theme's text (light on dark) is readable.
@@ -96,11 +114,12 @@ def radar_figure(card: SiteCard) -> go.Figure:
                 gridcolor=RADAR_GRID,
                 tickfont=dict(size=12),
             ),
-            angularaxis=dict(gridcolor=RADAR_GRID, linecolor=RADAR_GRID),
+            angularaxis=dict(gridcolor=RADAR_GRID, linecolor=RADAR_GRID, tickfont=dict(size=11)),  # small enough for "Water and ice" on a phone
         ),
-        showlegend=False,
+        showlegend=other is not None,
+        legend=dict(orientation="v", yanchor="top", y=1.0, xanchor="left", x=0.0),  # top left: nothing else is drawn there
         height=320,
-        margin=dict(l=60, r=60, t=30, b=30),
+        margin=dict(l=72, r=72, t=30, b=30),
         paper_bgcolor="rgba(0,0,0,0)",
     )
     return fig
@@ -126,7 +145,18 @@ def _dimension_list(title: str, items, empty_phrase: str | None) -> None:
         st.caption(empty_phrase)
 
 
-def render_card(card: SiteCard) -> None:
+def render_summary(card: SiteCard, anchor: str) -> None:
+    """The selected cell in a few lines for the first screen: its total and its scores as bars. The full card is below."""
+    place = card.header.label + (f" · {card.header.country}" if card.header.country else "")
+    with st.container(border=True):
+        st.markdown(f"**Selected: {place}**  \nTotal vs. {card.target_label}: **{_score_text(card.scores.total)}**")
+        for label, value in zip(*radar_axes(card), strict=True):
+            st.progress(float(value), text=f"{label}: {value:.{SCORE_DECIMALS_UI}f}")
+        st.markdown(f"[Read the full card ↓](#{anchor})")
+
+
+def render_card(card: SiteCard, other: SiteCard | None = None) -> None:
+    """`other`: the same cell for the other target; its polygon is drawn over the radar."""
     # 1. Header
     head, total = st.columns([3, 1])
     with head:
@@ -147,7 +177,7 @@ def render_card(card: SiteCard) -> None:
         st.markdown(card.manual.body_md)
 
     # 3. Radar
-    st.plotly_chart(radar_figure(card), width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(radar_figure(card, other), width="stretch", config={"displayModeBar": False})
 
     # 4. Variables table
     st.dataframe(
