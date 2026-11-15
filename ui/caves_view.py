@@ -1,9 +1,9 @@
-"""Tabla de cuevas y tubos de lava (TAI-53), debajo del mapa cuando la capa está prendida.
+"""Caves and lava tubes table (TAI-53), below the map when the layer is on.
 
-Cada fila dice en qué puesto del ranking actual está la celda de la cueva. Elegir una fila abre la ficha de
-esa celda, igual que el ranking: guarda su cell_id en st.session_state["selected_cell_id"]. La clave del
-widget sigue el mismo criterio que la del ranking (ui/ranking_view.py): cambia con el orden de las filas y
-con la celda elegida, así la fila marcada siempre es la de la ficha que se ve.
+Each row says at which rank of the current ranking the cave's cell sits. Picking a row opens that cell's
+card, just like the ranking: it stores its cell_id in st.session_state["selected_cell_id"]. The widget key
+follows the same rule as the ranking's (ui/ranking_view.py): it changes with the row order and with the
+selected cell, so the checked row is always the one of the card being shown.
 """
 
 from __future__ import annotations
@@ -14,44 +14,44 @@ import streamlit as st
 from tai.constants import SCORE_DECIMALS_UI
 from ui.ranking_view import NO_DATA, SCROLL_KEY, SELECTED_KEY, table_key
 
-HEADING = "Cuevas y tubos de lava"
+HEADING = "Caves and lava tubes"
 CAPTION = (
-    "Sitios subterráneos estudiados como análogos de la Luna y Marte. No cambian los puntajes: el puesto y el "
-    "total son los de la celda donde cae cada uno. Elegí una fila para ver la ficha de esa celda."
+    "Underground sites studied as analogs of the Moon and Mars. They do not change the scores: the rank and "
+    "total are those of the cell each one falls in. Pick a row to see that cell's card."
 )
-ROW_HEIGHT = 84  # entran tres renglones de "Por qué interesa"
+ROW_HEIGHT = 84  # fits three lines of "Why it matters"
 HEADER_HEIGHT = 38
 TABLE_BORDERS = 3
 
 
 def table_height(n_rows: int) -> int:
-    """Alto exacto para que no haya que desplazarse dentro de la tabla."""
+    """Exact height so there is no need to scroll inside the table."""
     return HEADER_HEIGHT + n_rows * ROW_HEIGHT + TABLE_BORDERS
 
 
 def column_config() -> dict:
     return {
-        "Cueva": st.column_config.TextColumn("Cueva", width=260),
-        "Tipo": st.column_config.TextColumn("Tipo", width=110),
-        "Puesto": st.column_config.NumberColumn("Puesto", width=70, help="Puesto de su celda entre todas las elegibles"),
+        "Cave": st.column_config.TextColumn("Cave", width=260),
+        "Type": st.column_config.TextColumn("Type", width=110),
+        "Rank": st.column_config.NumberColumn("Rank", width=70, help="Rank of its cell among all eligible cells"),
         "Total": st.column_config.ProgressColumn(
             "Total", format=f"%.{SCORE_DECIMALS_UI}f", min_value=0.0, max_value=1.0, width=130
         ),
-        "Por qué interesa": st.column_config.TextColumn("Por qué interesa", width="large"),
-        "Fuente": st.column_config.TextColumn("Fuente", width=260),
+        "Why it matters": st.column_config.TextColumn("Why it matters", width="large"),
+        "Source": st.column_config.TextColumn("Source", width=260),
     }
 
 
 def selected_rows(cell_ids: tuple[int | None, ...], selected: int | None) -> list[int]:
-    """La fila a marcar: la primera cueva de la celda elegida. Sin celda elegida, ninguna (aunque haya cuevas
-    sin celda: None no es una celda)."""
+    """The row to check: the first cave in the selected cell. With no selected cell, none (even if there are
+    caves without a cell: None is not a cell)."""
     if selected is None or selected not in cell_ids:
         return []
     return [cell_ids.index(selected)]
 
 
 def _on_select(key: str, cell_ids: tuple[int | None, ...]) -> None:
-    """Una fila con celda abre su ficha; una sin celda (isla chica) no cambia nada."""
+    """A row with a cell opens its card; one without a cell (small island) changes nothing."""
     state = st.session_state.get(key)
     rows = state["selection"]["rows"] if state else []
     if not rows or not 0 <= rows[0] < len(cell_ids) or cell_ids[rows[0]] is None:

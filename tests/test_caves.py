@@ -1,4 +1,4 @@
-"""Capa de cuevas y tubos de lava (TAI-53): config, paso 08, carga, mapa y casilla de la barra lateral."""
+"""Caves and lava tubes layer (TAI-53): config, step 08, loading, map and sidebar checkbox."""
 
 import importlib.util
 from pathlib import Path
@@ -30,8 +30,8 @@ def bundle(data_dir):
 
 
 def _cave(**kw) -> dict:
-    return {"cave_id": "c", "name": "Cueva", "lat": 10.0, "lon": 20.0, "kind": "lava_tube",
-            "relevance": "Marte", "source": "x"} | kw
+    return {"cave_id": "c", "name": "Cave", "lat": 10.0, "lon": 20.0, "kind": "lava_tube",
+            "relevance": "Mars", "source": "x"} | kw
 
 
 # --- config/caves.csv ---------------------------------------------------------------
@@ -45,7 +45,7 @@ def test_the_config_file_is_valid_and_every_site_has_a_source():
     assert {c.kind for c in caves} <= set(map_view.CAVE_KINDS)
 
 
-@pytest.mark.parametrize("bad", [{"lat": 91.0}, {"lon": -181.0}, {"kind": "karst"}, {"cave_id": "Con Espacios"},
+@pytest.mark.parametrize("bad", [{"lat": 91.0}, {"lon": -181.0}, {"kind": "karst"}, {"cave_id": "With Spaces"},
                                  {"source": ""}])
 def test_the_model_rejects_bad_rows(bad):
     with pytest.raises(ValidationError):
@@ -55,18 +55,18 @@ def test_the_model_rejects_bad_rows(bad):
 def test_load_caves_rejects_repeated_ids_and_wrong_columns(tmp_path):
     path = tmp_path / "caves.csv"
     pd.DataFrame([_cave(), _cave()], columns=list(CAVES_COLUMNS)).to_csv(path, index=False)
-    with pytest.raises(step08.OutputValidationError, match="repetidos"):
+    with pytest.raises(step08.OutputValidationError, match="duplicated"):
         step08.load_caves(path)
     pd.DataFrame([_cave()]).drop(columns="source").to_csv(path, index=False)
-    with pytest.raises(step08.OutputValidationError, match="columnas"):
+    with pytest.raises(step08.OutputValidationError, match="columns"):
         step08.load_caves(path)
 
 
-# --- Carga -------------------------------------------------------------------------
+# --- Loading -----------------------------------------------------------------------
 
 
 def test_the_bundle_carries_the_caves(bundle):
-    assert [c.cave_id for c in services.get_caves(bundle)] == ["cueva_norte", "cueva_sur"]
+    assert [c.cave_id for c in services.get_caves(bundle)] == ["north_cave", "south_cave"]
 
 
 def test_a_missing_caves_file_names_step_08(data_dir):
@@ -75,7 +75,7 @@ def test_a_missing_caves_file_names_step_08(data_dir):
         io.load_bundle(data_dir)
 
 
-# --- Mapa ------------------------------------------------------------------------------
+# --- Map -------------------------------------------------------------------------------
 
 
 def _caves_traces(fig):
@@ -94,43 +94,43 @@ def test_without_caves_the_map_has_no_cave_layer(bundle):
 def test_world_shows_every_cave_with_its_name_type_and_source(bundle):
     (trace,) = _caves_traces(_figure(bundle, "world", services.get_caves(bundle)))
     assert list(trace.x) == [-13.44, -77.5] and list(trace.y) == [29.16, -89.5]
-    assert "Cueva del norte" in trace.hovertext[0] and "Tubo de lava" in trace.hovertext[0]
-    assert "Cueva de hielo" in trace.hovertext[1] and "Fuente: prueba" in trace.hovertext[1]
+    assert "North cave" in trace.hovertext[0] and "Lava tube" in trace.hovertext[0]
+    assert "Ice cave" in trace.hovertext[1] and "Source: test" in trace.hovertext[1]
 
 
-@pytest.mark.parametrize("projection,expected", [("south_pole", "Cueva del sur"), ("north_pole", "Cueva del norte")])
+@pytest.mark.parametrize("projection,expected", [("south_pole", "South cave"), ("north_pole", "North cave")])
 def test_each_pole_shows_only_its_hemisphere(bundle, projection, expected):
     (trace,) = _caves_traces(_figure(bundle, projection, services.get_caves(bundle)))
     assert len(trace.x) == 1 and expected in trace.hovertext[0]
 
 
 def test_long_hover_text_is_split_into_lines():
-    cave = models.Cave.model_validate(_cave(relevance="palabra " * 30))
+    cave = models.Cave.model_validate(_cave(relevance="word " * 30))
     lines = map_view._cave_hover(cave).split("<br>")
     assert all(len(line) <= map_view.HOVER_WRAP + 10 for line in lines[2:])
 
 
-# --- En la app ----------------------------------------------------------------------
+# --- In the app ---------------------------------------------------------------------
 
 
 def test_the_checkbox_starts_off_and_turns_the_layer_on(data_dir, monkeypatch):
     monkeypatch.setenv("TAI_DATA_DIR", str(data_dir))
     at = AppTest.from_file(APP, default_timeout=30).run()
     box = at.sidebar.checkbox(key="show_caves")
-    assert box.value is False and box.label == "Mostrar cuevas y tubos de lava"
+    assert box.value is False and box.label == "Show caves and lava tubes"
     assert map_view.CAVES_NAME not in at.get("plotly_chart")[0].proto.spec
     box.check().run()
     assert not at.exception
     assert map_view.CAVES_NAME in at.get("plotly_chart")[0].proto.spec
 
 
-# --- Tabla de cuevas y ficha (puesto de su celda, sin cambiar puntajes) -------------------------------
+# --- Caves table and card (rank of its cell, without changing scores) -------------------------------
 
 
 def test_a_cave_belongs_to_the_cell_that_contains_it_or_to_none(bundle):
     north, south = services.get_caves(bundle)
     assert tai_caves.cell_of(south, bundle.grid.index) == 102
-    assert tai_caves.cell_of(north, bundle.grid.index) is None  # su celda no está en la grilla
+    assert tai_caves.cell_of(north, bundle.grid.index) is None  # its cell is not in the grid
 
 
 def test_caves_table_gives_the_rank_and_total_of_each_cave_cell(bundle):
@@ -138,19 +138,19 @@ def test_caves_table_gives_the_rank_and_total_of_each_cave_cell(bundle):
     assert tuple(table.columns) == services.CAVES_TABLE_COLUMNS
     ranking = {i.cell_id: i for i in services.get_ranking(bundle, "mars_jezero", DEFAULT_WEIGHTS).items}
     first, second = table.to_dict(orient="records")
-    assert first["Cueva"] == "Cueva del sur" and first["cell_id"] == 102 and first["Tipo"] == "Cueva de hielo"
-    assert first["Puesto"] == ranking[102].rank and first["Total"] == pytest.approx(ranking[102].total)
-    assert second["Cueva"] == "Cueva del norte" and pd.isna(second["Puesto"]) and pd.isna(second["Total"])
-    assert tai_caves.NO_CELL in second["Por qué interesa"]
+    assert first["Cave"] == "South cave" and first["cell_id"] == 102 and first["Type"] == "Ice cave"
+    assert first["Rank"] == ranking[102].rank and first["Total"] == pytest.approx(ranking[102].total)
+    assert second["Cave"] == "North cave" and pd.isna(second["Rank"]) and pd.isna(second["Total"])
+    assert tai_caves.NO_CELL in second["Why it matters"]
 
 
 def test_caves_table_follows_the_known_analog_filter_and_survives_zero_weights(bundle):
-    weights = DEFAULT_WEIGHTS | {"terrain": 0.0}  # con terreno en 0 entra la celda 105, análogo conocido
-    shown = services.get_caves_table(bundle, "mars_jezero", weights)["Puesto"].iloc[0]
-    hidden = services.get_caves_table(bundle, "mars_jezero", weights, hide_known=True)["Puesto"].iloc[0]
+    weights = DEFAULT_WEIGHTS | {"terrain": 0.0}  # with terrain at 0, cell 105 (a known analog) gets in
+    shown = services.get_caves_table(bundle, "mars_jezero", weights)["Rank"].iloc[0]
+    hidden = services.get_caves_table(bundle, "mars_jezero", weights, hide_known=True)["Rank"].iloc[0]
     assert hidden <= shown
     zero = services.get_caves_table(bundle, "mars_jezero", {k: 0.0 for k in DEFAULT_WEIGHTS})
-    assert zero["Puesto"].isna().all() and len(zero) == 2
+    assert zero["Rank"].isna().all() and len(zero) == 2
 
 
 def test_caves_table_unknown_target_raises(bundle):
@@ -160,7 +160,7 @@ def test_caves_table_unknown_target_raises(bundle):
 
 def test_the_card_lists_the_caves_of_its_cell_and_keeps_the_score(bundle):
     card = services.get_site_card(bundle, 102, "mars_jezero", DEFAULT_WEIGHTS, cards_dir=None)
-    assert [(c.name, c.kind_label) for c in card.caves] == [("Cueva del sur", "Cueva de hielo")]
+    assert [(c.name, c.kind_label) for c in card.caves] == [("South cave", "Ice cave")]
     ranking = {i.cell_id: i for i in services.get_ranking(bundle, "mars_jezero", DEFAULT_WEIGHTS).items}
     assert card.scores.total == pytest.approx(ranking[102].total, abs=1e-3)
     assert services.get_site_card(bundle, 104, "mars_jezero", DEFAULT_WEIGHTS, cards_dir=None).caves == []
@@ -196,4 +196,4 @@ def test_the_table_shows_only_with_the_layer_on_and_the_card_shows_the_cave(data
     at.session_state[caves_view.SELECTED_KEY] = 102
     at.run()
     assert any(card_view.CAVES_HEADING in m.value for m in at.markdown)
-    assert any("Cueva del sur" in m.value for m in at.markdown)
+    assert any("South cave" in m.value for m in at.markdown)

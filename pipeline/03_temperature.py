@@ -157,7 +157,7 @@ def temperature_cells(months, grid: pd.DataFrame, land, read=read_hdf4_layer, lo
 def _months_note(counts: np.ndarray, what: str) -> str:
     hist = pd.Series(counts).value_counts().sort_index(ascending=False)
     parts = ", ".join(f"{int(k)}: {int(v)}" for k, v in hist.items())
-    return f"meses con dato {what} (meses: celdas): {parts}"
+    return f"months with {what} data (months: cells): {parts}"
 
 
 def main() -> None:
@@ -174,7 +174,7 @@ def main() -> None:
         and is_up_to_date([OUTPUT], [*months, GRID_PATH, LAND_MASK_PATH, *code])
         and not last_run_partial(STEP)
     ):
-        log.info("al día")
+        log.info("up to date")
         return
 
     grid = load_grid()
@@ -191,10 +191,10 @@ def main() -> None:
 
     nulls = {c: int(temps[c].isna().sum()) for c in COLUMNS}
     notes = [
-        f"celdas sin dato: tmin_c {nulls['tmin_c']}, trange_c {nulls['trange_c']}",
-        f"{s['clipped']} celdas con rango anual negativo llevado a 0 (meseta de hielo, dentro del error de MODIS)",
-        _months_note(s["n_night"], "nocturno"),
-        _months_note(s["n_both"], "diurno y nocturno"),
+        f"cells without data: tmin_c {nulls['tmin_c']}, trange_c {nulls['trange_c']}",
+        f"{s['clipped']} cells with a negative annual range set to 0 (ice plateau, within MODIS error)",
+        _months_note(s["n_night"], "night"),
+        _months_note(s["n_both"], "day and night"),
     ]
     if args.bbox:
         notes.append(bbox_note(args.bbox))
@@ -209,13 +209,13 @@ def main() -> None:
             started,
             inputs=[
                 {
-                    "name": f"MODIS, temperatura superficial mensual, {DATA_YEAR}",
+                    "name": f"MODIS, monthly land surface temperature, {DATA_YEAR}",
                     "product": f"{PRODUCT} v061",
                     "portal": "NASA Earthdata (LP DAAC)",
                     "url": "https://doi.org/10.5067/MODIS/MOD11C3.061",
                     "files": len(months),
                     "size_mb": round(sum(file_size_mb(p) for p in months), 1),
-                    "license_note": "Datos abiertos de NASA",
+                    "license_note": "NASA open data",
                 }
             ],
             outputs=[(OUTPUT, len(temps))],

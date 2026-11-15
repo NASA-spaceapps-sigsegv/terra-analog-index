@@ -1,4 +1,4 @@
-"""Capa biológica (TAI-15): paso 05 sobre XML y búsquedas de mentira, sin red."""
+"""Biology layer (TAI-15): step 05 on fake XML and searches, no network."""
 
 import importlib.util
 import json
@@ -23,7 +23,7 @@ ATACAMA_CELL = 23510  # design 3.3: lat -24.08, lon -69.92
 
 
 def sample_xml(*samples) -> bytes:
-    """samples: (accession, organism, {atributo: valor})."""
+    """samples: (accession, organism, {attribute: value})."""
     parts = []
     for acc, organism, attrs in samples:
         a = "".join(
@@ -36,7 +36,7 @@ def sample_xml(*samples) -> bytes:
     return f"<BioSampleSet>{''.join(parts)}</BioSampleSet>".encode()
 
 
-# --- Búsquedas ---------------------------------------------------------------
+# --- Searches ----------------------------------------------------------------
 
 
 def test_environment_query_quotes_phrases_and_joins_with_or():
@@ -75,7 +75,7 @@ def test_parse_ignores_empty_attribute_text_and_unknown_attributes():
     assert row["lat_lon"] is None and "strain" not in row
 
 
-# --- Coordenadas y celdas ----------------------------------------------------
+# --- Coordinates and cells ---------------------------------------------------
 
 
 def raw_frame(rows):
@@ -107,7 +107,7 @@ def test_assign_cells_on_an_empty_frame():
     assert step05.assign_cells(empty, [1, 2]).empty
 
 
-# --- Tablas de salida --------------------------------------------------------
+# --- Output tables ----------------------------------------------------------
 
 
 def on_land(rows):
@@ -118,7 +118,7 @@ def on_land(rows):
 def test_samples_table_matches_the_contract_and_keeps_one_row_per_sample_and_type():
     df = on_land([
         ("A", "halophile", "o", -24.08, -69.92, ATACAMA_CELL, None, None, None),
-        ("A", "halophile", "o", -24.08, -69.92, ATACAMA_CELL, None, None, None),  # duplicado
+        ("A", "halophile", "o", -24.08, -69.92, ATACAMA_CELL, None, None, None),  # duplicate
         ("A", "xerophile", "o", -24.08, -69.92, ATACAMA_CELL, None, None, None),
     ])
     out = step05.samples_table(df)
@@ -129,13 +129,13 @@ def test_samples_table_matches_the_contract_and_keeps_one_row_per_sample_and_typ
 def test_cells_table_counts_unique_samples_and_types():
     df = on_land([
         ("A", "halophile", "o", 0, 0, 10, None, None, None),
-        ("A", "xerophile", "o", 0, 0, 10, None, None, None),  # la misma muestra en dos tipos
+        ("A", "xerophile", "o", 0, 0, 10, None, None, None),  # the same sample in two types
         ("B", "halophile", "o", 0, 0, 10, None, None, None),
         ("C", "thermophile", "o", 0, 0, 11, None, None, None),
     ])
     cells = step05.cells_table(step05.samples_table(df), [10, 11, 12])
     got = cells.set_index("cell_id")
-    assert got.loc[10, "bio_records"] == 2  # A y B, no 3 filas
+    assert got.loc[10, "bio_records"] == 2  # A and B, not 3 rows
     assert got.loc[10, "bio_types"] == 2 and got.loc[10, "bio_type_list"] == "halophile,xerophile"
     assert got.loc[11, "bio_records"] == 1 and got.loc[11, "bio_type_list"] == "thermophile"
     assert got.loc[12, "bio_records"] == 0 and got.loc[12, "bio_types"] == 0 and got.loc[12, "bio_type_list"] == ""
@@ -153,7 +153,7 @@ def test_type_list_follows_the_order_of_bio_types():
     assert cells.loc[0, "bio_type_list"] == ",".join(BIO_TYPES) and cells.loc[0, "bio_types"] == 6
 
 
-# --- Descarga por lotes ------------------------------------------------------
+# --- Batch download ---------------------------------------------------------
 
 
 class FakeNcbi:
@@ -178,10 +178,10 @@ def test_download_is_capped_batched_and_resumable(tmp_path):
     assert [f.name for f in files] == ["halophile_0.xml", f"halophile_{NCBI_BATCH}.xml", f"halophile_{2 * NCBI_BATCH}.xml"]
     assert len(step05.read_batches(files)) == cap
 
-    (tmp_path / f"halophile_{2 * NCBI_BATCH}.xml").unlink()  # se cortó antes del último lote
+    (tmp_path / f"halophile_{2 * NCBI_BATCH}.xml").unlink()  # it stopped before the last batch
     again = FakeNcbi(total_in_ncbi)
     step05.download_type(again, "halophile", "q", tmp_path, cap, LOG)
-    assert again.fetches == [(2 * NCBI_BATCH, 50)]  # solo pide lo que falta
+    assert again.fetches == [(2 * NCBI_BATCH, 50)]  # only requests what is missing
     assert not list(tmp_path.glob("*.part"))
 
 
@@ -202,12 +202,12 @@ def test_download_of_an_empty_search_requests_nothing(tmp_path):
 
 def test_manual_csv_becomes_samples(tmp_path):
     csv = tmp_path / "bio_manual.csv"
-    csv.write_text("lat,lon,extremophile_type,source\n-24.08,-69.92,halophile,Cita 1\n37.7,-6.6,acidophile,Cita 2\n",
+    csv.write_text("lat,lon,extremophile_type,source\n-24.08,-69.92,halophile,Citation 1\n37.7,-6.6,acidophile,Citation 2\n",
                    encoding="utf-8")
     df = step05.read_manual(csv)
     assert list(df["accession"]) == ["MANUAL-0001", "MANUAL-0002"]
     coords = step05.with_coordinates(df)
-    assert list(coords["isolation_source"]) == ["Cita 1", "Cita 2"]
+    assert list(coords["isolation_source"]) == ["Citation 1", "Citation 2"]
     assert coords.loc[0, "lat"] == pytest.approx(-24.08)
 
 
@@ -218,11 +218,11 @@ def test_manual_csv_rejects_unknown_types_and_missing_columns(tmp_path):
         step05.read_manual(bad_type)
     no_cols = tmp_path / "b.csv"
     no_cols.write_text("lat,lon\n1,2\n", encoding="utf-8")
-    with pytest.raises(MissingInputError, match="faltan columnas"):
+    with pytest.raises(MissingInputError, match="missing columns"):
         step05.read_manual(no_cols)
 
 
-# --- Archivo de términos real ------------------------------------------------
+# --- Real terms file -------------------------------------------------------
 
 
 def test_config_terms_validate_and_cover_the_six_types():

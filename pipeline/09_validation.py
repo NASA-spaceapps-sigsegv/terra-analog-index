@@ -21,7 +21,7 @@ target fails, the review order of design 12.2 applies and each change is noted.
 
 The note of each target is Santino's. A failed target needs one, so while
 config/validation_notes.json has none the step writes a note that starts with
-"PENDIENTE" and warns.
+"PENDING" and warns.
 """
 
 import json
@@ -70,7 +70,7 @@ FINALISTS_OUT = INTERIM / "finalists.csv"
 
 PASS_FRACTION = 2 / 3  # design 12.2: at least two thirds of the covered analogs
 MIN_COVERED = 2  # design 12.2: fewer covered analogs than this is "insufficient"
-PENDING_NOTE = "PENDIENTE: nota de Santino sobre por qué no pasó y qué se revisó (design 12.2)"
+PENDING_NOTE = "PENDING: Santino's note on why it did not pass and what was checked (design 12.2)"
 FINALISTS_DEFAULT = 8  # the ticket asks for 6 to 10 per target
 
 
@@ -183,7 +183,7 @@ def main() -> None:
     tai_dir = Path(__file__).resolve().parents[1] / "tai"
     freshness = [*inputs, NOTES_PATH, Path(__file__), tai_dir / "scoring.py", tai_dir / "constants.py"]
     if not args.force and is_up_to_date([OUTPUT, FINALISTS_OUT], freshness):
-        log.info("al día")
+        log.info("up to date")
         return
 
     grid = load_grid()
@@ -193,22 +193,22 @@ def main() -> None:
     notes = []
     missing = [tid for tid in TARGET_IDS if tid not in {t.target_id for t in report.targets}]
     for tid in missing:
-        line = f"{tid}: sin filas en similarity.parquet, queda fuera de la validación"
+        line = f"{tid}: no rows in similarity.parquet, left out of the validation"
         notes.append(line)
         log.warning(line)
     if not report.targets:
-        raise OutputValidationError("similarity.parquet no tiene filas de ningún objetivo")
+        raise OutputValidationError("similarity.parquet has no rows for any target")
     frames = []
     for t in report.targets:
-        line = (f"{t.target_id}: {t.result} ({t.covered_passed} de {t.covered_total} análogos cubiertos "
-                f"en el percentil {report.percentile_threshold:g} o más; {t.n_eligible} celdas elegibles)")
+        line = (f"{t.target_id}: {t.result} ({t.covered_passed} of {t.covered_total} covered analogs "
+                f"at percentile {report.percentile_threshold:g} or above; {t.n_eligible} eligible cells)")
         notes.append(line)
         log.info(line)
         for a in t.analogs:
-            log.info("  %s [%s]: %s, %s celdas, mejor puesto %s, percentil %s", a.analog_id, a.covered,
+            log.info("  %s [%s]: %s, %s cells, best rank %s, percentile %s", a.analog_id, a.covered,
                      a.result, a.n_cells, a.best_rank, a.percentile)
-        if t.note.startswith("PENDIENTE"):
-            log.warning("%s no pasó y no tiene nota: Santino la carga en config/validation_notes.json", t.target_id)
+        if t.note.startswith("PENDING"):
+            log.warning("%s did not pass and has no note: Santino adds it in config/validation_notes.json", t.target_id)
         sim = sim_all[sim_all["target_id"] == t.target_id].set_index("cell_id")
         frames.append(finalist_candidates(sim, grid, n=args.finalists).assign(target_id=t.target_id))
     finalists = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
@@ -217,17 +217,17 @@ def main() -> None:
     FINALISTS_OUT.parent.mkdir(parents=True, exist_ok=True)
     finalists.to_csv(FINALISTS_OUT, index=False)
     for tid, g in finalists.groupby("target_id"):
-        log.info("candidatas a finalista de %s: %s", tid,
-                 "; ".join(f"{r.rank}. celda {r.cell_id} ({r.lat:.1f}, {r.lon:.1f}) {r.country or ''} {r.total:.2f}"
+        log.info("finalist candidates for %s: %s", tid,
+                 "; ".join(f"{r.rank}. cell {r.cell_id} ({r.lat:.1f}, {r.lon:.1f}) {r.country or ''} {r.total:.2f}"
                            for r in g.itertuples()))
     write_step_manifest(
         step_entry(
             STEP,
             started,
-            inputs=[{"name": "Similitud por celda y análogos conocidos", "product": "similarity.parquet, known_analogs.csv",
-                     "portal": "Pipeline del proyecto (pasos 08 y 01)", "url": "https://github.com/NASA-spaceapps-sigsegv/terra-analog-index",
+            inputs=[{"name": "Per-cell similarity and known analogs", "product": "similarity.parquet, known_analogs.csv",
+                     "portal": "Project pipeline (steps 08 and 01)", "url": "https://github.com/NASA-spaceapps-sigsegv/terra-analog-index",
                      "files": len(inputs), "size_mb": round(sum(file_size_mb(p) for p in inputs), 1),
-                     "license_note": "Datos derivados del proyecto"}],
+                     "license_note": "Project-derived data"}],
             outputs=[(OUTPUT, len(report.targets)), (FINALISTS_OUT, len(finalists))],
             columns={},
             notes=notes,

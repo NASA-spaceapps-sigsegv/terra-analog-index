@@ -234,10 +234,10 @@ def read_manual(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path)
     missing = {"lat", "lon", "extremophile_type", "source"} - set(df.columns)
     if missing:
-        raise MissingInputError(f"{path}: faltan columnas {sorted(missing)}")
+        raise MissingInputError(f"{path}: missing columns {sorted(missing)}")
     unknown = sorted(set(df["extremophile_type"]) - set(BIO_TYPES))
     if unknown:
-        raise MissingInputError(f"{path}: tipos desconocidos {unknown}; válidos: {list(BIO_TYPES)}")
+        raise MissingInputError(f"{path}: unknown types {unknown}; valid: {list(BIO_TYPES)}")
     df = df.reset_index(drop=True)
     return pd.DataFrame(
         {
@@ -341,7 +341,7 @@ def main() -> None:
         and is_up_to_date([SAMPLES_OUT, CELLS_OUT], inputs_for_freshness)
         and not last_run_partial(STEP)
     ):
-        log.info("al día")
+        log.info("up to date")
         return
 
     grid = load_grid()
@@ -357,10 +357,10 @@ def main() -> None:
     else:
         email = _env("NCBI_EMAIL")
         if not email:
-            raise MissingInputError("falta la variable de entorno NCBI_EMAIL (ver README, 'Variables de entorno')")
+            raise MissingInputError("the NCBI_EMAIL environment variable is missing (see README, 'Environment variables')")
         ncbi = Ncbi(email, _env("NCBI_API_KEY"))
         if not _env("NCBI_API_KEY"):
-            log.warning("sin NCBI_API_KEY: %.1f s entre pedidos", ncbi.delay)
+            log.warning("no NCBI_API_KEY: %.1f s between requests", ncbi.delay)
         frames_in = []
         for t in selected:
             query = build_query(terms.shared, t.search_by, t.terms)
@@ -390,21 +390,21 @@ def main() -> None:
 
     empty = [t for t in BIO_TYPES if t not in set(samples["extremophile_type"])]
     if cells["bio_records"].max() == 0:
-        log.warning("bio_records es 0 en toda la grilla: bio_score valdrá 0 (design 5.5)")
+        log.warning("bio_records is 0 across the whole grid: bio_score will be 0 (design 5.5)")
     elif empty and not partial:
-        log.warning("sin registros en tierra para: %s (el ticket pide los 6 tipos)", ", ".join(empty))
+        log.warning("no records on land for: %s (the ticket asks for all 6 types)", ", ".join(empty))
 
     notes = [
-        f"{t}: total en NCBI {s['total']}, bajados {s['downloaded']}, con coordenadas {s['with_coords']}, "
-        f"en tierra {s['on_land']}"
+        f"{t}: total in NCBI {s['total']}, downloaded {s['downloaded']}, with coordinates {s['with_coords']}, "
+        f"on land {s['on_land']}"
         for t, s in stats.items()
     ]
-    notes.append(f"muestras únicas en tierra: {samples['accession'].nunique()} en {int((cells['bio_records'] > 0).sum())} celdas")
+    notes.append(f"unique samples on land: {samples['accession'].nunique()} in {int((cells['bio_records'] > 0).sum())} cells")
     if args.manual:
-        notes.append("plan B: datos de config/bio_manual.csv (literatura), no de NCBI")
+        notes.append("plan B: data from config/bio_manual.csv (literature), not from NCBI")
     capped = [t for t, s in stats.items() if s["total"] > args.max_records]
     if capped and not args.manual:
-        notes.append(f"tope de {args.max_records} registros por tipo alcanzado en: {', '.join(capped)} (design 7.6)")
+        notes.append(f"cap of {args.max_records} records per type reached for: {', '.join(capped)} (design 7.6)")
     notes += partial
     for line in notes:
         log.info(line)
@@ -417,13 +417,13 @@ def main() -> None:
             started,
             inputs=[
                 {
-                    "name": "Literatura (config/bio_manual.csv)" if args.manual else "NCBI BioSample",
+                    "name": "Literature (config/bio_manual.csv)" if args.manual else "NCBI BioSample",
                     "product": "bio_manual.csv" if args.manual else "BioSample (Entrez esearch/efetch)",
                     "portal": "Santino" if args.manual else "NCBI",
                     "url": BIOSAMPLE_URL,
                     "files": 1 if args.manual else len(raw_files),
                     "size_mb": file_size_mb(MANUAL_PATH) if args.manual else round(sum(file_size_mb(f) for f in raw_files), 1),
-                    "license_note": "Citas de la literatura" if args.manual else "Datos públicos de NCBI",
+                    "license_note": "Literature citations" if args.manual else "NCBI public data",
                 }
             ],
             outputs=[(SAMPLES_OUT, len(samples)), (CELLS_OUT, len(cells))],

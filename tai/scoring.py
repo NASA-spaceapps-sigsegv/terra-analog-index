@@ -1,8 +1,8 @@
-"""Puntaje total con pesos, elegibilidad y orden del ranking (design 5.6 y 5.7, TAI-19).
+"""Weighted total score, eligibility and ranking order (design 5.6 and 5.7, TAI-19).
 
-Lo usan la app en vivo y el paso 09 de validación, con la misma fórmula.
-Funciones puras sobre la tabla de similitud de un objetivo (indexada por
-cell_id): no leen archivos ni modifican su entrada. Las pruebas están en
+Used by the live app and by validation step 09, with the same formula.
+Pure functions over a target's similarity table (indexed by cell_id): they
+do not read files or modify their input. The tests are in
 tests/test_scoring.py.
 """
 
@@ -16,13 +16,13 @@ from tai.constants import CORE_DIMENSIONS, DIMENSIONS, MIN_PHYSICAL_DIMS, OPTION
 from tai.errors import InvalidWeightsError, ZeroWeightsError
 from tai.models import Weights
 
-# Los puntajes vienen en float32 (0,1 o 0,3 no son exactos), así que dos totales
-# iguales en papel pueden diferir en la octava cifra. Se ordena por el total
-# redondeado a esta cantidad de decimales para que un empate real se decida
-# por cell_id (design 5.7), sin mezclar totales que difieren de verdad.
+# Scores come as float32 (0.1 or 0.3 are not exact), so two totals that are
+# equal on paper can differ in the eighth digit. Sorting uses the total
+# rounded to this many decimals so that a real tie is broken by cell_id
+# (design 5.7), without mixing totals that truly differ.
 TIE_DECIMALS = 6
 
-# dimensión -> columna de similarity.parquet
+# dimension -> similarity.parquet column
 SCORE_COLUMNS = {
     "terrain": "s_terrain",
     "temperature": "s_temperature",
@@ -33,22 +33,22 @@ SCORE_COLUMNS = {
 
 
 def validate_weights(weights: Weights | Mapping[str, float]) -> Weights:
-    """Devuelve Weights válidos. Falta una dimensión o hay un valor fuera de 0..1:
-    InvalidWeightsError. Todos en 0: ZeroWeightsError."""
+    """Return valid Weights. A missing dimension or a value outside 0..1:
+    InvalidWeightsError. All at 0: ZeroWeightsError."""
     if isinstance(weights, Weights):
         w = weights
     else:
         try:
             w = Weights(**dict(weights))
         except (ValidationError, TypeError) as exc:
-            raise InvalidWeightsError(f"Pesos inválidos: {exc}") from exc
+            raise InvalidWeightsError(f"Invalid weights: {exc}") from exc
     if all(v == 0 for v in w.as_dict().values()):
-        raise ZeroWeightsError("Subí al menos un peso")
+        raise ZeroWeightsError("Raise at least one weight")
     return w
 
 
 def _scores(sim: pd.DataFrame, dim: str) -> np.ndarray:
-    """Puntajes de una dimensión. Una dimensión opcional sin columna (tabla anterior a TAI-52) es nula."""
+    """Scores of one dimension. An optional dimension without a column (table older than TAI-52) is null."""
     col = SCORE_COLUMNS[dim]
     if col not in sim.columns and dim in OPTIONAL_DIMENSIONS:
         return np.full(len(sim), np.nan)
@@ -56,8 +56,8 @@ def _scores(sim: pd.DataFrame, dim: str) -> np.ndarray:
 
 
 def combine(sim: pd.DataFrame, weights: Weights | Mapping[str, float]) -> pd.Series:
-    """Puntaje total por celda (5.6). Las dimensiones nulas salen del denominador;
-    si la suma de pesos con dato es 0, el total es nulo."""
+    """Total score per cell (5.6). Null dimensions drop out of the denominator;
+    if the sum of weights with data is 0, the total is null."""
     w = validate_weights(weights).as_dict()
     scores = np.column_stack([_scores(sim, d) for d in DIMENSIONS])
     wv = np.array([w[d] for d in DIMENSIONS], dtype="float64")
@@ -70,18 +70,18 @@ def combine(sim: pd.DataFrame, weights: Weights | Mapping[str, float]) -> pd.Ser
 
 
 def is_eligible(sim: pd.DataFrame) -> pd.Series:
-    """Dato en al menos MIN_PHYSICAL_DIMS de las 3 dimensiones físicas centrales (5.7).
+    """Data in at least MIN_PHYSICAL_DIMS of the 3 core physical dimensions (5.7).
 
-    Polvo y viento (TAI-52) no cuenta: es opcional por objetivo, y contarla cambiaría qué celdas entran."""
+    Dust and wind (TAI-52) does not count: it is optional per target, and counting it would change which cells get in."""
     n = sum(sim[SCORE_COLUMNS[d]].notna().astype(int) for d in CORE_DIMENSIONS)
     return n >= MIN_PHYSICAL_DIMS
 
 
 def rank(sim: pd.DataFrame, total: pd.Series, hide_known: bool = False) -> pd.DataFrame:
-    """Celdas elegibles ordenadas por total descendente; empates por cell_id (5.7).
+    """Eligible cells sorted by descending total; ties by cell_id (5.7).
 
-    `sim` está indexada por cell_id. Devuelve un DataFrame con la columna cell_id,
-    las columnas de sim y la columna total."""
+    `sim` is indexed by cell_id. Returns a DataFrame with the cell_id column,
+    the columns of sim and the total column."""
     mask = is_eligible(sim).to_numpy() & total.notna().to_numpy()
     if hide_known:
         mask &= sim["known_analog"].isna().to_numpy()

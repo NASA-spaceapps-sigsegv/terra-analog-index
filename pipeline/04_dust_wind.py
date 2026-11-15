@@ -61,13 +61,13 @@ COLUMNS = ["dust_aod", "wind_ms"]
 # column -> (subfolder, collection in the file name, MERRA-2 variable, manifest entry)
 PRODUCTS = {
     "dust_aod": ("m2tmnxaer", "tavgM_2d_aer_Nx", "DUEXTTAU", {
-        "name": f"MERRA-2, espesor óptico del polvo mensual, {DATA_YEAR}",
+        "name": f"MERRA-2, monthly dust optical depth, {DATA_YEAR}",
         "product": "M2TMNXAER v5.12.4 (DUEXTTAU)",
         "portal": "NASA Earthdata (GES DISC)",
         "url": "https://doi.org/10.5067/FH9A0MLJPC7N",
     }),
     "wind_ms": ("m2tmnxflx", "tavgM_2d_flx_Nx", "SPEED", {
-        "name": f"MERRA-2, velocidad del viento en superficie mensual, {DATA_YEAR}",
+        "name": f"MERRA-2, monthly surface wind speed, {DATA_YEAR}",
         "product": "M2TMNXFLX v5.12.4 (SPEED)",
         "portal": "NASA Earthdata (GES DISC)",
         "url": "https://doi.org/10.5067/0JRLVL8YV2Y4",
@@ -83,8 +83,8 @@ def find_months(column: str, year: int = DATA_YEAR, root: Path = RAW_DIR) -> lis
     missing = [m for m in range(1, 13) if m not in found]
     if missing:
         raise MissingInputError(
-            f"faltan meses de {collection} {year} en {root / folder}: {missing}. "
-            "Bajarlos con: make data-dust-wind"
+            f"missing months of {collection} {year} in {root / folder}: {missing}. "
+            "Download them with: make data-dust-wind"
         )
     return [found[m] for m in range(1, 13)]
 
@@ -125,7 +125,7 @@ def main() -> None:
         and is_up_to_date([OUTPUT], [*files, GRID_PATH, *code])
         and not last_run_partial(STEP)
     ):
-        log.info("al día")
+        log.info("up to date")
         return
 
     grid = load_grid()
@@ -138,7 +138,7 @@ def main() -> None:
         )
 
     nulls = {c: int(cells[c].isna().sum()) for c in COLUMNS}
-    notes = [f"celdas sin dato: dust_aod {nulls['dust_aod']}, wind_ms {nulls['wind_ms']}"]
+    notes = [f"cells without data: dust_aod {nulls['dust_aod']}, wind_ms {nulls['wind_ms']}"]
     if args.bbox:
         notes.append(bbox_note(args.bbox))
         log.warning("--bbox: %d cells computed, the rest stay null", int(inside.sum()))
@@ -153,7 +153,7 @@ def main() -> None:
             inputs=[
                 {**PRODUCTS[c][3], "files": len(months[c]),
                  "size_mb": round(sum(file_size_mb(p) for p in months[c]), 1),
-                 "license_note": "Datos abiertos de NASA"}
+                 "license_note": "NASA open data"}
                 for c in COLUMNS
             ],
             outputs=[(OUTPUT, len(cells))],

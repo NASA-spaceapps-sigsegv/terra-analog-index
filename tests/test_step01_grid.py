@@ -40,8 +40,8 @@ COUNTRIES = _gdf(
         box(50.4, 50.4, 50.6, 50.6),  # small polygon around the center
         MultiPolygon([box(50, 50, 50.4, 51), box(50.6, 50, 51, 51)]),  # most of the cell
     ],
-    NAME_ES=["Alfa", "Beta", "Gamma", "Delta"],
-    NAME=["Alpha", "Beta", "Gamma", "Delta"],
+    NAME_EN=["Alpha", "Beta", "Gamma", "Delta"],
+    NAME=["Alpha (short)", "Beta (short)", "Gamma (short)", "Delta (short)"],
 )
 
 
@@ -105,7 +105,7 @@ def test_grid_contract(grid):
 def test_country_rules(with_country):
     grid, counts = with_country
     country = grid.set_index("cell_id")["country"]
-    assert country[_cell(10.5, 10.5)] == "Alfa"  # center inside
+    assert country[_cell(10.5, 10.5)] == "Alpha"  # center inside
     assert country[_cell(10.5, 20.5)] == "Beta"  # center on edge -> majority
     assert country[_cell(50.5, 50.5)] == "Gamma"  # center wins over majority
     assert country.isna()[_cell(10.5, 40.5)]  # no polygon at all
@@ -114,7 +114,7 @@ def test_country_rules(with_country):
 
 
 def test_country_name_falls_back_to_name():
-    names = step01.country_names(_gdf([box(0, 0, 1, 1)] * 2, NAME_ES=[None, " "], NAME=["X", "Y"]))
+    names = step01.country_names(_gdf([box(0, 0, 1, 1)] * 2, NAME_EN=[None, " "], NAME=["X", "Y"]))
     assert names.tolist() == ["X", "Y"]
 
 

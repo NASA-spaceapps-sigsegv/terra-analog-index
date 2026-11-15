@@ -1,4 +1,4 @@
-"""TAI-31: ranking con selección de fila (design 10.4 y 10.5)."""
+"""TAI-31: ranking with row selection (design 10.4 and 10.5)."""
 
 import json
 from pathlib import Path
@@ -26,13 +26,13 @@ def app(data_dir, monkeypatch):
     return AppTest.from_file(APP, default_timeout=30).run()
 
 
-# --- Funciones puras ------------------------------------------------------------
+# --- Pure functions -------------------------------------------------------------
 
 
 def test_table_has_the_design_columns_in_order(bundle):
     df = rv.ranking_table(services.get_ranking(bundle, "mars_jezero", WEIGHTS))
     assert list(df.columns) == list(rv.COLUMNS.values())
-    assert df["Puesto"].tolist() == list(range(1, len(df) + 1))
+    assert df["Rank"].tolist() == list(range(1, len(df) + 1))
     assert df["Total"].is_monotonic_decreasing
 
 
@@ -40,8 +40,8 @@ def test_null_scores_stay_null_not_zero(bundle):
     ranking = services.get_ranking(bundle, "mars_jezero", WEIGHTS)
     df = rv.ranking_table(ranking)
     nulls = [i for i, item in enumerate(ranking.items) if item.s_temperature is None]
-    assert nulls, "los datos de prueba tienen una celda sin temperatura (104)"
-    assert all(np.isnan(df.loc[i, "Temperatura"]) for i in nulls)
+    assert nulls, "the test data has a cell without temperature (104)"
+    assert all(np.isnan(df.loc[i, "Temperature"]) for i in nulls)
 
 
 def test_empty_ranking_gives_an_empty_table_with_the_columns(bundle):
@@ -72,14 +72,14 @@ def test_callback_saves_and_clears_the_cell(monkeypatch):
     monkeypatch.setattr(rv.st, "session_state", state)
     rv._on_select("k", (7, 8, 9))
     assert state[rv.SELECTED_KEY] == 9
-    assert state[rv.SCROLL_KEY] is True  # elegir una fila lleva a la ficha
+    assert state[rv.SCROLL_KEY] is True  # picking a row scrolls to the card
     state["k"] = {"selection": {"rows": [], "columns": [], "cells": []}}
     rv._on_select("k", (7, 8, 9))
     assert state[rv.SELECTED_KEY] is None
-    assert state[rv.SCROLL_KEY] is False  # deseleccionar no mueve la página
+    assert state[rv.SCROLL_KEY] is False  # deselecting does not move the page
 
 
-# --- En la app ---------------------------------------------------------------------
+# --- In the app --------------------------------------------------------------------
 
 
 def _selected(app):
@@ -91,12 +91,12 @@ def test_table_shows_scores_as_progress_bars_and_nulls_as_sin_dato(app):
     proto = app.dataframe[0].proto
     config = json.loads(proto.columns)
     assert all(config[c]["type_config"]["type"] == "progress" for c in rv.SCORE_COLUMNS)
-    assert proto.placeholder == "sin dato"
+    assert proto.placeholder == "no data"
 
 
 def test_no_cell_selected_shows_the_hint(app):
     assert _selected(app) is None
-    assert any("Elegí una fila del ranking" in i.value for i in app.info)
+    assert any("Pick a row in the ranking" in i.value for i in app.info)
 
 
 def _scroll_scripts(app):
@@ -105,34 +105,34 @@ def _scroll_scripts(app):
 
 def test_picking_a_row_scrolls_to_the_card_once(app):
     app.session_state[rv.SELECTED_KEY] = 102
-    app.session_state[rv.SCROLL_KEY] = True  # lo que deja el callback al elegir una fila
+    app.session_state[rv.SCROLL_KEY] = True  # what the callback leaves after picking a row
     app.run()
     assert not app.exception
     assert len(_scroll_scripts(app)) == 1
     assert rv.SCROLL_KEY not in app.session_state
-    app.sidebar.slider(key="w_terrain").set_value(0.5).run()  # mover un slider no vuelve a desplazar
+    app.sidebar.slider(key="w_terrain").set_value(0.5).run()  # moving a slider does not scroll again
     assert _scroll_scripts(app) == []
 
 
 def test_total_is_wider_than_the_other_scores(app):
     config = json.loads(app.dataframe[0].proto.columns)
-    assert config["Total"]["width"] > config["Terreno"]["width"]
+    assert config["Total"]["width"] > config["Terrain"]["width"]
 
 
 def test_selection_survives_moving_a_slider(app):
     app.session_state[rv.SELECTED_KEY] = 102
     app.run()
-    assert any("Celda" in m.value for m in app.markdown)
+    assert any("Cell" in m.value for m in app.markdown)
     app.sidebar.slider(key="w_terrain").set_value(0.0).run()
     assert not app.exception
     assert _selected(app) == 102
 
 
 def test_selection_survives_when_the_cell_leaves_the_ranking(app):
-    app.session_state[rv.SELECTED_KEY] = 103  # no elegible: nunca está en el ranking
+    app.session_state[rv.SELECTED_KEY] = 103  # not eligible: never in the ranking
     app.sidebar.slider(key="w_biology").set_value(0.0).run()
     assert _selected(app) == 103
-    assert not app.exception and not app.tabs[0].warning  # Método puede avisar de una validación insuficiente
+    assert not app.exception and not app.tabs[0].warning  # Method may warn about an insufficient validation
 
 
 def test_changing_the_target_clears_the_selection(app):
@@ -140,14 +140,14 @@ def test_changing_the_target_clears_the_selection(app):
     app.run()
     app.sidebar.radio(key="target_id").set_value("mars_jezero").run()
     assert _selected(app) is None
-    assert any("Elegí una fila del ranking" in i.value for i in app.info)
+    assert any("Pick a row in the ranking" in i.value for i in app.info)
 
 
 def test_hide_known_removes_every_known_analog(app):
-    app.sidebar.slider(key="w_terrain").set_value(0.0).run()  # con terreno en 0 entra 105
-    assert app.dataframe[0].value["Análogo conocido"].notna().any()
+    app.sidebar.slider(key="w_terrain").set_value(0.0).run()  # with terrain at 0, 105 gets in
+    assert app.dataframe[0].value["Known analog"].notna().any()
     app.sidebar.checkbox(key="hide_known").check().run()
-    assert app.dataframe[0].value["Análogo conocido"].isna().all()
+    assert app.dataframe[0].value["Known analog"].isna().all()
 
 
 def test_the_widget_marks_the_row_of_the_selected_cell(app):
@@ -155,9 +155,9 @@ def test_the_widget_marks_the_row_of_the_selected_cell(app):
     app.run()
     df = app.dataframe[0]
     lon = float(df.value["Lon"].iloc[json.loads(df.proto.selection_default)["selection"]["rows"][0]])
-    assert lon == pytest.approx(-79.5)  # centro de la celda 100
+    assert lon == pytest.approx(-79.5)  # center of cell 100
 
-    app.sidebar.slider(key="w_terrain").set_value(0.0).run()  # orden nuevo: widget nuevo
+    app.sidebar.slider(key="w_terrain").set_value(0.0).run()  # new order: new widget
     df = app.dataframe[0]
     rows = json.loads(df.proto.selection_default)["selection"]["rows"]
     assert df.value["Lon"].iloc[rows[0]] == pytest.approx(-79.5)

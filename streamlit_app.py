@@ -1,6 +1,6 @@
-"""Punto de entrada de la app (design 10). Solo lee data/processed/.
+"""App entry point (design 10). It only reads data/processed/.
 
-Para probar con los datos de prueba:
+To try it with the test data:
     TAI_DATA_DIR=tests/fixtures streamlit run streamlit_app.py
 """
 
@@ -28,33 +28,33 @@ st.set_page_config(page_title="Terra Analog Index", page_icon="🛰️", layout=
 DATA_DIR = Path(os.environ.get("TAI_DATA_DIR") or Path(__file__).parent / "data" / "processed")
 
 
-@st.cache_resource(show_spinner="Cargando datos…")
+@st.cache_resource(show_spinner="Loading data…")
 def get_bundle(path: str, signature: tuple) -> DataBundle:
-    """Se carga una vez por proceso. `signature` cambia si se borra o toca un archivo."""
+    """Loaded once per process. `signature` changes if a file is deleted or touched."""
     return load_bundle(path)
 
 
 @contextmanager
 def handle_tai_errors(fatal: bool = False):
-    """Único lugar donde la app atrapa TaiError (design 9.3).
+    """The only place where the app catches TaiError (design 9.3).
 
-    fatal=True: lo que sigue depende de lo que falló, así que la página se corta."""
+    fatal=True: what follows depends on what failed, so the page stops."""
     try:
         yield
     except DataNotAvailableError as err:
-        st.error(f"**No se pueden cargar los datos.** {err.detail}")
+        st.error(f"**The data cannot be loaded.** {err.detail}")
         st.stop()
     except ZeroWeightsError:
-        st.warning("Subí al menos un peso.")
+        st.warning("Raise at least one weight.")
     except TargetNotFoundError as err:
         st.error(err.detail)
-        st.session_state.pop("target_id", None)  # la próxima corrida vuelve al primer objetivo
+        st.session_state.pop("target_id", None)  # the next run goes back to the first target
         if fatal:
             st.stop()
     except CellNotFoundError as err:
         st.warning(err.detail)
         st.session_state[SELECTED_KEY] = None
-    except TaiError as err:  # InvalidWeightsError y futuros: error de programación
+    except TaiError as err:  # InvalidWeightsError and future ones: programming error
         st.error(f"{type(err).__name__}: {err.detail}")
         if fatal:
             st.stop()
@@ -64,15 +64,15 @@ def handle_tai_errors(fatal: bool = False):
         st.stop()
 
 
-CARD_HINT = "Elegí una fila del ranking para ver su ficha."
-CARD_ANCHOR = "ficha"
+CARD_HINT = "Pick a row in the ranking to see its card."
+CARD_ANCHOR = "card"
 
 
 def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
-    """Mapa arriba; con la capa prendida, la tabla de cuevas; después el ranking y la ficha, todo a lo ancho.
+    """Map on top; with the layer on, the caves table; then the ranking and the card, all full width.
 
-    Cada parte atrapa sus propios errores: con todos los pesos en 0 el ranking avisa y la ficha
-    elegida se sigue viendo, con el total nulo."""
+    Each part catches its own errors: with every weight at 0 the ranking warns and the selected
+    card is still shown, with a null total."""
     with handle_tai_errors():
         layer = services.get_map_layer(bundle, state.target_id, state.weights)
         caves = services.get_caves(bundle) if state.show_caves else ()
@@ -81,12 +81,12 @@ def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
         with handle_tai_errors():
             table = services.get_caves_table(bundle, state.target_id, state.weights, hide_known=state.hide_known)
             caves_view.render_caves(table, state.target_id, st.session_state.get(SELECTED_KEY))
-    st.subheader("Mejores celdas")
+    st.subheader("Best cells")
     with handle_tai_errors():
         ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)
         csv_text = services.export_ranking_csv(bundle, state.target_id, state.weights, hide_known=state.hide_known)
         ranking_view.render_ranking(ranking, st.session_state.get(SELECTED_KEY), csv_text)
-    st.subheader("Ficha", anchor=CARD_ANCHOR)
+    st.subheader("Card", anchor=CARD_ANCHOR)
     with handle_tai_errors():
         selected = st.session_state.get(SELECTED_KEY)
         if selected is None:
@@ -98,7 +98,7 @@ def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
 
 
 def scroll_to(anchor: str) -> None:
-    """Lleva la página hasta el título con ese anchor. Espera un momento para que la ficha ya esté dibujada."""
+    """Scroll the page to the heading with that anchor. Waits a moment so the card is already drawn."""
     st.html(
         f"<script>setTimeout(() => document.getElementById({anchor!r})"
         "?.scrollIntoView({behavior: 'smooth', block: 'start'}), 150);</script>",
@@ -107,7 +107,7 @@ def scroll_to(anchor: str) -> None:
 
 
 def method_tab(bundle: DataBundle) -> None:
-    """Pestaña Método (design 10.7): textos de content/method.md y tablas de los archivos del pipeline."""
+    """Method tab (design 10.7): texts from content/method.md and tables from the pipeline files."""
     with handle_tai_errors():
         targets = [services.get_target(bundle, t.target_id) for t in services.list_targets(bundle)]
         method_view.render_method(
@@ -120,7 +120,7 @@ def main() -> None:
         bundle = get_bundle(str(DATA_DIR), data_signature(DATA_DIR))
         state = render_sidebar(services.list_targets(bundle))
 
-    tab_explore, tab_method = st.tabs(["Explorar", "Método"])
+    tab_explore, tab_method = st.tabs(["Explore", "Method"])
     with tab_explore:
         explore_tab(bundle, state)
     with tab_method:

@@ -1,40 +1,40 @@
-"""Revisa los textos manuales de las fichas (content/cards/, contracts 7.4).
+"""Check the manual texts of the cards (content/cards/, contracts 7.4).
 
-Para cada archivo .md dice qué le falta, en castellano llano: nombre <cell_id>__<target_id>.md,
-título "# ...", entre 150 y 250 palabras y una sección final "## Fuentes" con al menos un ítem.
-Usa las mismas reglas que la app (tai.cards) y que tests/test_cards.py.
+For each .md file it says what is missing, in plain English: name <cell_id>__<target_id>.md,
+title "# ...", between 150 and 250 words and a final "## Sources" section with at least one item.
+It uses the same rules as the app (tai.cards) and tests/test_cards.py.
 
     python scripts/check_cards.py            # content/cards/
-    python scripts/check_cards.py otra/carpeta
+    python scripts/check_cards.py other/folder
 
-Sale con código 1 si algún archivo tiene problemas.
+Exits with code 1 if any file has problems.
 """
 
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))  # para importar tai sin instalarlo
+sys.path.insert(0, str(ROOT))  # to import tai without installing it
 
 from tai.cards import CARDS_DIR, manual_problems  # noqa: E402
 from tai.constants import N_CELLS_GLOBAL, TARGET_IDS  # noqa: E402
 
 
 def name_problems(path: Path) -> list[str]:
-    """Lo que está mal en el nombre del archivo; vacía si está bien."""
+    """What is wrong with the file name; empty if it is fine."""
     if "__" not in path.stem:
-        return ["el nombre debe ser <cell_id>__<target_id>.md, por ejemplo 23510__mars_jezero.md"]
+        return ["the name must be <cell_id>__<target_id>.md, for example 23510__mars_jezero.md"]
     cell, target = path.stem.split("__", 1)
     problems = []
     if not cell.isdigit() or not 0 <= int(cell) < N_CELLS_GLOBAL:
-        problems.append(f"{cell!r} no es un cell_id válido (0 a {N_CELLS_GLOBAL - 1})")
+        problems.append(f"{cell!r} is not a valid cell_id (0 to {N_CELLS_GLOBAL - 1})")
     if target not in TARGET_IDS:
-        problems.append(f"{target!r} no es un objetivo; tiene que ser uno de {', '.join(TARGET_IDS)}")
+        problems.append(f"{target!r} is not a target; it must be one of {', '.join(TARGET_IDS)}")
     return problems
 
 
 def check_folder(folder: Path) -> dict[str, list[str]]:
-    """Archivo -> problemas, solo para los archivos con problemas."""
+    """File -> problems, only for the files with problems."""
     report = {}
     for path in sorted(folder.glob("*.md")):
         problems = name_problems(path) + manual_problems(path.read_text(encoding="utf-8"))
@@ -47,7 +47,7 @@ def main(argv: list[str]) -> int:
     folder = Path(argv[0]) if argv else ROOT / CARDS_DIR
     files = sorted(folder.glob("*.md"))
     if not files:
-        print(f"{folder}: no hay textos todavía.")
+        print(f"{folder}: there are no texts yet.")
         return 0
     report = check_folder(folder)
     for path in files:
@@ -57,7 +57,7 @@ def main(argv: list[str]) -> int:
                 print(f"    - {p}")
         else:
             print(f"✓ {path.name}")
-    print(f"\n{len(files) - len(report)} de {len(files)} textos en orden.")
+    print(f"\n{len(files) - len(report)} of {len(files)} texts in order.")
     return 1 if report else 0
 
 

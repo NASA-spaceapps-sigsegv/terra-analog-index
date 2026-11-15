@@ -48,7 +48,7 @@ LAND_BASENAME = "ne_50m_land"
 COUNTRIES_BASENAME = "ne_50m_admin_0_countries"
 VECTOR_SUFFIXES = (".shp", ".geojson", ".gpkg", ".zip")
 MASK_RES_DEG = 0.05
-COUNTRY_NAME_FIELDS = ("NAME_ES", "NAME")
+COUNTRY_NAME_FIELDS = ("NAME_EN", "NAME")
 OUTPUTS = [GRID_PATH, LAND_MASK_PATH]
 EXPECTED_CELLS = (15_000, 25_000)  # TAI-11 acceptance range
 
@@ -148,7 +148,7 @@ def build_grid(land_frac: pd.Series, min_frac: float = LAND_FRAC_MIN) -> pd.Data
 
 
 def country_names(countries_gdf) -> pd.Series:
-    """Spanish name of each country (NAME_ES), falling back to NAME."""
+    """English name of each country (NAME_EN), falling back to NAME."""
     names = pd.Series([None] * len(countries_gdf), index=countries_gdf.index, dtype="object")
     for field in COUNTRY_NAME_FIELDS:
         if field in countries_gdf.columns:
@@ -241,7 +241,7 @@ def _input_entry(name: str, product: str, url: str, path: Path) -> dict:
         "url": url,
         "files": 1,
         "size_mb": file_size_mb(path),
-        "license_note": "Dominio público",
+        "license_note": "Public domain",
     }
 
 
@@ -259,7 +259,7 @@ def main() -> None:
         and is_up_to_date(OUTPUTS, [land_path, countries_path, *code])
         and not last_run_partial(STEP)
     ):
-        log.info("al día")
+        log.info("up to date")
         return
 
     log.info("reading %s", land_path.name)
@@ -274,9 +274,9 @@ def main() -> None:
     log.info("country by center %d, by majority %d, none %d", counts["center"], counts["majority"], counts["none"])
 
     notes = [
-        f"{len(grid)} celdas con land_frac >= {LAND_FRAC_MIN}",
-        f"país por el centro: {counts['center']}; por mayoría de píxeles: {counts['majority']}; "
-        f"sin país: {counts['none']}",
+        f"{len(grid)} cells with land_frac >= {LAND_FRAC_MIN}",
+        f"country by center: {counts['center']}; by pixel majority: {counts['majority']}; "
+        f"no country: {counts['none']}",
     ]
     if args.bbox:
         grid = grid[bbox_mask(grid["lat"], grid["lon"], args.bbox).to_numpy()].reset_index(drop=True)
@@ -295,13 +295,13 @@ def main() -> None:
             started,
             inputs=[
                 _input_entry(
-                    "Natural Earth, tierra 1:50m",
+                    "Natural Earth, land 1:50m",
                     LAND_BASENAME,
                     "https://www.naturalearthdata.com/downloads/50m-physical-vectors/",
                     land_path,
                 ),
                 _input_entry(
-                    "Natural Earth, países 1:50m",
+                    "Natural Earth, countries 1:50m",
                     COUNTRIES_BASENAME,
                     "https://www.naturalearthdata.com/downloads/50m-cultural-vectors/",
                     countries_path,

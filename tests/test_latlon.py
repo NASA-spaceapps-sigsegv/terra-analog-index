@@ -1,4 +1,4 @@
-"""Intérprete de lat_lon (design 7.4 y 12.1, TAI-15)."""
+"""lat_lon parser (design 7.4 and 12.1, TAI-15)."""
 
 import numpy as np
 import pytest
@@ -10,12 +10,12 @@ from tai.latlon import parse_lat_lon
     "text,expected",
     [
         ("24.08 N 69.92 E", (24.08, 69.92)),
-        ("24.08 S 69.92 W", (-24.08, -69.92)),  # S y W dan negativos
-        ("24.08 S, 69.92 W", (-24.08, -69.92)),  # coma entre las dos partes
-        ("  18 N 77 E  ", (18.0, 77.0)),  # enteros y espacios
-        ("90 S 180 W", (-90.0, -180.0)),  # extremos válidos
-        ("-24.08 -69.92", (-24.08, -69.92)),  # decimales con signo, espacio
-        ("-24.08, -69.92", (-24.08, -69.92)),  # decimales con signo, coma
+        ("24.08 S 69.92 W", (-24.08, -69.92)),  # S and W give negatives
+        ("24.08 S, 69.92 W", (-24.08, -69.92)),  # comma between the two parts
+        ("  18 N 77 E  ", (18.0, 77.0)),  # integers and spaces
+        ("90 S 180 W", (-90.0, -180.0)),  # valid extremes
+        ("-24.08 -69.92", (-24.08, -69.92)),  # signed decimals, space
+        ("-24.08, -69.92", (-24.08, -69.92)),  # signed decimals, comma
         ("+37.7,-6.6", (37.7, -6.6)),
     ],
 )

@@ -1,7 +1,7 @@
-"""Fachada que usa la interfaz (design 9.2). Funciones puras: no modifican el bundle.
+"""Facade used by the interface (design 9.2). Pure functions: they do not modify the bundle.
 
-TAI-21 trae list_targets y get_ranking; el resto de la tabla 9.2 llega con
-TAI-30 a TAI-34.
+TAI-21 brings list_targets and get_ranking; the rest of table 9.2 arrives with
+TAI-30 to TAI-34.
 """
 
 from collections.abc import Mapping
@@ -51,26 +51,26 @@ def list_targets(bundle: DataBundle) -> list[TargetSummary]:
 
 
 def get_caves(bundle: DataBundle) -> tuple[Cave, ...]:
-    """Cuevas y tubos de lava estudiados como análogos (TAI-53). Son los mismos para todos los objetivos y no
-    tienen puntaje: el mapa los dibuja como capa informativa."""
+    """Caves and lava tubes studied as analogs (TAI-53). They are the same for every target and have
+    no score: the map draws them as an informational layer."""
     return bundle.caves
 
 
-# Columnas de la tabla de cuevas; cell_id va oculta y sirve para abrir la ficha.
-CAVES_TABLE_COLUMNS = ("cell_id", "Cueva", "Tipo", "Puesto", "Total", "Por qué interesa", "Fuente")
+# Columns of the caves table; cell_id is hidden and is used to open the card.
+CAVES_TABLE_COLUMNS = ("cell_id", "Cave", "Type", "Rank", "Total", "Why it matters", "Source")
 
 
 def get_caves_table(
     bundle: DataBundle, target_id: str, weights: Weights | Mapping[str, float], hide_known: bool = False
 ) -> pd.DataFrame:
-    """Una fila por cueva con el puesto y el total de su celda en el ranking actual (TAI-53).
+    """One row per cave with the rank and total of its cell in the current ranking (TAI-53).
 
-    El puesto cuenta todas las celdas elegibles, no solo las que muestra la tabla del ranking, y respeta el
-    filtro de análogos conocidos. Puesto y total quedan vacíos si la cueva no tiene celda (isla chica), si
-    su celda no es elegible o si todos los pesos valen 0. Ordenada por puesto; las sin puesto, al final.
-    Lanza TargetNotFoundError o InvalidWeightsError."""
+    The rank counts every eligible cell, not only the ones the ranking table shows, and honors the
+    known-analogs filter. Rank and total are empty if the cave has no cell (small island), if its
+    cell is not eligible or if every weight is 0. Sorted by rank; those without a rank go last.
+    Raises TargetNotFoundError or InvalidWeightsError."""
     if target_id not in bundle.similarity:
-        raise TargetNotFoundError(f"No existe el sitio objetivo {target_id!r}")
+        raise TargetNotFoundError(f"Target site {target_id!r} does not exist")
     sim = bundle.similarity[target_id]
     try:
         ranked = scoring.rank(sim, scoring.combine(sim, scoring.validate_weights(weights)), hide_known=hide_known)
@@ -84,16 +84,16 @@ def get_caves_table(
         cell = cave_cells.cell_of(cave, bundle.grid.index)
         rows.append({
             "cell_id": cell,
-            "Cueva": cave.name,
-            "Tipo": cave_cells.CAVE_KINDS[cave.kind],
-            "Puesto": position.get(cell),
+            "Cave": cave.name,
+            "Type": cave_cells.CAVE_KINDS[cave.kind],
+            "Rank": position.get(cell),
             "Total": totals.get(cell),
-            "Por qué interesa": cave.relevance if cell is not None else f"{cave.relevance}. ({cave_cells.NO_CELL})",
-            "Fuente": cave.source,
+            "Why it matters": cave.relevance if cell is not None else f"{cave.relevance}. ({cave_cells.NO_CELL})",
+            "Source": cave.source,
         })
     df = pd.DataFrame(rows, columns=list(CAVES_TABLE_COLUMNS))
-    df = df.astype({"cell_id": "Int64", "Puesto": "Int64", "Total": "float64"})
-    return df.sort_values("Puesto", na_position="last", kind="stable").reset_index(drop=True)
+    df = df.astype({"cell_id": "Int64", "Rank": "Int64", "Total": "float64"})
+    return df.sort_values("Rank", na_position="last", kind="stable").reset_index(drop=True)
 
 
 def get_ranking(
@@ -103,19 +103,19 @@ def get_ranking(
     hide_known: bool = False,
     limit: int = TOP_N,
 ) -> Ranking:
-    """Las `limit` mejores celdas elegibles del objetivo, con los pesos dados.
+    """The target's `limit` best eligible cells, with the given weights.
 
-    Lanza TargetNotFoundError, InvalidWeightsError o ZeroWeightsError."""
+    Raises TargetNotFoundError, InvalidWeightsError or ZeroWeightsError."""
     if target_id not in bundle.similarity:
-        raise TargetNotFoundError(f"No existe el sitio objetivo {target_id!r}")
+        raise TargetNotFoundError(f"Target site {target_id!r} does not exist")
     if not 1 <= limit <= RANKING_LIMIT_MAX:
-        raise ValueError(f"limit debe estar entre 1 y {RANKING_LIMIT_MAX}")
+        raise ValueError(f"limit must be between 1 and {RANKING_LIMIT_MAX}")
 
     w = scoring.validate_weights(weights)
     sim = bundle.similarity[target_id]
     ranked = scoring.rank(sim, scoring.combine(sim, w), hide_known=hide_known)
     top = ranked.head(limit)
-    grid = bundle.grid.loc[top["cell_id"]]  # lat, lon, country de las filas elegidas
+    grid = bundle.grid.loc[top["cell_id"]]  # lat, lon, country of the chosen rows
 
     names = {a.analog_id: a.name for a in bundle.known_analogs}
 
@@ -150,7 +150,7 @@ def get_ranking(
     )
 
 
-CSV_DECIMALS = 3  # los puntajes del archivo, como en data/processed (la tabla muestra 2)
+CSV_DECIMALS = 3  # the file's scores, as in data/processed (the table shows 2)
 
 
 def export_ranking_csv(
@@ -160,10 +160,10 @@ def export_ranking_csv(
     hide_known: bool = False,
     limit: int = TOP_N,
 ) -> str:
-    """El ranking actual como texto CSV con encabezado: las mismas filas y columnas que la tabla (RF-34).
+    """The current ranking as CSV text with a header: the same rows and columns as the table (RF-34).
 
-    Mismos argumentos y errores que get_ranking. Una columna opcional vacía (polvo y viento en la Luna) no va,
-    como en la tabla. Separador coma y punto decimal; un dato faltante queda vacío."""
+    Same arguments and errors as get_ranking. An empty optional column (dust and wind on the Moon) is left
+    out, as in the table. Comma separator and decimal point; a missing value is left empty."""
     ranking = get_ranking(bundle, target_id, weights, hide_known=hide_known, limit=limit)
     table = tables.ranking_table(ranking)
     shown = table[tables.visible_columns(table)].round({"Lat": 1, "Lon": 1, **{c: CSV_DECIMALS for c in tables.SCORE_COLUMNS}})
@@ -171,25 +171,25 @@ def export_ranking_csv(
 
 
 def get_map_layer(bundle: DataBundle, target_id: str, weights: Weights | Mapping[str, float]) -> MapLayer:
-    """Todas las celdas de la grilla con su puntaje total para el objetivo y los pesos (design 4.4).
+    """Every grid cell with its total score for the target and the weights (design 4.4).
 
-    No ordena ni filtra: el mapa dibuja las no elegibles en gris y los análogos conocidos con borde.
-    `total` es nulo en las celdas no elegibles. Con todos los pesos en 0 no hay total en ninguna
-    celda: la capa sale igual, toda en gris (design 10.6), y el aviso lo muestra el ranking.
+    It neither sorts nor filters: the map draws non-eligible cells in gray and known analogs with a border.
+    `total` is null in non-eligible cells. With every weight at 0 no cell has a total: the layer is
+    returned anyway, all gray (design 10.6), and the ranking shows the warning.
 
-    Lanza TargetNotFoundError o InvalidWeightsError.
+    Raises TargetNotFoundError or InvalidWeightsError.
     """
     if target_id not in bundle.similarity:
-        raise TargetNotFoundError(f"No existe el sitio objetivo {target_id!r}")
-    sim = bundle.similarity[target_id]  # indexada por cell_id
+        raise TargetNotFoundError(f"Target site {target_id!r} does not exist")
+    sim = bundle.similarity[target_id]  # indexed by cell_id
     eligible = scoring.is_eligible(sim)
     try:
         w = scoring.validate_weights(weights)
         total = scoring.combine(sim, w)
-    except ZeroWeightsError:  # pesos válidos pero todos en 0: sin total en ninguna celda
+    except ZeroWeightsError:  # valid weights but all at 0: no total in any cell
         w = Weights(**_as_dict(weights))
         total = pd.Series(np.nan, index=sim.index)
-    total = total.where(eligible)  # nulo si no es elegible
+    total = total.where(eligible)  # null if not eligible
 
     names = {a.analog_id: a.name for a in bundle.known_analogs}
     grid = bundle.grid.loc[sim.index, ["lat", "lon", "country"]]
@@ -225,17 +225,17 @@ def get_site_card(
     weights: Weights | Mapping[str, float],
     cards_dir: Path | None = CARDS_DIR,
 ) -> SiteCard:
-    """Ficha de una celda frente a un objetivo (design 11, contrato SiteCard).
+    """Card for a cell against a target (design 11, SiteCard contract).
 
-    Con todos los pesos en 0 no falla: scores.total es nulo. `cards_dir` es la carpeta de los textos
-    manuales; None no los busca. Lanza TargetNotFoundError, CellNotFoundError o InvalidWeightsError."""
+    With every weight at 0 it does not fail: scores.total is null. `cards_dir` is the folder of the manual
+    texts; None skips them. Raises TargetNotFoundError, CellNotFoundError or InvalidWeightsError."""
     target = next((t for t in bundle.targets.targets if t.target_id == target_id), None)
     if target is None or target_id not in bundle.similarity:
-        raise TargetNotFoundError(f"No existe el sitio objetivo {target_id!r}")
+        raise TargetNotFoundError(f"Target site {target_id!r} does not exist")
     sim = bundle.similarity[target_id]
     cell_id = int(cell_id)
     if cell_id not in sim.index or cell_id not in bundle.grid.index:
-        raise CellNotFoundError(f"La celda {cell_id} no está en la grilla")
+        raise CellNotFoundError(f"Cell {cell_id} is not in the grid")
     try:
         w = scoring.validate_weights(weights)
     except ZeroWeightsError:
@@ -259,33 +259,33 @@ def get_site_card(
 def _target(bundle: DataBundle, target_id: str) -> Target:
     target = next((t for t in bundle.targets.targets if t.target_id == target_id), None)
     if target is None:
-        raise TargetNotFoundError(f"No existe el sitio objetivo {target_id!r}")
+        raise TargetNotFoundError(f"Target site {target_id!r} does not exist")
     return target
 
 
 def get_target(bundle: DataBundle, target_id: str) -> Target:
-    """El sitio objetivo completo, con sus variables y fuentes (design 9.2). Lanza TargetNotFoundError."""
+    """The full target site, with its variables and sources (design 9.2). Raises TargetNotFoundError."""
     return _target(bundle, target_id)
 
 
 def get_validation(bundle: DataBundle, target_id: str | None = None) -> ValidationReport:
-    """El informe de validation.json. Con `target_id`, solo ese objetivo. Lanza TargetNotFoundError."""
+    """The validation.json report. With `target_id`, only that target. Raises TargetNotFoundError."""
     report = bundle.validation
     if target_id is None:
         return report
     kept = [t for t in report.targets if t.target_id == target_id]
     if not kept:
-        raise TargetNotFoundError(f"No hay validación del sitio objetivo {target_id!r}")
+        raise TargetNotFoundError(f"There is no validation for target site {target_id!r}")
     return report.model_copy(update={"targets": kept})
 
 
 def get_manifest(bundle: DataBundle) -> Manifest:
-    """El manifiesto de la corrida del pipeline (manifest.json), fuente de la tabla "Datos usados"."""
+    """The pipeline run manifest (manifest.json), source of the "Data used" table."""
     return bundle.manifest
 
 
 def get_method_text(path: Path | None = None) -> dict[str, str]:
-    """Los textos fijos de la pestaña Método, por encabezado ({} si content/method.md todavía no existe)."""
+    """The fixed texts of the Method tab, by heading ({} if content/method.md does not exist yet)."""
     return method.read_method(METHOD_PATH if path is None else path)
 
 

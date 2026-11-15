@@ -20,7 +20,7 @@
       "analogs": [
         {
           "analog_id": "haughton_crater",
-          "name": "Cráter Haughton (isla Devon)",
+          "name": "Haughton Crater (Devon Island)",
           "covered": "yes",
           "n_cells": 14,
           "best_cell_id": 59853,
@@ -31,7 +31,7 @@
         },
         {
           "analog_id": "concordia_dome_c",
-          "name": "Estación Concordia (Domo C)",
+          "name": "Concordia Station (Dome C)",
           "covered": "yes",
           "n_cells": 19,
           "best_cell_id": 5699,
@@ -42,7 +42,7 @@
         },
         {
           "analog_id": "askja_iceland",
-          "name": "Caldera de Askja (Islandia)",
+          "name": "Askja Caldera (Iceland)",
           "covered": "no",
           "n_cells": 11,
           "best_cell_id": 55961,
@@ -53,7 +53,7 @@
         },
         {
           "analog_id": "ross_island",
-          "name": "Isla de Ross (Antártida)",
+          "name": "Ross Island (Antarctica)",
           "covered": "yes",
           "n_cells": 4,
           "best_cell_id": 4661,
@@ -74,7 +74,7 @@
       "analogs": [
         {
           "analog_id": "atacama_yungay",
-          "name": "Desierto de Atacama (Yungay)",
+          "name": "Atacama Desert (Yungay)",
           "covered": "yes",
           "n_cells": 4,
           "best_cell_id": 23510,
@@ -85,7 +85,7 @@
         },
         {
           "analog_id": "mcmurdo_dry_valleys",
-          "name": "Valles Secos de McMurdo (Antártida)",
+          "name": "McMurdo Dry Valleys (Antarctica)",
           "covered": "yes",
           "n_cells": 20,
           "best_cell_id": 5020,
@@ -96,7 +96,7 @@
         },
         {
           "analog_id": "licancabur_altiplano",
-          "name": "Volcán Licancabur y lagos del Altiplano (Bolivia y Chile)",
+          "name": "Licancabur Volcano and Altiplano lakes (Bolivia and Chile)",
           "covered": "yes",
           "n_cells": 5,
           "best_cell_id": 23871,
@@ -107,7 +107,7 @@
         },
         {
           "analog_id": "death_valley_ubehebe",
-          "name": "Valle de la Muerte (cráter Ubehebe)",
+          "name": "Death Valley (Ubehebe Crater)",
           "covered": "partial",
           "n_cells": 6,
           "best_cell_id": 45423,
@@ -118,7 +118,7 @@
         },
         {
           "analog_id": "rio_tinto",
-          "name": "Río Tinto (España)",
+          "name": "Río Tinto (Spain)",
           "covered": "no",
           "n_cells": 1,
           "best_cell_id": 45893,

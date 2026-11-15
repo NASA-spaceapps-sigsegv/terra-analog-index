@@ -1,4 +1,4 @@
-"""Criterios de aceptación de TAI-21, con el arnés de pruebas de Streamlit."""
+"""TAI-21 acceptance criteria, with the Streamlit test harness."""
 
 from pathlib import Path
 
@@ -20,7 +20,7 @@ def test_shows_the_ranking(app):
 
 
 def test_moving_a_slider_changes_the_order(app):
-    before = app.dataframe[0].value["Lon"].tolist()  # las 6 celdas de prueba comparten latitud
+    before = app.dataframe[0].value["Lon"].tolist()  # the 6 test cells share a latitude
     app.sidebar.slider(key="w_terrain").set_value(0.0).run()
     assert app.dataframe[0].value["Lon"].tolist() != before
 
@@ -29,7 +29,7 @@ def test_all_weights_zero_shows_the_warning(app):
     for dim in ("terrain", "temperature", "water_ice", "dust_wind", "biology"):
         app.sidebar.slider(key=f"w_{dim}").set_value(0.0)
     app.run()
-    assert any("Subí al menos un peso" in w.value for w in app.warning)
+    assert any("Raise at least one weight" in w.value for w in app.warning)
     assert not app.exception
 
 

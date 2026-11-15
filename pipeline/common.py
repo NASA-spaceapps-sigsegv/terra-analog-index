@@ -5,7 +5,7 @@ Every step script follows the same shape:
     args = make_parser("02_terrain", __doc__).parse_args()
     log = setup_logging("02_terrain")
     if not args.force and is_up_to_date(outputs, inputs + [Path(__file__)]):
-        log.info("al día"); sys.exit(EXIT_OK)
+        log.info("up to date"); sys.exit(EXIT_OK)
     ...
 """
 

@@ -1,9 +1,9 @@
-"""Pestaña Método (design 10.7, TAI-34). Dibuja lo que arma tai/method.py; no calcula ni redacta.
+"""Method tab (design 10.7, TAI-34). Draws what tai/method.py builds; it neither computes nor words anything.
 
-Seis partes, en este orden: qué hace, datos usados (con la tabla de variables y las fuentes del manifiesto),
-cómo se calcula, validación (con la tabla de validation.json), límites y créditos. Los textos fijos salen de
-content/method.md, que escribe Santino; una sección sin texto dice que está pendiente en vez de quedar vacía.
-Ninguna cifra se escribe a mano: salen de los archivos de data/processed/.
+Six parts, in this order: what it does, data used (with the variables table and the manifest sources),
+how it is calculated, validation (with the validation.json table), limits and credits. The fixed texts come
+from content/method.md, written by Santino; a section without text says it is pending instead of staying
+empty. No figure is written by hand: they come from the files in data/processed/.
 """
 
 from __future__ import annotations
@@ -20,18 +20,18 @@ from tai.constants import SCORE_DECIMALS_UI
 if TYPE_CHECKING:
     from tai.models import Manifest, Target, TargetValidation, ValidationReport
 
-PENDING = "Texto pendiente: falta la sección «{title}» en content/method.md."
-VARIABLES_HEADING = "Variables de cada sitio objetivo"
-SOURCES_HEADING = "Fuentes de los datos de la Tierra"
-UNREPLICABLE_HEADING = "Lo que ningún lugar de la Tierra puede replicar"
+PENDING = "Text pending: the \"{title}\" section is missing from content/method.md."
+VARIABLES_HEADING = "Variables of each target site"
+SOURCES_HEADING = "Sources of the Earth data"
+UNREPLICABLE_HEADING = "What no place on Earth can replicate"
 
-# Altura de las tablas, en píxeles: con height="auto" st.dataframe se corta en 400 px y hay que desplazarse
-# adentro. Encabezado y filas de 35 px (2.1875rem) más un borde de 1 px arriba y abajo.
+# Table height, in pixels: with height="auto" st.dataframe is cut at 400 px and you have to scroll
+# inside. Header and rows of 35 px (2.1875rem) plus a 1 px border at the top and bottom.
 ROW_HEIGHT = 35
 HEADER_HEIGHT = 35
 TABLE_BORDERS = 2
 
-# Fondo suave por resultado: se lee igual en tema claro y oscuro porque el color de la letra no cambia.
+# Soft background per result: it reads the same in light and dark themes because the text color does not change.
 RESULT_STYLE = {
     "pass": "background-color: rgba(33, 145, 140, 0.35)",
     "fail": "background-color: rgba(229, 57, 53, 0.35)",
@@ -53,11 +53,11 @@ def _text(sections: dict[str, str], title: str) -> None:
 
 
 def style_results(df: pd.DataFrame):
-    """El DataFrame de validación con la columna Resultado pintada; pandas Styler, que st.dataframe acepta."""
-    return df.style.map(lambda r: RESULT_STYLE.get(r, ""), subset=["Resultado"])
+    """The validation DataFrame with the Result column colored; a pandas Styler, which st.dataframe accepts."""
+    return df.style.map(lambda r: RESULT_STYLE.get(r, ""), subset=["Result"])
 
 
-# --- Datos usados ----------------------------------------------------------------------------------
+# --- Data used --------------------------------------------------------------------------------------
 
 
 def render_variables(targets: list[Target], manifest: Manifest) -> None:
@@ -65,7 +65,7 @@ def render_variables(targets: list[Target], manifest: Manifest) -> None:
     earth = method.earth_source_names(manifest)
     for target in targets:
         st.markdown(f"**{target.label}**")
-        # st.table y no st.dataframe: las fuentes son frases largas y la tabla las parte en vez de cortarlas.
+        # st.table and not st.dataframe: the sources are long phrases and the table wraps them instead of cutting them.
         st.table(method.variables_table(target, earth).set_index("Variable"))
 
 
@@ -75,7 +75,7 @@ def render_sources(manifest: Manifest) -> None:
     st.caption(method.grid_summary(manifest))
 
 
-# --- Validación ------------------------------------------------------------------------------------
+# --- Validation ------------------------------------------------------------------------------------
 
 
 def render_target_validation(target: TargetValidation, label: str, report: ValidationReport) -> None:
@@ -84,7 +84,7 @@ def render_target_validation(target: TargetValidation, label: str, report: Valid
     if target.result == "pass":
         st.success(summary)
     elif target.result == "fail":
-        st.error(summary)  # un fail no se esconde: se muestra con la nota de Santino
+        st.error(summary)  # a fail is not hidden: it is shown with Santino's note
     else:
         st.warning(summary)
     if target.note.strip():
@@ -95,10 +95,10 @@ def render_target_validation(target: TargetValidation, label: str, report: Valid
         hide_index=True,
         height=table_height(len(table)),
         column_config={
-            "Celdas": st.column_config.NumberColumn(format="%d"),
-            "Mejor puntaje": st.column_config.NumberColumn(format=f"%.{SCORE_DECIMALS_UI}f"),
-            "Puesto": st.column_config.NumberColumn(format="%d"),
-            "Percentil": st.column_config.NumberColumn(format="%.1f"),
+            "Cells": st.column_config.NumberColumn(format="%d"),
+            "Best score": st.column_config.NumberColumn(format=f"%.{SCORE_DECIMALS_UI}f"),
+            "Rank": st.column_config.NumberColumn(format="%d"),
+            "Percentile": st.column_config.NumberColumn(format="%.1f"),
         },
     )
 
@@ -110,7 +110,7 @@ def render_validation(report: ValidationReport, labels: dict[str, str]) -> None:
     st.caption(method.result_legend(report))
 
 
-# --- Límites ---------------------------------------------------------------------------------------
+# --- Limits ----------------------------------------------------------------------------------------
 
 
 def render_unreplicable(targets: list[Target]) -> None:
@@ -120,33 +120,33 @@ def render_unreplicable(targets: list[Target]) -> None:
         st.markdown("\n".join(f"- {item}" for item in [*target.unreplicable, *target.notes]))
 
 
-# --- Pestaña ---------------------------------------------------------------------------------------
+# --- Tab -------------------------------------------------------------------------------------------
 
 
 def render_method(
     sections: dict[str, str], targets: list[Target], validation: ValidationReport, manifest: Manifest
 ) -> None:
-    """Dibuja la pestaña. `sections` es lo que devuelve tai.method.read_method()."""
+    """Draw the tab. `sections` is what tai.method.read_method() returns."""
     labels = {t.target_id: t.label for t in targets}
 
-    st.subheader("Qué hace")
-    _text(sections, "Qué hace")
+    st.subheader("What it does")
+    _text(sections, "What it does")
 
-    st.subheader("Datos usados")
-    _text(sections, "Datos usados")
+    st.subheader("Data used")
+    _text(sections, "Data used")
     render_variables(targets, manifest)
     render_sources(manifest)
 
-    st.subheader("Cómo se calcula")
-    _text(sections, "Cómo se calcula")
+    st.subheader("How it is calculated")
+    _text(sections, "How it is calculated")
 
-    st.subheader("Validación")
-    _text(sections, "Validación")
+    st.subheader("Validation")
+    _text(sections, "Validation")
     render_validation(validation, labels)
 
-    st.subheader("Límites")
-    _text(sections, "Límites")
+    st.subheader("Limits")
+    _text(sections, "Limits")
     render_unreplicable(targets)
 
-    st.subheader("Créditos")
-    _text(sections, "Créditos")
+    st.subheader("Credits")
+    _text(sections, "Credits")

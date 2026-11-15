@@ -1,4 +1,4 @@
-"""tai/scoring.py: ejemplos de 5.6, elegibilidad y orden de 5.7 (design 12.1, TAI-19)."""
+"""tai/scoring.py: examples from 5.6, eligibility and order from 5.7 (design 12.1, TAI-19)."""
 
 import time
 
@@ -16,7 +16,7 @@ COLS = ["s_terrain", "s_temperature", "s_water_ice", "bio_score"]
 
 
 def make_sim(rows, known=None) -> pd.DataFrame:
-    """rows: dict cell_id -> (terreno, temperatura, agua y hielo, biología)."""
+    """rows: dict cell_id -> (terrain, temperature, water and ice, biology)."""
     ids = list(rows)
     df = pd.DataFrame([rows[i] for i in ids], columns=COLS, dtype="float32")
     df.index = pd.Index(ids, name="cell_id", dtype="int32")
@@ -45,7 +45,7 @@ def test_null_is_not_a_zero():
     full = make_sim({1: (0.5, 0.5, 0.5, 0.5)})
     holey = make_sim({1: (0.5, NAN, 0.5, 0.5)})
     assert scoring.combine(full, DEFAULT_WEIGHTS).iloc[0] == pytest.approx(0.5)
-    assert scoring.combine(holey, DEFAULT_WEIGHTS).iloc[0] == pytest.approx(0.5)  # con 0 sería menor
+    assert scoring.combine(holey, DEFAULT_WEIGHTS).iloc[0] == pytest.approx(0.5)  # with 0 it would be lower
 
 
 def test_zero_weight_equals_dropping_the_dimension():
@@ -98,7 +98,7 @@ def test_missing_or_unknown_dimension_raises():
     with pytest.raises(InvalidWeightsError):
         scoring.validate_weights({"terrain": 1.0})
     with pytest.raises(InvalidWeightsError):
-        scoring.validate_weights(dict(DEFAULT_WEIGHTS, polvo=1.0))
+        scoring.validate_weights(dict(DEFAULT_WEIGHTS, dust=1.0))
 
 
 def test_valid_weights_come_back_as_weights():
@@ -127,7 +127,7 @@ def test_biology_does_not_count_for_eligibility():
 
 def test_rank_sorts_descending_and_drops_ineligible_cells():
     sim = make_sim({10: (0.2, 0.2, 0.2, 0.0), 11: (0.9, 0.9, 0.9, 0.0), 12: (0.99, NAN, NAN, 1.0)})
-    assert order(sim) == [11, 10]  # 12 tiene una sola dimensión física
+    assert order(sim) == [11, 10]  # 12 has a single physical dimension
 
 
 def test_rank_returns_cell_id_scores_and_total_columns():
@@ -144,7 +144,7 @@ def test_ties_are_broken_by_ascending_cell_id(input_order):
 
 
 def test_float32_noise_does_not_break_a_real_tie():
-    # 0.1 + 0.2 y 0.3 son iguales en papel pero no en float32
+    # 0.1 + 0.2 and 0.3 are equal on paper but not in float32
     sim = make_sim({2: (0.3, 0.3, 0.3, 0.3), 1: (0.1, 0.2, 0.6, 0.3)})
     w = dict(terrain=1.0, temperature=1.0, water_ice=1.0, biology=0.0)
     assert order(sim, w) == [1, 2]
@@ -161,18 +161,18 @@ def test_rank_of_an_empty_selection_is_empty():
     assert scoring.rank(sim, scoring.combine(sim, DEFAULT_WEIGHTS)).empty
 
 
-# --- rendimiento (criterio de aceptación: menos de 50 ms) ---------------------
+# --- performance (acceptance criterion: under 50 ms) -------------------------
 
 
 def test_combine_on_the_whole_grid_takes_under_50_ms():
     rng = np.random.default_rng(0)
-    n = N_CELLS_GLOBAL  # 64 800 celdas, más que las 21 357 de tierra firme
+    n = N_CELLS_GLOBAL  # 64,800 cells, more than the 21,357 on dry land
     data = rng.random((n, 4), dtype="float32")
-    data[:, :3][rng.random((n, 3)) < 0.1] = NAN  # 10 % de huecos en las tres dimensiones físicas
+    data[:, :3][rng.random((n, 3)) < 0.1] = NAN  # 10% gaps in the three physical dimensions
     sim = pd.DataFrame(data, columns=COLS, index=pd.Index(np.arange(n, dtype="int32"), name="cell_id"))
-    scoring.combine(sim, DEFAULT_WEIGHTS)  # calienta
+    scoring.combine(sim, DEFAULT_WEIGHTS)  # warm-up
     best = min(_timed(scoring.combine, sim, DEFAULT_WEIGHTS) for _ in range(5))
-    assert best < 0.050, f"combine tardó {best * 1000:.1f} ms"
+    assert best < 0.050, f"combine took {best * 1000:.1f} ms"
 
 
 def _timed(fn, *args) -> float:

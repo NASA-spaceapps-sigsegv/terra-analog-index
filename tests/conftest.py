@@ -1,9 +1,9 @@
-"""Datos de prueba mínimos de data/processed/ armados a mano (6 celdas, 2 objetivos).
+"""Minimal hand-built test data for data/processed/ (6 cells, 2 targets).
 
-Diseñados para que mover los pesos cambie el orden:
-  pesos iniciales      -> 104, 102, 100, 101   (100 y 101 empatan: gana el cell_id menor)
-  terreno en 0         -> 101, 102, 104, 100, 105
-  103 tiene 1 sola dimensión física: no es elegible. 105 es análogo conocido.
+Designed so that moving the weights changes the order:
+  default weights      -> 104, 102, 100, 101   (100 and 101 tie: the lower cell_id wins)
+  terrain at 0         -> 101, 102, 104, 100, 105
+  103 has a single physical dimension: not eligible. 105 is a known analog.
 """
 
 import json
@@ -22,9 +22,9 @@ SCORES = [
     (0.9, 0.1, 0.5, 0.0),  # 100
     (0.1, 0.9, 0.5, 0.0),  # 101
     (0.5, 0.5, 0.5, 0.2),  # 102
-    (NAN, NAN, 0.9, 0.0),  # 103: no elegible
+    (NAN, NAN, 0.9, 0.0),  # 103: not eligible
     (0.6, NAN, 0.6, 0.1),  # 104
-    (0.3, 0.3, 0.3, 0.0),  # 105: análogo conocido
+    (0.3, 0.3, 0.3, 0.0),  # 105: known analog
 ]
 
 
@@ -82,7 +82,7 @@ def _similarity() -> pd.DataFrame:
         for v in PHYSICAL_VARS:
             df[f"sv_{v}"] = np.full(len(CELLS), NAN, dtype="float32")
         df["s_terrain"], df["s_temperature"], df["s_water_ice"], df["bio_score"] = (s[:, i] for i in range(4))
-        df["s_dust_wind"] = np.full(len(CELLS), NAN, dtype="float32")  # TAI-52: sin dato, no altera el orden
+        df["s_dust_wind"] = np.full(len(CELLS), NAN, dtype="float32")  # TAI-52: no data, does not alter the order
         df["bio_score"] = df["bio_score"].astype("float32")
         phys = df[["s_terrain", "s_temperature", "s_water_ice"]].notna().sum(axis=1)
         df["n_physical"] = phys.astype("int8")
@@ -94,11 +94,11 @@ def _similarity() -> pd.DataFrame:
 
 
 def _target(target_id: str, body: str, bounds: dict) -> dict:
-    var = {"mean": 1.0, "std": 1.0, "unit": "u", "rule": "overlap", "source": "prueba",
+    var = {"mean": 1.0, "std": 1.0, "unit": "u", "rule": "overlap", "source": "test",
            "source_type": "literature", "earth_p01": 0.0, "earth_p99": 10.0, "earth_std": 2.0}
-    return {"target_id": target_id, "label": f"Objetivo {target_id}", "body": body, "bounds": bounds,
-            "has_ice": body == "moon", "has_ice_source": "prueba", "summary": "resumen de prueba",
-            "unreplicable": ["gravedad"], "notes": [], "vars": {v: dict(var) for v in PHYSICAL_VARS}}
+    return {"target_id": target_id, "label": f"Target {target_id}", "body": body, "bounds": bounds,
+            "has_ice": body == "moon", "has_ice_source": "test", "summary": "test summary",
+            "unreplicable": ["gravity"], "notes": [], "vars": {v: dict(var) for v in PHYSICAL_VARS}}
 
 
 def write_bundle(path) -> None:
@@ -113,12 +113,12 @@ def write_bundle(path) -> None:
     (path / "targets.json").write_text(json.dumps(targets), encoding="utf-8")
     (path / "known_analogs.csv").write_text(
         "analog_id,name,lat,lon,radius_km,target_id,basis,covered,source\n"
-        "atacama_yungay,Atacama,-24.1,-69.3,150,mars_jezero,hiperaridez,yes,prueba\n", encoding="utf-8")
-    # cueva_norte no cae en ninguna celda de la grilla; cueva_sur cae en la 102 (puesto 2 con Jezero).
+        "atacama_yungay,Atacama,-24.1,-69.3,150,mars_jezero,hyperaridity,yes,test\n", encoding="utf-8")
+    # north_cave falls in no grid cell; south_cave falls in 102 (rank 2 for Jezero).
     (path / "caves.csv").write_text(
         "cave_id,name,lat,lon,kind,relevance,source\n"
-        "cueva_norte,Cueva del norte,29.16,-13.44,lava_tube,Luna y Marte: prueba,prueba\n"
-        "cueva_sur,Cueva del sur,-89.5,-77.5,ice_cave,Marte: prueba,prueba\n", encoding="utf-8")
+        "north_cave,North cave,29.16,-13.44,lava_tube,Moon and Mars: test,test\n"
+        "south_cave,South cave,-89.5,-77.5,ice_cave,Mars: test,test\n", encoding="utf-8")
     validation = {"schema_version": 1, "generated_at": "2026-11-14T15:30:00Z",
                   "weights": {"terrain": 1, "temperature": 1, "water_ice": 1, "biology": 0.5},
                   "percentile_threshold": 90,

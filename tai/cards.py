@@ -1,11 +1,11 @@
-"""Ficha de sitio (design 11, contrato SiteCard, TAI-32).
+"""Site card (design 11, SiteCard contract, TAI-32).
 
-`build_card` arma la ficha completa de una celda frente a un objetivo a partir de las tablas ya
-cargadas: puntajes, frases de la plantilla (11.2), límites, fuentes y el texto manual (11.3), si
-existe. Es puro salvo por leer content/cards/<cell_id>__<target_id>.md. La vista (ui/card_view.py)
-solo dibuja lo que trae el modelo.
+`build_card` assembles the full card for a cell against a target from the already loaded tables:
+scores, template phrases (11.2), limits, sources and the manual text (11.3), if there is one. It is
+pure except for reading content/cards/<cell_id>__<target_id>.md. The view (ui/card_view.py) only
+draws what the model carries.
 
-Las frases viven acá como constantes. Las pruebas están en tests/test_cards.py.
+The phrases live here as constants. The tests are in tests/test_cards.py.
 """
 
 from __future__ import annotations
@@ -47,60 +47,60 @@ from tai.models import (
     Weights,
 )
 
-# --- Textos fijos (11.2) ---------------------------------------------------------
+# --- Fixed texts (11.2) ---------------------------------------------------------
 
-PHRASE_OVERLAP = "{value} {unit} frente a {mean} ± {std} del objetivo"
+PHRASE_OVERLAP = "{value} {unit} vs. the target's {mean} ± {std}"
 PHRASE_DIRECTIONAL_LOW = (
-    "Más {adjective} que el {pct}% de la tierra firme; el objetivo ({mean} {unit}) queda fuera del rango terrestre"
+    "{adjective} than {pct}% of dry land; the target ({mean} {unit}) lies outside the Earth range"
 )
 PHRASE_DIRECTIONAL_HIGH = (
-    "Mayor que el {pct}% de la tierra firme; el objetivo ({mean} {unit}) queda fuera del rango terrestre"
+    "Higher than {pct}% of dry land; the target ({mean} {unit}) lies outside the Earth range"
 )
-PHRASE_PRESENCE = "Nieve o hielo el {pct}% del año; el objetivo tiene hielo"
-PHRASE_ABSENCE = "Sin nieve ni hielo el {pct}% del año; el objetivo no tiene hielo en superficie"
-PHRASE_NO_DATA = "Sin dato para esta celda"
-PHRASE_BIO_RECORDS = "{n} registros de ambientes extremos en NCBI BioSample: {types}"
-PHRASE_BIO_ONE_RECORD = "1 registro de ambientes extremos en NCBI BioSample: {types}"
-PHRASE_BIO_NONE = "Sin registros en NCBI BioSample"
-SAMPLING_NOTE = "La falta de registros puede deberse a que nadie tomó muestras acá, no a que no haya vida"
-NONE_SIMILAR = "Ninguna dimensión física alcanza un parecido alto"
-NONE_DIFFERENT = "Ninguna dimensión física se aleja de forma marcada"
-NOT_ELIGIBLE_NOTE = "Datos insuficientes: la celda tiene dato en menos de 2 de las 3 dimensiones físicas y no entra en el ranking"
+PHRASE_PRESENCE = "Snow or ice {pct}% of the year; the target has ice"
+PHRASE_ABSENCE = "No snow or ice {pct}% of the year; the target has no surface ice"
+PHRASE_NO_DATA = "No data for this cell"
+PHRASE_BIO_RECORDS = "{n} extreme-environment records in NCBI BioSample: {types}"
+PHRASE_BIO_ONE_RECORD = "1 extreme-environment record in NCBI BioSample: {types}"
+PHRASE_BIO_NONE = "No records in NCBI BioSample"
+SAMPLING_NOTE = "A lack of records may mean nobody sampled here, not that there is no life"
+NONE_SIMILAR = "No physical dimension reaches a high similarity"
+NONE_DIFFERENT = "No physical dimension departs markedly"
+NOT_ELIGIBLE_NOTE = "Insufficient data: the cell has data in fewer than 2 of the 3 physical dimensions and is not ranked"
 
-DIRECTIONAL_ADJECTIVE = {"tmin_c": "fría", "precip_mm": "seca"}
+DIRECTIONAL_ADJECTIVE = {"tmin_c": "Colder", "precip_mm": "Drier"}
 
 VAR_LABELS = {
-    "slope_deg": "Pendiente media",
-    "roughness_m": "Rugosidad local",
-    "tmin_c": "Temperatura mínima",
-    "trange_c": "Rango térmico diario",
-    "precip_mm": "Precipitación anual",
-    "ice_frac": "Nieve o hielo",
-    "dust_aod": "Polvo en suspensión",
-    "wind_ms": "Viento en superficie",
+    "slope_deg": "Mean slope",
+    "roughness_m": "Local roughness",
+    "tmin_c": "Minimum temperature",
+    "trange_c": "Daily temperature range",
+    "precip_mm": "Annual precipitation",
+    "ice_frac": "Snow or ice",
+    "dust_aod": "Airborne dust",
+    "wind_ms": "Surface wind",
 }
 DIMENSION_LABELS = {
-    "terrain": "Terreno",
-    "temperature": "Temperatura",
-    "water_ice": "Agua y hielo",
-    "dust_wind": "Polvo y viento",
-    "biology": "Interés astrobiológico",
+    "terrain": "Terrain",
+    "temperature": "Temperature",
+    "water_ice": "Water and ice",
+    "dust_wind": "Dust and wind",
+    "biology": "Astrobiological interest",
 }
-# Copia de las etiquetas de config/bio_terms.json (la app no lee config/); una prueba las mantiene iguales.
+# Copy of the labels in config/bio_terms.json (the app does not read config/); a test keeps them equal.
 BIO_TYPE_LABELS = {
-    "halophile": "Halófilos (sal)",
-    "psychrophile": "Psicrófilos (frío)",
-    "xerophile": "Xerófilos (aridez)",
-    "acidophile": "Acidófilos (ácido)",
-    "thermophile": "Termófilos (calor)",
-    "radioresistant": "Radiorresistentes",
+    "halophile": "Halophiles (salt)",
+    "psychrophile": "Psychrophiles (cold)",
+    "xerophile": "Xerophiles (dryness)",
+    "acidophile": "Acidophiles (acid)",
+    "thermophile": "Thermophiles (heat)",
+    "radioresistant": "Radioresistant",
 }
 
-# Decimales con que se escribe cada unidad en las frases.
-UNIT_DECIMALS = {"mm/año": 0, "fracción": 2, "": 2}  # "": espesor óptico, sin unidad
+# Decimals each unit is written with in the phrases.
+UNIT_DECIMALS = {"mm/yr": 0, "fraction": 2, "": 2}  # "": optical depth, unitless
 DEFAULT_DECIMALS = 1
 
-# De qué entrada del manifiesto sale cada variable terrestre: (paso, prefijo del producto).
+# Which manifest input each Earth variable comes from: (step, product prefix).
 EARTH_SOURCE = {
     "slope_deg": ("02_terrain", ""),
     "roughness_m": ("02_terrain", ""),
@@ -113,17 +113,17 @@ EARTH_SOURCE = {
 }
 BIO_STEP = "05_biology_ncbi"
 BIO_SOURCE = "NCBI BioSample"
-HAS_ICE_DERIVED = "Derivado de has_ice"
+HAS_ICE_DERIVED = "Derived from has_ice"
 
 MONTHS = (
-    "enero", "febrero", "marzo", "abril", "mayo", "junio",
-    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
 )
 
 CARDS_DIR = Path("content") / "cards"
 
 
-# --- Formato -------------------------------------------------------------------------
+# --- Formatting -------------------------------------------------------------------------
 
 
 def _missing(x) -> bool:
@@ -131,23 +131,23 @@ def _missing(x) -> bool:
 
 
 def fmt_num(x: float, decimals: int = DEFAULT_DECIMALS) -> str:
-    """Número con coma decimal: 3.5 -> "3,5". Nunca "-0"."""
+    """Number with a decimal point: 3.5 -> "3.5". Never "-0"."""
     s = f"{x:.{decimals}f}"
     if float(s) == 0:
         s = s.lstrip("-")
-    return s.replace(".", ",")
+    return s
 
 
 def unit_value(x: float, unit: str) -> str:
-    """El número con los decimales de su unidad: unit_value(3.0, "mm/año") -> "3"."""
+    """The number with its unit's decimals: unit_value(3.0, "mm/yr") -> "3"."""
     return fmt_num(x, UNIT_DECIMALS.get(unit, DEFAULT_DECIMALS))
 
 
 def coord_label(lat: float, lon: float) -> str:
-    """"24,5°S 69,5°O"."""
+    """"24.5°S 69.5°W"."""
     ns = "S" if lat < 0 else "N"
-    eo = "O" if lon < 0 else "E"
-    return f"{fmt_num(abs(lat))}°{ns} {fmt_num(abs(lon))}°{eo}"
+    ew = "W" if lon < 0 else "E"
+    return f"{fmt_num(abs(lat))}°{ns} {fmt_num(abs(lon))}°{ew}"
 
 
 def _round(x) -> float | None:
@@ -158,16 +158,16 @@ def _pct(x: float) -> int:
     return int(round(100 * x))
 
 
-# --- Frases ----------------------------------------------------------------------------
+# --- Phrases ----------------------------------------------------------------------------
 
 
 def _no_double_space(text: str) -> str:
-    """Una variable sin unidad (el espesor óptico) deja "0,12  frente a" o "(0,45 )"; se limpia."""
+    """A unitless variable (optical depth) leaves "0.12  vs." or "(0.45 )"; clean it up."""
     return text.replace("  ", " ").replace(" )", ")")
 
 
 def variable_phrase(variable: str, rule: str, earth_value, score, mean: float, std: float, unit: str) -> str:
-    """La frase de 11.2 que corresponde a la regla. Sin dato: PHRASE_NO_DATA."""
+    """The 11.2 phrase that matches the rule. No data: PHRASE_NO_DATA."""
     if _missing(earth_value) or _missing(score):
         return PHRASE_NO_DATA
     if rule == "overlap":
@@ -175,7 +175,7 @@ def variable_phrase(variable: str, rule: str, earth_value, score, mean: float, s
             value=unit_value(earth_value, unit), unit=unit, mean=unit_value(mean, unit), std=unit_value(std, unit)
         ))
     if rule == "directional_low":
-        adjective = DIRECTIONAL_ADJECTIVE.get(variable, "baja")
+        adjective = DIRECTIONAL_ADJECTIVE.get(variable, "Lower")
         return _no_double_space(PHRASE_DIRECTIONAL_LOW.format(
             adjective=adjective, pct=_pct(score), mean=unit_value(mean, unit), unit=unit))
     if rule == "directional_high":
@@ -184,11 +184,11 @@ def variable_phrase(variable: str, rule: str, earth_value, score, mean: float, s
         return PHRASE_PRESENCE.format(pct=_pct(earth_value))
     if rule == "absence":
         return PHRASE_ABSENCE.format(pct=_pct(1 - earth_value))
-    raise ValueError(f"regla desconocida: {rule!r}")
+    raise ValueError(f"unknown rule: {rule!r}")
 
 
 def _type_short(label: str) -> str:
-    """"Halófilos (sal)" -> "halófilos"."""
+    """"Halophiles (salt)" -> "halophiles"."""
     return label.split(" (")[0].lower()
 
 
@@ -201,20 +201,20 @@ def biology_phrase(records: int, types: list[BioTypeRef]) -> str:
     return PHRASE_BIO_RECORDS.format(n=records, types=names)
 
 
-# --- Texto manual (11.3) -----------------------------------------------------------------
+# --- Manual text (11.3) -----------------------------------------------------------------
 
 
 def manual_filename(cell_id: int, target_id: str) -> str:
     return f"{cell_id}__{target_id}.md"
 
 
-_SOURCES_HEADING = re.compile(r"^##\s+Fuentes\s*$", re.MULTILINE)
+_SOURCES_HEADING = re.compile(r"^##\s+Sources\s*$", re.MULTILINE)
 _LIST_ITEM = re.compile(r"^\s*(?:\d+[.)]|[-*])\s+\S", re.MULTILINE)
 MANUAL_WORDS = (150, 250)
 
 
 def parse_manual(text: str) -> tuple[str | None, str]:
-    """(título, cuerpo). El título es la primera línea si empieza con "# "; si no, None."""
+    """(title, body). The title is the first line if it starts with "# "; otherwise None."""
     lines = text.strip().splitlines()
     if lines and lines[0].startswith("# "):
         return lines[0][2:].strip() or None, "\n".join(lines[1:]).strip()
@@ -222,32 +222,32 @@ def parse_manual(text: str) -> tuple[str | None, str]:
 
 
 def manual_problems(text: str) -> list[str]:
-    """Lo que le falta a un texto manual para cumplir el formato de contracts 7.4. Vacía si está bien."""
+    """What a manual text is missing to meet the contracts 7.4 format. Empty if it is fine."""
     problems = []
     title, body = parse_manual(text)
     if title is None:
-        problems.append('la primera línea debe ser el título: "# Nombre del lugar"')
+        problems.append('the first line must be the title: "# Place name"')
     found = list(_SOURCES_HEADING.finditer(body))
     if not found:
-        problems.append('falta la sección final "## Fuentes"')
+        problems.append('the final "## Sources" section is missing')
         return problems
     sources = body[found[-1].end():]
     if re.search(r"^#{1,6}\s", sources, re.MULTILINE):
-        problems.append('"## Fuentes" debe ser la última sección')
+        problems.append('"## Sources" must be the last section')
     if not _LIST_ITEM.search(sources):
-        problems.append('"## Fuentes" debe tener al menos un ítem de lista')
+        problems.append('"## Sources" must have at least one list item')
     words = len(re.findall(r"\w+", body[: found[-1].start()]))
     lo, hi = MANUAL_WORDS
     if not lo <= words <= hi:
-        problems.append(f"el texto tiene {words} palabras sin contar las fuentes; deben ser entre {lo} y {hi}")
+        problems.append(f"the text has {words} words not counting the sources; it must have between {lo} and {hi}")
     return problems
 
 
 def read_manual(cards_dir: Path, cell_id: int, target_id: str, root: Path | None = None) -> ManualText | None:
-    """El texto manual de la celda y el objetivo, o None si no hay archivo.
+    """The manual text for the cell and target, or None if there is no file.
 
-    Un archivo sin título se muestra igual (el título pasa a ser el nombre del archivo): mejor ver
-    el texto que ocultarlo por un error de formato, que de todos modos hace fallar test_cards.py."""
+    A file without a title is shown anyway (the title becomes the file name): better to see the
+    text than to hide it over a format error, which makes test_cards.py fail anyway."""
     path = Path(cards_dir) / manual_filename(cell_id, target_id)
     if not path.is_file():
         return None
@@ -256,11 +256,11 @@ def read_manual(cards_dir: Path, cell_id: int, target_id: str, root: Path | None
     return ManualText(title=title or path.stem, body_md=body, path=shown)
 
 
-# --- Fuentes -------------------------------------------------------------------------------
+# --- Sources -------------------------------------------------------------------------------
 
 
 def earth_source_names(manifest: Manifest) -> dict[str, str]:
-    """Variable física -> nombre de su fuente terrestre en el manifiesto ("" si el paso no está)."""
+    """Physical variable -> name of its Earth source in the manifest ("" if the step is missing)."""
     steps = {s.step: s for s in manifest.steps}
     out = {}
     for var, (step, prefix) in EARTH_SOURCE.items():
@@ -275,11 +275,11 @@ def biology_source(manifest: Manifest) -> str:
     if step is None:
         return BIO_SOURCE
     d = step.ran_at
-    return f"{BIO_SOURCE}, consulta del {d.day} de {MONTHS[d.month - 1]} de {d.year}"
+    return f"{BIO_SOURCE}, queried on {MONTHS[d.month - 1]} {d.day}, {d.year}"
 
 
 def _sources(variables: list[CardVariable], target: Target) -> list[CardSource]:
-    """Una entrada por nombre, en orden de aparición: Tierra, NCBI y después el objetivo."""
+    """One entry per name, in order of appearance: Earth, NCBI and then the target."""
     used: dict[str, list[str]] = {}
     for v in variables:
         if v.source_earth:
@@ -292,7 +292,7 @@ def _sources(variables: list[CardVariable], target: Target) -> list[CardSource]:
     return [CardSource(name=name, used_for=list(dict.fromkeys(vs))) for name, vs in used.items()]
 
 
-# --- Ficha ------------------------------------------------------------------------------------
+# --- Card ------------------------------------------------------------------------------------
 
 
 def _total(sim_row: pd.DataFrame, weights: Weights, eligible: bool) -> float | None:
@@ -300,7 +300,7 @@ def _total(sim_row: pd.DataFrame, weights: Weights, eligible: bool) -> float | N
         return None
     try:
         total = scoring.combine(sim_row, weights).iloc[0]
-    except ZeroWeightsError:  # contrato: con todos los pesos en 0 la ficha no falla, el total es nulo
+    except ZeroWeightsError:  # contract: with every weight at 0 the card does not fail, the total is null
         return None
     return _round(total)
 
@@ -319,16 +319,16 @@ def build_card(
     root: Path | None = None,
     caves: Sequence[Cave] = (),
 ) -> SiteCard:
-    """La ficha de una celda. `sim_row` es la fila de similarity.parquet de ese objetivo.
+    """The card for a cell. `sim_row` is that target's row in similarity.parquet.
 
-    `caves`: las cuevas y tubos de lava que caen en la celda (TAI-53); se muestran, no puntúan."""
+    `caves`: the caves and lava tubes that fall in the cell (TAI-53); they are shown, not scored."""
     earth_sources = earth_source_names(manifest)
 
     variables = []
     for dim in PHYSICAL_DIMENSIONS:
         for var in DIMENSION_VARS[dim]:
             t = target.vars.get(var)
-            if t is None:  # variable opcional que el objetivo no tiene (polvo y viento en la Luna)
+            if t is None:  # optional variable the target does not have (dust and wind on the Moon)
                 continue
             earth = None if _missing(features_row.get(var)) else float(features_row[var])
             score = _round(sim_row.get(f"sv_{var}"))

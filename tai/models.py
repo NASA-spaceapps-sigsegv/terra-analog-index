@@ -1,4 +1,4 @@
-"""Pydantic models for the JSON contracts ("Contratos JSON e interfaces").
+"""Pydantic models for the JSON contracts ("JSON contracts and interfaces").
 
 Every model rejects unknown keys (extra="forbid") so a typo in a file fails
 at load time, not during the demo. Missing values are null, never NaN.
@@ -208,7 +208,7 @@ CaveKind = Literal["lava_tube", "ice_cave"]
 
 
 class Cave(_Model):
-    """Una cueva o tubo de lava estudiado como análogo. Capa informativa del mapa: no entra en ningún puntaje."""
+    """A cave or lava tube studied as an analog. Informational map layer: it does not enter any score."""
 
     cave_id: str
     name: str = Field(min_length=1)
@@ -342,25 +342,25 @@ class BioTermType(_Model):
 
 
 class BioTermsFile(_Model):
-    # Versión 2 (TAI-06) agrega `shared`: filtro de BioSample común a todos los tipos
-    # (bacterias, sin metagenomas, con lat_lon y los atributos de ambiente). Versión 1 no lo trae.
+    # Version 2 (TAI-06) adds `shared`: BioSample filter common to every type
+    # (bacteria, no metagenomes, with lat_lon and the environment attributes). Version 1 lacks it.
     schema_version: Literal[1, 2]
     shared: str = ""
     types: list[BioTermType] = Field(min_length=1)
 
 
-# --- Respuesta de get_ranking (contracts 4.5) --------------------------------
+# --- get_ranking response (contracts 4.5) -----------------------------------
 
 
 class AnalogRef(_Model):
-    """Análogo conocido que cubre una celda: id y nombre para mostrar."""
+    """Known analog that covers a cell: id and display name."""
 
     analog_id: str
     name: str = Field(min_length=1)
 
 
 class RankingItem(_Model):
-    """Una fila del ranking. Un puntaje nulo es "sin dato", nunca 0."""
+    """One ranking row. A null score means "no data", never 0."""
 
     rank: int = Field(ge=1)
     cell_id: int = Field(ge=0)
@@ -371,7 +371,7 @@ class RankingItem(_Model):
     s_terrain: float | None = Field(ge=0, le=1)
     s_temperature: float | None = Field(ge=0, le=1)
     s_water_ice: float | None = Field(ge=0, le=1)
-    s_dust_wind: float | None = Field(default=None, ge=0, le=1)  # nulo si el objetivo no tiene la dimensión
+    s_dust_wind: float | None = Field(default=None, ge=0, le=1)  # null if the target lacks the dimension
     bio_score: float = Field(ge=0, le=1)
     known_analog: AnalogRef | None
 
@@ -381,11 +381,11 @@ class Ranking(_Model):
     weights: Weights
     hide_known: bool
     limit: int = Field(ge=1)
-    total_eligible: int = Field(ge=0)  # elegibles antes de aplicar limit (y después de hide_known)
+    total_eligible: int = Field(ge=0)  # eligible before applying limit (and after hide_known)
     items: list[RankingItem]
 
 
-# --- Respuesta de get_map_layer (contracts 4.4) ------------------------------
+# --- get_map_layer response (contracts 4.4) ---------------------------------
 
 MAP_CELL_COLUMNS = (
     "cell_id", "lat", "lon", "country", "total", "s_terrain", "s_temperature",
@@ -394,11 +394,11 @@ MAP_CELL_COLUMNS = (
 
 
 class MapLayer(BaseModel):
-    """Todas las celdas de la grilla para un objetivo y unos pesos, sin ordenar.
+    """Every grid cell for a target and a set of weights, unsorted.
 
-    `cells` es una tabla (una fila por celda, columnas de MAP_CELL_COLUMNS) para que el mapa
-    se arme sin recorrer objetos; `to_dict` da la forma JSON del contrato, con null en vez
-    de NaN. `total` es nulo si la celda no es elegible (o si todos los pesos valen 0).
+    `cells` is a table (one row per cell, MAP_CELL_COLUMNS columns) so the map can be built
+    without iterating over objects; `to_dict` gives the contract's JSON shape, with null instead
+    of NaN. `total` is null if the cell is not eligible (or if every weight is 0).
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True, arbitrary_types_allowed=True)
@@ -429,7 +429,7 @@ class MapLayer(BaseModel):
 
 
 
-# --- Respuesta de get_site_card (contracts 5) ----------------------------------
+# --- get_site_card response (contracts 5) -------------------------------------
 
 PhysicalDimension = Literal["terrain", "temperature", "water_ice", "dust_wind"]
 
@@ -444,18 +444,18 @@ class CardAnalog(_Model):
 class CardHeader(_Model):
     lat: float
     lon: float
-    label: str  # "24,5°S 69,5°O"
+    label: str  # "24.5°S 69.5°W"
     country: str | None
     area_km2: float = Field(gt=0)
     known_analog: CardAnalog | None
 
 
 class CardScores(_Model):
-    total: float | None = Field(ge=0, le=1)  # nulo si la celda no es elegible o los pesos suman 0
+    total: float | None = Field(ge=0, le=1)  # null if the cell is not eligible or the weights add up to 0
     terrain: float | None = Field(ge=0, le=1)
     temperature: float | None = Field(ge=0, le=1)
     water_ice: float | None = Field(ge=0, le=1)
-    dust_wind: float | None = Field(default=None, ge=0, le=1)  # nulo si el objetivo no tiene la dimensión
+    dust_wind: float | None = Field(default=None, ge=0, le=1)  # null if the target lacks the dimension
     biology: float = Field(ge=0, le=1)
 
 
@@ -506,7 +506,7 @@ class CardSource(_Model):
 
 
 class CardCave(_Model):
-    """Cueva o tubo de lava que cae en la celda (TAI-53): informativo, no cambia el puntaje."""
+    """Cave or lava tube that falls in the cell (TAI-53): informational, it does not change the score."""
 
     name: str = Field(min_length=1)
     kind_label: str = Field(min_length=1)
@@ -515,7 +515,7 @@ class CardCave(_Model):
 
 
 class SiteCard(_Model):
-    """Todo lo que muestra la ficha, ya redactado: la vista no arma frases ni decide umbrales."""
+    """Everything the card shows, already worded: the view neither builds phrases nor decides thresholds."""
 
     cell_id: int = Field(ge=0)
     target_id: str

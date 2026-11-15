@@ -1,8 +1,8 @@
-"""Intérprete del atributo lat_lon de NCBI BioSample (design 7.4, TAI-15).
+"""Parser for the NCBI BioSample lat_lon attribute (design 7.4, TAI-15).
 
-El formato habitual es "24.08 S 69.92 W". También se aceptan dos decimales
-con signo separados por coma o espacio ("-24.08 -69.92"). S y W dan valores
-negativos. No lee archivos ni usa la red.
+The usual format is "24.08 S 69.92 W". Two signed decimals separated by a
+comma or a space ("-24.08 -69.92") are also accepted. S and W give negative
+values. It reads no files and does not use the network.
 """
 
 import math
@@ -11,18 +11,18 @@ import re
 _HEMISPHERES = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*([NS])[,\s]+(\d+(?:\.\d+)?)\s*([EW])\s*$")
 _SIGNED = re.compile(r"^\s*([+-]?\d+(?:\.\d+)?)\s*[,\s]\s*([+-]?\d+(?:\.\d+)?)\s*$")
 
-# Valores que BioSample usa para "sin dato" (se comparan en minúsculas).
+# Values BioSample uses for "no data" (compared in lowercase).
 MISSING = frozenset(
     {"", "missing", "not collected", "not applicable", "na", "n/a", "not provided", "unknown", "none"}
 )
 
 
 def parse_lat_lon(value) -> tuple[float, float] | None:
-    """(lat, lon) en grados decimales, o None si el valor no sirve.
+    """(lat, lon) in decimal degrees, or None if the value is unusable.
 
-    Se descartan: vacíos y missing, not collected, not applicable, NA; formatos
-    desconocidos; latitudes fuera de -90 a 90; longitudes fuera de -180 a 180;
-    y el par exacto (0, 0), que es el valor por defecto de muchos formularios.
+    Discarded: empty and missing, not collected, not applicable, NA; unknown
+    formats; latitudes outside -90 to 90; longitudes outside -180 to 180;
+    and the exact pair (0, 0), which is the default value of many forms.
     """
     if value is None or (isinstance(value, float) and math.isnan(value)):
         return None

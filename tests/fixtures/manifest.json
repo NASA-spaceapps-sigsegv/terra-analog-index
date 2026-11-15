@@ -11,13 +11,13 @@
       "git_commit": "a1b2c3d",
       "inputs": [
         {
-          "name": "MODIS, temperatura superficial mensual, 2024",
+          "name": "MODIS, monthly land surface temperature, 2024",
           "product": "MOD11C3",
           "portal": "NASA Earthdata Search",
           "url": "https://search.earthdata.nasa.gov/",
           "files": 12,
           "size_mb": 310.5,
-          "license_note": "Datos abiertos de NASA"
+          "license_note": "NASA open data"
         }
       ],
       "outputs": [ { "path": "data/interim/temperature.parquet", "rows": 20112, "size_mb": 0.3 } ],
@@ -26,7 +26,7 @@
         "trange_c": { "non_null": 19870, "null": 242, "min": 0.8,   "max": 41.2 }
       },
       "earth_stats": null,
-      "notes": [ "242 celdas sin dato por noche polar" ]
+      "notes": [ "242 cells without data due to polar night" ]
     },
     {
       "step": "06_features",
