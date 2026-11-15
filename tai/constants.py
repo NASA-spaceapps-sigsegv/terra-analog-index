@@ -70,8 +70,8 @@ SOURCE_TYPES = ("measured", "literature", "definition")
 
 # --- Weights (design 5.6) ----------------------------------------------------
 DEFAULT_WEIGHTS = MappingProxyType(
-    {"terrain": 1.0, "temperature": 1.0, "water_ice": 1.0, "dust_wind": 1.0, "biology": 0.5}
-)  # assumption; dust_wind (TAI-52) weighs like the other physical dimensions
+    {"terrain": 1.0, "temperature": 1.0, "water_ice": 1.0, "dust_wind": 0.5, "biology": 0.5}
+)  # assumption; dust_wind (TAI-52) at 0.5 keeps the finalist texts of TAI-33 in the top 20
 WEIGHT_STEP = 0.05
 
 # --- Targets (design 2.2) ----------------------------------------------------
