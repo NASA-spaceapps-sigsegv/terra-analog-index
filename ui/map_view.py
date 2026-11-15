@@ -30,6 +30,7 @@ import numpy as np
 import plotly.colors as pc
 import plotly.graph_objects as go
 
+from tai.caves import CAVE_KINDS
 from tai.constants import GRID_RES_DEG, N_LAT, N_LON
 
 if TYPE_CHECKING:
@@ -48,7 +49,6 @@ RING_SIZE = 20
 CAVE_COLOR = "#ff5ec4"  # cuevas y tubos de lava (TAI-53): rosa, que no aparece en Viridis ni en el gris
 CAVE_SIZE = 13
 CAVES_NAME = "Cuevas y tubos de lava"
-CAVE_KINDS = {"lava_tube": "Tubo de lava", "ice_cave": "Cueva de hielo"}
 HOVER_WRAP = 60  # caracteres por renglón en el cursor de una cueva
 SELECTED_SIZE = 28
 

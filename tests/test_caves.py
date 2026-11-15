@@ -8,11 +8,12 @@ import pytest
 from pydantic import ValidationError
 from streamlit.testing.v1 import AppTest
 
+from tai import caves as tai_caves
 from tai import io, models, services
 from tai.constants import DEFAULT_WEIGHTS
-from tai.errors import DataNotAvailableError
+from tai.errors import DataNotAvailableError, TargetNotFoundError
 from tai.schemas import CAVES_COLUMNS
-from ui import map_view
+from ui import card_view, caves_view, map_view
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = str(ROOT / "streamlit_app.py")
@@ -92,7 +93,7 @@ def test_without_caves_the_map_has_no_cave_layer(bundle):
 
 def test_world_shows_every_cave_with_its_name_type_and_source(bundle):
     (trace,) = _caves_traces(_figure(bundle, "world", services.get_caves(bundle)))
-    assert list(trace.x) == [-13.44, 167.16] and list(trace.y) == [29.16, -77.52]
+    assert list(trace.x) == [-13.44, -77.5] and list(trace.y) == [29.16, -89.5]
     assert "Cueva del norte" in trace.hovertext[0] and "Tubo de lava" in trace.hovertext[0]
     assert "Cueva de hielo" in trace.hovertext[1] and "Fuente: prueba" in trace.hovertext[1]
 
@@ -121,3 +122,78 @@ def test_the_checkbox_starts_off_and_turns_the_layer_on(data_dir, monkeypatch):
     box.check().run()
     assert not at.exception
     assert map_view.CAVES_NAME in at.get("plotly_chart")[0].proto.spec
+
+
+# --- Tabla de cuevas y ficha (puesto de su celda, sin cambiar puntajes) -------------------------------
+
+
+def test_a_cave_belongs_to_the_cell_that_contains_it_or_to_none(bundle):
+    north, south = services.get_caves(bundle)
+    assert tai_caves.cell_of(south, bundle.grid.index) == 102
+    assert tai_caves.cell_of(north, bundle.grid.index) is None  # su celda no está en la grilla
+
+
+def test_caves_table_gives_the_rank_and_total_of_each_cave_cell(bundle):
+    table = services.get_caves_table(bundle, "mars_jezero", DEFAULT_WEIGHTS)
+    assert tuple(table.columns) == services.CAVES_TABLE_COLUMNS
+    ranking = {i.cell_id: i for i in services.get_ranking(bundle, "mars_jezero", DEFAULT_WEIGHTS).items}
+    first, second = table.to_dict(orient="records")
+    assert first["Cueva"] == "Cueva del sur" and first["cell_id"] == 102 and first["Tipo"] == "Cueva de hielo"
+    assert first["Puesto"] == ranking[102].rank and first["Total"] == pytest.approx(ranking[102].total)
+    assert second["Cueva"] == "Cueva del norte" and pd.isna(second["Puesto"]) and pd.isna(second["Total"])
+    assert tai_caves.NO_CELL in second["Por qué interesa"]
+
+
+def test_caves_table_follows_the_known_analog_filter_and_survives_zero_weights(bundle):
+    weights = DEFAULT_WEIGHTS | {"terrain": 0.0}  # con terreno en 0 entra la celda 105, análogo conocido
+    shown = services.get_caves_table(bundle, "mars_jezero", weights)["Puesto"].iloc[0]
+    hidden = services.get_caves_table(bundle, "mars_jezero", weights, hide_known=True)["Puesto"].iloc[0]
+    assert hidden <= shown
+    zero = services.get_caves_table(bundle, "mars_jezero", {k: 0.0 for k in DEFAULT_WEIGHTS})
+    assert zero["Puesto"].isna().all() and len(zero) == 2
+
+
+def test_caves_table_unknown_target_raises(bundle):
+    with pytest.raises(TargetNotFoundError):
+        services.get_caves_table(bundle, "mars_gale", DEFAULT_WEIGHTS)
+
+
+def test_the_card_lists_the_caves_of_its_cell_and_keeps_the_score(bundle):
+    card = services.get_site_card(bundle, 102, "mars_jezero", DEFAULT_WEIGHTS, cards_dir=None)
+    assert [(c.name, c.kind_label) for c in card.caves] == [("Cueva del sur", "Cueva de hielo")]
+    ranking = {i.cell_id: i for i in services.get_ranking(bundle, "mars_jezero", DEFAULT_WEIGHTS).items}
+    assert card.scores.total == pytest.approx(ranking[102].total, abs=1e-3)
+    assert services.get_site_card(bundle, 104, "mars_jezero", DEFAULT_WEIGHTS, cards_dir=None).caves == []
+
+
+def test_picking_a_cave_row_opens_its_cell_and_a_row_without_cell_does_nothing(monkeypatch):
+    state = {"k": {"selection": {"rows": [0], "columns": [], "cells": []}}, caves_view.SELECTED_KEY: 7}
+    monkeypatch.setattr(caves_view.st, "session_state", state)
+    caves_view._on_select("k", (102, None))
+    assert state[caves_view.SELECTED_KEY] == 102 and state[caves_view.SCROLL_KEY] is True
+    state["k"]["selection"]["rows"] = [1]
+    state[caves_view.SCROLL_KEY] = False
+    caves_view._on_select("k", (102, None))
+    assert state[caves_view.SELECTED_KEY] == 102 and state[caves_view.SCROLL_KEY] is False
+
+
+def test_selected_rows_never_marks_a_cave_without_cell():
+    assert caves_view.selected_rows((102, None), None) == []
+    assert caves_view.selected_rows((102, None), 102) == [0]
+    assert caves_view.selected_rows((102, None), 5) == []
+
+
+def test_the_table_shows_only_with_the_layer_on_and_the_card_shows_the_cave(data_dir, monkeypatch):
+    monkeypatch.setenv("TAI_DATA_DIR", str(data_dir))
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.sidebar.radio(key="target_id").set_value("mars_jezero").run()
+    assert caves_view.HEADING not in [s.value for s in at.subheader]
+    at.sidebar.checkbox(key="show_caves").check().run()
+    assert not at.exception
+    assert caves_view.HEADING in [s.value for s in at.subheader]
+    keys = [d.key for d in at.dataframe if d.key]
+    assert keys[0].startswith("ranking_caves_mars_jezero") and keys[1].startswith("ranking_mars_jezero")
+    at.session_state[caves_view.SELECTED_KEY] = 102
+    at.run()
+    assert any(card_view.CAVES_HEADING in m.value for m in at.markdown)
+    assert any("Cueva del sur" in m.value for m in at.markdown)

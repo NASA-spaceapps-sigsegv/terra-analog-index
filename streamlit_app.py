@@ -19,7 +19,7 @@ from tai.errors import (
     ZeroWeightsError,
 )
 from tai.io import DataBundle, data_signature, load_bundle
-from ui import card_view, map_view, method_view, ranking_view
+from ui import card_view, caves_view, map_view, method_view, ranking_view
 from ui.ranking_view import SCROLL_KEY, SELECTED_KEY
 from ui.sidebar import SidebarState, render_sidebar
 
@@ -69,7 +69,7 @@ CARD_ANCHOR = "ficha"
 
 
 def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
-    """Mapa arriba, después el ranking y la ficha debajo, los tres a todo el ancho.
+    """Mapa arriba; con la capa prendida, la tabla de cuevas; después el ranking y la ficha, todo a lo ancho.
 
     Cada parte atrapa sus propios errores: con todos los pesos en 0 el ranking avisa y la ficha
     elegida se sigue viendo, con el total nulo."""
@@ -77,6 +77,10 @@ def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
         layer = services.get_map_layer(bundle, state.target_id, state.weights)
         caves = services.get_caves(bundle) if state.show_caves else ()
         map_view.render_map(layer, state.projection, st.session_state.get(SELECTED_KEY), caves)
+    if state.show_caves:
+        with handle_tai_errors():
+            table = services.get_caves_table(bundle, state.target_id, state.weights, hide_known=state.hide_known)
+            caves_view.render_caves(table, state.target_id, st.session_state.get(SELECTED_KEY))
     st.subheader("Mejores celdas")
     with handle_tai_errors():
         ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)

@@ -12,12 +12,13 @@ from __future__ import annotations
 
 import math
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import pandas as pd
 
 from tai import scoring
+from tai.caves import CAVE_KINDS
 from tai.constants import (
     DIFFERENT_MAX,
     DIMENSION_VARS,
@@ -31,11 +32,13 @@ from tai.models import (
     BioTypeRef,
     CardAnalog,
     CardBiology,
+    CardCave,
     CardDimension,
     CardHeader,
     CardScores,
     CardSource,
     CardVariable,
+    Cave,
     KnownAnalog,
     Manifest,
     ManualText,
@@ -314,8 +317,11 @@ def build_card(
     manifest: Manifest,
     cards_dir: Path | None = None,
     root: Path | None = None,
+    caves: Sequence[Cave] = (),
 ) -> SiteCard:
-    """La ficha de una celda. `sim_row` es la fila de similarity.parquet de ese objetivo."""
+    """La ficha de una celda. `sim_row` es la fila de similarity.parquet de ese objetivo.
+
+    `caves`: las cuevas y tubos de lava que caen en la celda (TAI-53); se muestran, no puntúan."""
     earth_sources = earth_source_names(manifest)
 
     variables = []
@@ -413,6 +419,8 @@ def build_card(
         notes=notes,
         manual=read_manual(cards_dir, cell_id, target.target_id, root) if cards_dir is not None else None,
         sources=_sources(variables, target),
+        caves=[CardCave(name=c.name, kind_label=CAVE_KINDS[c.kind], relevance=c.relevance, source=c.source)
+               for c in caves],
     )
 
 

@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from tai import cards, method, scoring, tables
+from tai import caves as cave_cells
 from tai.constants import RANKING_LIMIT_MAX, TOP_N
 from tai.errors import CellNotFoundError, TargetNotFoundError, ZeroWeightsError
 from tai.io import DataBundle
@@ -53,6 +54,46 @@ def get_caves(bundle: DataBundle) -> tuple[Cave, ...]:
     """Cuevas y tubos de lava estudiados como análogos (TAI-53). Son los mismos para todos los objetivos y no
     tienen puntaje: el mapa los dibuja como capa informativa."""
     return bundle.caves
+
+
+# Columnas de la tabla de cuevas; cell_id va oculta y sirve para abrir la ficha.
+CAVES_TABLE_COLUMNS = ("cell_id", "Cueva", "Tipo", "Puesto", "Total", "Por qué interesa", "Fuente")
+
+
+def get_caves_table(
+    bundle: DataBundle, target_id: str, weights: Weights | Mapping[str, float], hide_known: bool = False
+) -> pd.DataFrame:
+    """Una fila por cueva con el puesto y el total de su celda en el ranking actual (TAI-53).
+
+    El puesto cuenta todas las celdas elegibles, no solo las que muestra la tabla del ranking, y respeta el
+    filtro de análogos conocidos. Puesto y total quedan vacíos si la cueva no tiene celda (isla chica), si
+    su celda no es elegible o si todos los pesos valen 0. Ordenada por puesto; las sin puesto, al final.
+    Lanza TargetNotFoundError o InvalidWeightsError."""
+    if target_id not in bundle.similarity:
+        raise TargetNotFoundError(f"No existe el sitio objetivo {target_id!r}")
+    sim = bundle.similarity[target_id]
+    try:
+        ranked = scoring.rank(sim, scoring.combine(sim, scoring.validate_weights(weights)), hide_known=hide_known)
+    except ZeroWeightsError:
+        ranked = pd.DataFrame({"cell_id": [], "total": []})
+    position = {int(c): i for i, c in enumerate(ranked["cell_id"], start=1)}
+    totals = dict(zip(ranked["cell_id"].astype(int), ranked["total"]))
+
+    rows = []
+    for cave in bundle.caves:
+        cell = cave_cells.cell_of(cave, bundle.grid.index)
+        rows.append({
+            "cell_id": cell,
+            "Cueva": cave.name,
+            "Tipo": cave_cells.CAVE_KINDS[cave.kind],
+            "Puesto": position.get(cell),
+            "Total": totals.get(cell),
+            "Por qué interesa": cave.relevance if cell is not None else f"{cave.relevance}. ({cave_cells.NO_CELL})",
+            "Fuente": cave.source,
+        })
+    df = pd.DataFrame(rows, columns=list(CAVES_TABLE_COLUMNS))
+    df = df.astype({"cell_id": "Int64", "Puesto": "Int64", "Total": "float64"})
+    return df.sort_values("Puesto", na_position="last", kind="stable").reset_index(drop=True)
 
 
 def get_ranking(
@@ -211,6 +252,7 @@ def get_site_card(
         manifest=bundle.manifest,
         cards_dir=cards_dir,
         root=REPO_ROOT,
+        caves=cave_cells.caves_in_cell(bundle.caves, cell_id, bundle.grid.index),
     )
 
 

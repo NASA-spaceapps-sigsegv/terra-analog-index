@@ -505,6 +505,15 @@ class CardSource(_Model):
     used_for: list[str] = Field(min_length=1)
 
 
+class CardCave(_Model):
+    """Cueva o tubo de lava que cae en la celda (TAI-53): informativo, no cambia el puntaje."""
+
+    name: str = Field(min_length=1)
+    kind_label: str = Field(min_length=1)
+    relevance: str = Field(min_length=1)
+    source: str = Field(min_length=1)
+
+
 class SiteCard(_Model):
     """Todo lo que muestra la ficha, ya redactado: la vista no arma frases ni decide umbrales."""
 
@@ -525,6 +534,7 @@ class SiteCard(_Model):
     notes: list[str]
     manual: ManualText | None
     sources: list[CardSource]
+    caves: list[CardCave] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _rules(self):
