@@ -1,0 +1,15 @@
+# Lo que `gcloud run deploy --source .` NO sube a Cloud Build. Los datos crudos pueden pesar gigas.
+.git
+.gitignore
+.idea
+.venv
+.pytest_cache
+__pycache__/
+*.pyc
+data/raw/
+data/interim/
+tests/
+pipeline/
+scripts/
+docs/
+Makefile
