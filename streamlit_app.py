@@ -19,7 +19,7 @@ from tai.errors import (
     ZeroWeightsError,
 )
 from tai.io import DataBundle, data_signature, load_bundle
-from ui import map_view, ranking_view
+from ui import card_view, map_view, ranking_view
 from ui.ranking_view import SELECTED_KEY
 from ui.sidebar import SidebarState, render_sidebar
 
@@ -64,33 +64,31 @@ def handle_tai_errors(fatal: bool = False):
         st.stop()
 
 
-def cell_label(bundle: DataBundle, cell_id: int) -> str:
-    """Encabezado de la ficha (design 11.1): "Celda 24,5°S 69,5°O · Chile"."""
-    if cell_id not in bundle.grid.index:
-        raise CellNotFoundError(f"La celda {cell_id} no está en la grilla.")
-    row = bundle.grid.loc[cell_id]
-    lat = f"{abs(row.lat):.1f}°{'S' if row.lat < 0 else 'N'}".replace(".", ",")
-    lon = f"{abs(row.lon):.1f}°{'O' if row.lon < 0 else 'E'}".replace(".", ",")
-    country = row.country if isinstance(row.country, str) else None
-    return f"Celda {lat} {lon}" + (f" · {country}" if country else "")
+CARD_HINT = "Elegí una fila del ranking para ver su ficha."
 
 
 def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
-    layer = services.get_map_layer(bundle, state.target_id, state.weights)
-    map_view.render_map(layer, state.projection, st.session_state.get(SELECTED_KEY))
+    """Mapa arriba; ranking (40%) y ficha (60%) abajo (design 10.1).
+
+    Cada parte atrapa sus propios errores: con todos los pesos en 0 el ranking avisa y la ficha
+    elegida se sigue viendo, con el total nulo."""
+    with handle_tai_errors():
+        layer = services.get_map_layer(bundle, state.target_id, state.weights)
+        map_view.render_map(layer, state.projection, st.session_state.get(SELECTED_KEY))
     left, right = st.columns([4, 6])
     with left:
         st.subheader("Mejores celdas")
-        ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)
-        ranking_view.render_ranking(ranking, st.session_state.get(SELECTED_KEY))
+        with handle_tai_errors():
+            ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)
+            ranking_view.render_ranking(ranking, st.session_state.get(SELECTED_KEY))
     with right:
         st.subheader("Ficha")
-        selected = st.session_state.get(SELECTED_KEY)
-        if selected is None:
-            st.info("Elegí una fila del ranking para ver su ficha.")
-        else:
-            st.markdown(f"**{cell_label(bundle, selected)}**")
-            st.caption("La ficha completa llega con TAI-32.")
+        with handle_tai_errors():
+            selected = st.session_state.get(SELECTED_KEY)
+            if selected is None:
+                st.info(CARD_HINT)
+            else:
+                card_view.render_card(services.get_site_card(bundle, selected, state.target_id, state.weights))
 
 
 def main() -> None:
@@ -100,8 +98,7 @@ def main() -> None:
 
     tab_explore, tab_method = st.tabs(["Explorar", "Método"])
     with tab_explore:
-        with handle_tai_errors():
-            explore_tab(bundle, state)
+        explore_tab(bundle, state)
     with tab_method:
         st.info("La pestaña Método llega el domingo (TAI-34).")
 

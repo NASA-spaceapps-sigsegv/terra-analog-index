@@ -5,15 +5,28 @@ TAI-30 a TAI-34.
 """
 
 from collections.abc import Mapping
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from tai import scoring
+from tai import cards, scoring
 from tai.constants import RANKING_LIMIT_MAX, TOP_N
-from tai.errors import TargetNotFoundError, ZeroWeightsError
+from tai.errors import CellNotFoundError, TargetNotFoundError, ZeroWeightsError
 from tai.io import DataBundle
-from tai.models import MAP_CELL_COLUMNS, AnalogRef, MapLayer, Ranking, RankingItem, TargetSummary, Weights
+from tai.models import (
+    MAP_CELL_COLUMNS,
+    AnalogRef,
+    MapLayer,
+    Ranking,
+    RankingItem,
+    SiteCard,
+    TargetSummary,
+    Weights,
+)
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+CARDS_DIR = REPO_ROOT / cards.CARDS_DIR
 
 
 def _num(x) -> float | None:
@@ -128,6 +141,43 @@ def get_map_layer(bundle: DataBundle, target_id: str, weights: Weights | Mapping
         n_cells=len(cells),
         n_eligible=int(eligible.sum()),
         cells=cells,
+    )
+
+
+def get_site_card(
+    bundle: DataBundle,
+    cell_id: int,
+    target_id: str,
+    weights: Weights | Mapping[str, float],
+    cards_dir: Path | None = CARDS_DIR,
+) -> SiteCard:
+    """Ficha de una celda frente a un objetivo (design 11, contrato SiteCard).
+
+    Con todos los pesos en 0 no falla: scores.total es nulo. `cards_dir` es la carpeta de los textos
+    manuales; None no los busca. Lanza TargetNotFoundError, CellNotFoundError o InvalidWeightsError."""
+    target = next((t for t in bundle.targets.targets if t.target_id == target_id), None)
+    if target is None or target_id not in bundle.similarity:
+        raise TargetNotFoundError(f"No existe el sitio objetivo {target_id!r}")
+    sim = bundle.similarity[target_id]
+    cell_id = int(cell_id)
+    if cell_id not in sim.index or cell_id not in bundle.grid.index:
+        raise CellNotFoundError(f"La celda {cell_id} no está en la grilla")
+    try:
+        w = scoring.validate_weights(weights)
+    except ZeroWeightsError:
+        w = Weights(**_as_dict(weights))
+    features = bundle.features.loc[cell_id] if cell_id in bundle.features.index else pd.Series(dtype=object)
+    return cards.build_card(
+        cell_id=cell_id,
+        target=target,
+        grid_row=bundle.grid.loc[cell_id],
+        features_row=features,
+        sim_row=sim.loc[cell_id],
+        weights=w,
+        analogs={a.analog_id: a for a in bundle.known_analogs},
+        manifest=bundle.manifest,
+        cards_dir=cards_dir,
+        root=REPO_ROOT,
     )
 
 
