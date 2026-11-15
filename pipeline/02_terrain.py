@@ -75,18 +75,18 @@ COLUMNS = ["slope_deg", "roughness_m"]
 # Manifest metadata by file-name prefix; anything else is reported generically.
 KNOWN_DEMS = {
     "ETOPO_2022": {
-        "name": "ETOPO 2022, elevación de superficie, 30 segundos de arco",
+        "name": "ETOPO 2022, surface elevation, 30 arc-seconds",
         "product": "ETOPO_2022_v1_30s_surface",
         "portal": "NOAA NCEI",
         "url": "https://www.ncei.noaa.gov/products/etopo-global-relief-model",
-        "license_note": "Dominio público (NOAA)",
+        "license_note": "Public domain (NOAA)",
     },
     "GMTED2010": {
-        "name": "GMTED2010, elevación media, 30 segundos de arco",
+        "name": "GMTED2010, mean elevation, 30 arc-seconds",
         "product": "GMTED2010 mn30",
         "portal": "USGS EROS",
         "url": "https://www.usgs.gov/coastal-changes-and-impacts/gmted2010",
-        "license_note": "Dominio público (USGS)",
+        "license_note": "Public domain (USGS)",
     },
 }
 
@@ -321,9 +321,9 @@ def terrain_cells(
 def _input_entry(path: Path) -> dict:
     meta = next((m for prefix, m in KNOWN_DEMS.items() if path.name.startswith(prefix)), None)
     meta = meta or {
-        "name": f"Modelo de elevación global ({path.name})",
+        "name": f"Global elevation model ({path.name})",
         "product": path.stem,
-        "portal": "desconocido",
+        "portal": "unknown",
         "url": "",
         "license_note": "Ver data/raw/README.md",
     }
@@ -344,7 +344,7 @@ def main() -> None:
         and is_up_to_date([OUTPUT], [dem_path, GRID_PATH, LAND_MASK_PATH, *code])
         and not last_run_partial(STEP)
     ):
-        log.info("al día")
+        log.info("up to date")
         return
 
     grid = load_grid()
@@ -369,8 +369,8 @@ def main() -> None:
             terrain = terrain_cells(read_rows, ppd, grid, land, land_res, lat_indices=lat_indices, log=log)
 
     notes = [
-        f"resolución base {TERRAIN_BASE_RES_KM} km; ventana de rugosidad "
-        f"{ROUGHNESS_WINDOW_PX} x {ROUGHNESS_WINDOW_PX} píxeles; DEM a {ppd} px/grado",
+        f"base resolution {TERRAIN_BASE_RES_KM} km; roughness window "
+        f"{ROUGHNESS_WINDOW_PX} x {ROUGHNESS_WINDOW_PX} pixels; DEM at {ppd} px/degree",
     ]
     if args.bbox:
         terrain.loc[~inside, COLUMNS] = np.nan
@@ -379,7 +379,7 @@ def main() -> None:
 
     nulls = terrain[COLUMNS].isna().any(axis=1)
     null_frac = float(nulls.mean()) if len(terrain) else 0.0
-    notes.append(f"{int(nulls.sum())} celdas sin dato de terreno ({100 * null_frac:.1f}%)")
+    notes.append(f"{int(nulls.sum())} cells without terrain data ({100 * null_frac:.1f}%)")
     if not args.bbox and null_frac >= MAX_NULL_FRAC:
         log.warning("%.1f%% of cells without terrain data (target < %d%%)", 100 * null_frac, 100 * MAX_NULL_FRAC)
 

@@ -1,9 +1,9 @@
-"""Ficha de sitio (design 11.1, TAI-32). Dibuja el modelo SiteCard; no calcula ni redacta.
+"""Site card (design 11.1, TAI-32). Draws the SiteCard model; it neither computes nor words anything.
 
-Las nueve partes, en orden: encabezado, texto manual, radar, tabla de variables, se parece en,
-se aleja en, interés astrobiológico, límites y fuentes.
+The nine parts, in order: header, manual text, radar, variables table, similar in, different in,
+astrobiological interest, limits and sources.
 
-`radar_figure` y `variables_table` se prueban sin Streamlit; `render_card` dibuja.
+`radar_figure` and `variables_table` are tested without Streamlit; `render_card` draws.
 """
 
 from __future__ import annotations
@@ -20,44 +20,44 @@ from tai.constants import DIMENSIONS, SCORE_DECIMALS_UI
 if TYPE_CHECKING:
     from tai.models import SiteCard
 
-NO_DATA = "sin dato"
-MANUAL_HEADING = "Para qué sirve en la exploración"
-LIMITS_HEADING = "Límites que ningún sitio terrestre replica"
-RADAR_COLOR = "#21918c"  # verde de la escala Viridis del mapa
-RADAR_GRID = "rgba(128,128,128,0.45)"  # gris semitransparente: se ve en tema claro y oscuro
-RADAR_TICKS = (0.3, 0.7, 1.0)  # los umbrales de "se aleja" y "se parece", y el máximo
-# Altura fija de las filas de la tabla de variables, en píxeles. st.dataframe solo parte el texto si la
-# altura pasa de 64 px (4rem), y es la misma para todas las filas: 84 px entran tres líneas de "Lectura".
+NO_DATA = "no data"
+MANUAL_HEADING = "What it is good for in exploration"
+LIMITS_HEADING = "Limits no site on Earth replicates"
+RADAR_COLOR = "#21918c"  # green from the map's Viridis scale
+RADAR_GRID = "rgba(128,128,128,0.45)"  # semi-transparent gray: visible in light and dark themes
+RADAR_TICKS = (0.3, 0.7, 1.0)  # the "different" and "similar" thresholds, and the maximum
+# Fixed row height of the variables table, in pixels. st.dataframe only wraps text if the height
+# exceeds 64 px (4rem), and it is the same for every row: 84 px fits three lines of "Reading".
 VARIABLE_ROW_HEIGHT = 84
-# Con height="auto" st.dataframe se corta en 400 px y hay que desplazarse dentro de la tabla. La altura
-# se fija para que entren todas las filas: encabezado de 35 px (2.1875rem), las filas y el borde de 1 px
-# arriba y abajo.
+# With height="auto" st.dataframe is cut at 400 px and you have to scroll inside the table. The height
+# is fixed so that every row fits: 35 px header (2.1875rem), the rows and the 1 px border at the top
+# and bottom.
 HEADER_HEIGHT = 35
-# Anchos de partida, en píxeles. La tabla ocupa todo el ancho y cada columna crece lo mismo hasta llenarlo,
-# así que la suma (725) tiene que entrar en la columna de la ficha para no desplazarse de costado.
-# Con 260 px o más, la frase más larga de "Lectura" ocupa tres líneas.
-COLUMN_WIDTHS = {"Variable": 140, "Tierra": 90, "Objetivo": 115, "Puntaje": 120, "Lectura": 260}
+# Starting widths, in pixels. The table takes the full width and each column grows equally to fill it,
+# so the sum (725) has to fit in the card column to avoid horizontal scrolling.
+# With 260 px or more, the longest "Reading" phrase takes three lines.
+COLUMN_WIDTHS = {"Variable": 140, "Earth": 90, "Target": 115, "Score": 120, "Reading": 260}
 TABLE_BORDERS = 2
 
 
-CAVES_HEADING = "Cuevas y tubos de lava en esta celda"
-CAVES_NOTE = "Estudiados como análogos de la Luna y Marte. Son informativos: no cambian el puntaje de la celda."
+CAVES_HEADING = "Caves and lava tubes in this cell"
+CAVES_NOTE = "Studied as analogs of the Moon and Mars. They are informational: they do not change the cell's score."
 
 
 def table_height(n_rows: int, row_height: int = VARIABLE_ROW_HEIGHT) -> int:
     return HEADER_HEIGHT + n_rows * row_height + TABLE_BORDERS
 
-VARIABLE_COLUMNS = ("Variable", "Tierra", "Objetivo", "Puntaje", "Lectura")
+VARIABLE_COLUMNS = ("Variable", "Earth", "Target", "Score", "Reading")
 
 
 def _score_text(x: float | None) -> str:
-    return NO_DATA if x is None else f"{x:.{SCORE_DECIMALS_UI}f}".replace(".", ",")
+    return NO_DATA if x is None else f"{x:.{SCORE_DECIMALS_UI}f}"
 
 
 def radar_axes(card: SiteCard) -> tuple[list[str], list[float]]:
-    """Etiquetas y valores de los ejes: uno por dimensión del objetivo (polvo y viento solo si la tiene).
+    """Axis labels and values: one per target dimension (dust and wind only if it has it).
 
-    Una dimensión nula va en 0 con "(sin dato)" en la etiqueta."""
+    A null dimension goes at 0 with "(no data)" in the label."""
     present = {v.dimension for v in card.variables} | {"biology"}
     labels, values = [], []
     for dim in DIMENSIONS:
@@ -73,7 +73,7 @@ def radar_figure(card: SiteCard) -> go.Figure:
     labels, values = radar_axes(card)
     fig = go.Figure(
         go.Scatterpolar(
-            r=values + values[:1],  # cerrar el polígono
+            r=values + values[:1],  # close the polygon
             theta=labels + labels[:1],
             fill="toself",
             line=dict(color=RADAR_COLOR),
@@ -83,13 +83,13 @@ def radar_figure(card: SiteCard) -> go.Figure:
     )
     fig.update_layout(
         polar=dict(
-            # Fondo transparente: toma el del tema, así el texto del tema (claro en oscuro) se lee.
+            # Transparent background: it takes the theme's, so the theme's text (light on dark) is readable.
             bgcolor="rgba(0,0,0,0)",
             radialaxis=dict(
                 range=[0, 1],
                 tickvals=RADAR_TICKS,
                 ticktext=[_score_text(t) for t in RADAR_TICKS],
-                # Entre Terreno (0°) y Temperatura (90°): los números no quedan sobre un eje ni bajo un vértice.
+                # Between Terrain (0°) and Temperature (90°): the numbers sit neither on an axis nor under a vertex.
                 angle=45,
                 tickangle=0,
                 showline=False,
@@ -127,20 +127,20 @@ def _dimension_list(title: str, items, empty_phrase: str | None) -> None:
 
 
 def render_card(card: SiteCard) -> None:
-    # 1. Encabezado
+    # 1. Header
     head, total = st.columns([3, 1])
     with head:
         place = card.header.label + (f" · {card.header.country}" if card.header.country else "")
-        st.markdown(f"#### Celda {place}")
+        st.markdown(f"#### Cell {place}")
         if card.header.known_analog:
             a = card.header.known_analog
-            st.markdown(f":blue-badge[Análogo conocido: {a.name}]")
+            st.markdown(f":blue-badge[Known analog: {a.name}]")
             if a.basis:
                 st.caption(a.basis)
     with total:
-        st.metric(f"Total frente a {card.target_label}", _score_text(card.scores.total))
+        st.metric(f"Total vs. {card.target_label}", _score_text(card.scores.total))
 
-    # 2. Texto manual
+    # 2. Manual text
     if card.manual:
         st.markdown(f"##### {MANUAL_HEADING}")
         st.markdown(f"**{card.manual.title}**")
@@ -149,7 +149,7 @@ def render_card(card: SiteCard) -> None:
     # 3. Radar
     st.plotly_chart(radar_figure(card), width="stretch", config={"displayModeBar": False})
 
-    # 4. Tabla de variables
+    # 4. Variables table
     st.dataframe(
         variables_table(card),
         hide_index=True,
@@ -158,46 +158,46 @@ def render_card(card: SiteCard) -> None:
         height=table_height(len(card.variables)),
         column_config={
             "Variable": st.column_config.TextColumn("Variable", width=COLUMN_WIDTHS["Variable"]),
-            "Tierra": st.column_config.TextColumn("Tierra", width=COLUMN_WIDTHS["Tierra"]),
-            "Objetivo": st.column_config.TextColumn("Objetivo", width=COLUMN_WIDTHS["Objetivo"]),
-            "Puntaje": st.column_config.ProgressColumn(
-                "Puntaje", format=f"%.{SCORE_DECIMALS_UI}f", min_value=0.0, max_value=1.0,
-                width=COLUMN_WIDTHS["Puntaje"],
+            "Earth": st.column_config.TextColumn("Earth", width=COLUMN_WIDTHS["Earth"]),
+            "Target": st.column_config.TextColumn("Target", width=COLUMN_WIDTHS["Target"]),
+            "Score": st.column_config.ProgressColumn(
+                "Score", format=f"%.{SCORE_DECIMALS_UI}f", min_value=0.0, max_value=1.0,
+                width=COLUMN_WIDTHS["Score"],
             ),
-            "Lectura": st.column_config.TextColumn("Lectura", width=COLUMN_WIDTHS["Lectura"]),
+            "Reading": st.column_config.TextColumn("Reading", width=COLUMN_WIDTHS["Reading"]),
         },
     )
     for note in card.notes:
         st.caption(note)
 
-    # 5 y 6. Se parece en, se aleja en
+    # 5 and 6. Similar in, different in
     similar, different = st.columns(2)
     with similar:
-        _dimension_list("Se parece en", card.similar_in, card.similar_empty_phrase)
+        _dimension_list("Similar in", card.similar_in, card.similar_empty_phrase)
     with different:
-        _dimension_list("Se aleja en", card.different_in, card.different_empty_phrase)
+        _dimension_list("Different in", card.different_in, card.different_empty_phrase)
 
-    # 7. Interés astrobiológico
-    st.markdown("**Interés astrobiológico**")
+    # 7. Astrobiological interest
+    st.markdown("**Astrobiological interest**")
     st.markdown(card.biology.phrase)
     st.caption(card.biology.sampling_note)
 
-    # 7b. Cuevas y tubos de lava de la celda (TAI-53): informativo, no cambia el puntaje
+    # 7b. Caves and lava tubes in the cell (TAI-53): informational, it does not change the score
     if card.caves:
         st.markdown(f"**{CAVES_HEADING}**")
         st.markdown("\n".join(
-            f"- **{c.name}** ({c.kind_label.lower()}). {c.relevance}. *Fuente: {c.source}*" for c in card.caves
+            f"- **{c.name}** ({c.kind_label.lower()}). {c.relevance}. *Source: {c.source}*" for c in card.caves
         ))
         st.caption(CAVES_NOTE)
 
-    # 8. Límites, siempre
+    # 8. Limits, always
     st.markdown(f"**{LIMITS_HEADING}**")
     st.markdown("\n".join(f"- {limit}" for limit in card.unreplicable))
 
-    # 9. Fuentes
-    with st.expander("Fuentes", expanded=False):
+    # 9. Sources
+    with st.expander("Sources", expanded=False):
         labels = {v.variable: v.label for v in card.variables}
-        labels |= {"bio_records": "registros biológicos", "bio_types": "tipos de extremófilos"}
+        labels |= {"bio_records": "biological records", "bio_types": "extremophile types"}
         lines = []
         for s in card.sources:
             used = ", ".join(dict.fromkeys(labels.get(u, u) for u in s.used_for))

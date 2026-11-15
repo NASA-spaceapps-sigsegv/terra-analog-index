@@ -1,7 +1,7 @@
-"""Los textos manuales de las finalistas dicen el puntaje total de su celda: tiene que ser el que muestra la app.
+"""The finalists' manual texts state their cell's total score: it has to be the one the app shows.
 
-Cuando se agregó la dimensión de polvo y viento (TAI-52) los totales de Marte bajaron y dos textos quedaron con la cifra
-vieja. Esta prueba lo detecta con los datos reales de data/processed/ y los pesos iniciales.
+When the dust and wind dimension was added (TAI-52) the Mars totals dropped and two texts kept the old
+figure. This test catches that with the real data in data/processed/ and the default weights.
 """
 
 from pathlib import Path
@@ -24,6 +24,6 @@ def real_bundle():
 def test_the_total_in_each_finalist_text_is_the_one_in_the_app(real_bundle, path):
     cell, target = path.stem.split("__", 1)
     total = services.get_site_card(real_bundle, int(cell), target, DEFAULT_WEIGHTS).scores.total
-    shown = f"{total:.2f}".replace(".", ",")
+    shown = f"{total:.2f}"
     text = path.read_text(encoding="utf-8")
-    assert f"{shown}" in text, f"{path.name} no menciona el total actual de la celda ({shown})"
+    assert f"{shown}" in text, f"{path.name} does not mention the current total of the cell ({shown})"

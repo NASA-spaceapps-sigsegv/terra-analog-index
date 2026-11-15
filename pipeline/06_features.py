@@ -73,9 +73,9 @@ BIO_COLUMNS = SOURCES["biology"][2]
 def _take(df: pd.DataFrame, columns: list[str], name: str) -> pd.DataFrame:
     missing = [c for c in ["cell_id", *columns] if c not in df.columns]
     if missing:
-        raise OutputValidationError(f"{name}.parquet no trae las columnas {missing}")
+        raise OutputValidationError(f"{name}.parquet lacks the columns {missing}")
     if df["cell_id"].duplicated().any():
-        raise OutputValidationError(f"{name}.parquet tiene cell_id repetidos")
+        raise OutputValidationError(f"{name}.parquet has duplicated cell_id")
     return df[["cell_id", *columns]]
 
 
@@ -90,7 +90,7 @@ def build_features(grid: pd.DataFrame, parts: dict[str, pd.DataFrame]) -> pd.Dat
         part = _take(parts[name], columns, name)
         unknown = ~part["cell_id"].isin(out["cell_id"])
         if unknown.any():
-            raise OutputValidationError(f"{name}.parquet tiene {int(unknown.sum())} celdas fuera de la grilla")
+            raise OutputValidationError(f"{name}.parquet has {int(unknown.sum())} cells outside the grid")
         out = out.merge(part, on="cell_id", how="left")
 
     out["bio_records"] = out["bio_records"].fillna(0).astype("int32")
@@ -114,7 +114,7 @@ def earth_stats(features: pd.DataFrame, grid: pd.DataFrame) -> dict[str, dict[st
     for v in PHYSICAL_VARS:
         x = features[v].to_numpy(dtype=np.float64)
         if np.isnan(x).all():
-            raise OutputValidationError(f"{v}: ninguna celda tiene dato; no hay estadística terrestre")
+            raise OutputValidationError(f"{v}: no cell has data; there is no Earth statistic")
         a = area.to_numpy(dtype=np.float64)
         stats[v] = {
             "p01": round(rules.weighted_quantile(x, a, 0.01), 3),
@@ -133,7 +133,7 @@ def main() -> None:
     require_inputs([GRID_PATH, *paths])
     code = [Path(__file__), ROOT / "pipeline" / "common.py", ROOT / "tai" / "rules.py", ROOT / "tai" / "constants.py"]
     if not args.force and is_up_to_date([OUTPUT], [GRID_PATH, *paths, *code]) and not last_run_partial(STEP):
-        log.info("al día")
+        log.info("up to date")
         return
 
     grid = load_grid()
@@ -142,9 +142,9 @@ def main() -> None:
 
     partial = [step for step, _, _ in SOURCES.values() if last_run_partial(step)]
     by_dims = features["n_physical"].value_counts().sort_index()
-    notes = ["celdas por dimensiones físicas con dato: " + ", ".join(f"{k}: {v}" for k, v in by_dims.items())]
+    notes = ["cells by physical dimensions with data: " + ", ".join(f"{k}: {v}" for k, v in by_dims.items())]
     if partial:
-        notes.append(f"{PARTIAL_NOTE_PREFIX} viene de pasos parciales ({', '.join(partial)})")
+        notes.append(f"{PARTIAL_NOTE_PREFIX} comes from partial steps ({', '.join(partial)})")
         log.warning("inputs from partial runs: %s; this output is partial too", ", ".join(partial))
 
     validate_output(features, grid_ids=grid["cell_id"], schema="features")
@@ -153,10 +153,10 @@ def main() -> None:
         step_entry(
             STEP,
             started,
-            inputs=[{"name": "Archivos intermedios de los pasos 02 a 05", "product": ", ".join(p.name for p in paths),
-                     "portal": "Pipeline del proyecto", "url": "https://github.com/NASA-spaceapps-sigsegv/terra-analog-index",
+            inputs=[{"name": "Intermediate files from steps 02 to 05", "product": ", ".join(p.name for p in paths),
+                     "portal": "Project pipeline", "url": "https://github.com/NASA-spaceapps-sigsegv/terra-analog-index",
                      "files": len(paths), "size_mb": round(sum(p.stat().st_size for p in paths) / 1e6, 1),
-                     "license_note": "Datos derivados del proyecto"}],
+                     "license_note": "Project-derived data"}],
             outputs=[(OUTPUT, len(features))],
             columns=column_stats(features, [*PHYSICAL_VARS, "bio_records", "bio_types", "coverage", "n_physical"]),
             notes=notes,
@@ -164,7 +164,7 @@ def main() -> None:
         )
     )
     for v, s in stats.items():
-        log.info("%s: p01 %s, p99 %s, std %s (ponderados por área)", v, s["p01"], s["p99"], s["std"])
+        log.info("%s: p01 %s, p99 %s, std %s (area-weighted)", v, s["p01"], s["p99"], s["std"])
     log.info("wrote %s (%d cells)", OUTPUT.name, len(features))
 
 

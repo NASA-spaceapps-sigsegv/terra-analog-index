@@ -133,8 +133,8 @@ def test_weights_missing_dimension_rejected():
         models.Weights(terrain=1, temperature=1, water_ice=1)
 
 
-# --- Archivos reales de data/processed/ (TAI-19) ------------------------------
-# Los que todavía no generó el pipeline se saltean; los que existen tienen que cumplir.
+# --- Real files in data/processed/ (TAI-19) ----------------------------------
+# Those the pipeline has not produced yet are skipped; the ones that exist must comply.
 
 REAL = Path(__file__).parent.parent / "data" / "processed"
 
@@ -142,7 +142,7 @@ REAL = Path(__file__).parent.parent / "data" / "processed"
 def _real(name: str) -> Path:
     path = REAL / name
     if not path.exists():
-        pytest.skip(f"data/processed/{name} todavía no existe")
+        pytest.skip(f"data/processed/{name} does not exist yet")
     return path
 
 
@@ -197,6 +197,6 @@ def test_processed_folder_is_under_the_size_limit():
     from tai.constants import MAX_PROCESSED_MB
 
     if not REAL.exists():
-        pytest.skip("no existe data/processed")
+        pytest.skip("data/processed does not exist")
     total = sum(p.stat().st_size for p in REAL.rglob("*") if p.is_file())
-    assert total < MAX_PROCESSED_MB * 1024 * 1024, f"data/processed pesa {total / 1e6:.1f} MB"
+    assert total < MAX_PROCESSED_MB * 1024 * 1024, f"data/processed weighs {total / 1e6:.1f} MB"

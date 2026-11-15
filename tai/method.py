@@ -1,8 +1,8 @@
-"""Pestaña Método (design 10.7, TAI-34): los textos de content/method.md y las tablas que salen de los archivos.
+"""Method tab (design 10.7, TAI-34): the texts in content/method.md and the tables that come from the files.
 
-Los textos fijos los escribe Santino en content/method.md; acá se parten por encabezados. Las cifras no se
-escriben a mano en ningún lado: salen de targets.json, manifest.json y validation.json. Es puro salvo por leer
-content/method.md. La vista (ui/method_view.py) solo dibuja lo que arman estas funciones.
+The fixed texts are written by Santino in content/method.md; here they are split by headings. The figures are
+not written by hand anywhere: they come from targets.json, manifest.json and validation.json. It is pure except
+for reading content/method.md. The view (ui/method_view.py) only draws what these functions build.
 """
 
 from __future__ import annotations
@@ -18,44 +18,44 @@ from tai.models import Manifest, Target, TargetValidation, ValidationReport
 
 METHOD_PATH = Path("content") / "method.md"
 
-# Encabezados de method.md (`## ...`), en el orden en que la pestaña los muestra (design 10.7).
-SECTIONS = ("Qué hace", "Datos usados", "Cómo se calcula", "Validación", "Límites", "Créditos")
+# Headings of method.md (`## ...`), in the order the tab shows them (design 10.7).
+SECTIONS = ("What it does", "Data used", "How it is calculated", "Validation", "Limits", "Credits")
 
-NO_DATA = "sin dato"
+NO_DATA = "no data"
 
-# Cómo se llama cada regla de puntaje (design 5.1) y cada tipo de fuente en pantalla.
+# What each scoring rule (design 5.1) and each source type is called on screen.
 RULE_LABELS = {
-    "overlap": "Parecido si cae dentro del rango",
-    "directional_low": "Premia los valores más bajos de la Tierra",
-    "directional_high": "Premia los valores más altos de la Tierra",
-    "presence": "Premia que haya",
-    "absence": "Premia que no haya",
+    "overlap": "Similar if it falls within the range",
+    "directional_low": "Rewards the lowest values on Earth",
+    "directional_high": "Rewards the highest values on Earth",
+    "presence": "Rewards presence",
+    "absence": "Rewards absence",
 }
-SOURCE_TYPE_LABELS = {"measured": "Medido", "literature": "Literatura", "definition": "Definición"}
+SOURCE_TYPE_LABELS = {"measured": "Measured", "literature": "Literature", "definition": "Definition"}
 
-COVERED_LABELS = {"yes": "Sí", "partial": "Parcial", "no": "No"}
-TARGET_RESULT_LABELS = {"pass": "Pasa", "fail": "Falla", "insufficient": "Datos insuficientes"}
+COVERED_LABELS = {"yes": "Yes", "partial": "Partial", "no": "No"}
+TARGET_RESULT_LABELS = {"pass": "Pass", "fail": "Fail", "insufficient": "Insufficient data"}
 
-# Qué significa cada resultado de la columna "Resultado" (se muestra tal cual está en validation.json).
+# What each value in the "Result" column means (shown as it is in validation.json).
 RESULT_LEGEND = {
-    "pass": "el mejor lugar del análogo supera el percentil de corte",
-    "fail": "el mejor lugar del análogo no lo supera",
-    "info": "el análogo no está cubierto: se muestra pero no cuenta para el resultado del objetivo",
-    "no_data": "no hay celdas con dato dentro del radio del análogo",
+    "pass": "the analog's best place exceeds the cutoff percentile",
+    "fail": "the analog's best place does not exceed it",
+    "info": "the analog is not covered: it is shown but does not count toward the target's result",
+    "no_data": "there are no cells with data within the analog's radius",
 }
 
-VARIABLE_COLUMNS = ("Variable", "Unidad", "Valor (media ± desvío)", "Regla", "Rango en la Tierra", "Fuentes", "Tipo de fuente")
-SOURCE_COLUMNS = ("Dato", "Producto", "Portal", "Licencia", "Tamaño (MB)", "Enlace")
-VALIDATION_COLUMNS = ("Análogo", "Cubierto", "Celdas", "Mejor puntaje", "Puesto", "Percentil", "Resultado")
+VARIABLE_COLUMNS = ("Variable", "Unit", "Value (mean ± std)", "Rule", "Range on Earth", "Sources", "Source type")
+SOURCE_COLUMNS = ("Data", "Product", "Portal", "License", "Size (MB)", "Link")
+VALIDATION_COLUMNS = ("Analog", "Covered", "Cells", "Best score", "Rank", "Percentile", "Result")
 
 
-# --- Textos de content/method.md -------------------------------------------------------------------------
+# --- Texts in content/method.md -------------------------------------------------------------------------
 
 _HEADING = re.compile(r"^##[ \t]+(.+?)[ \t]*$", re.MULTILINE)
 
 
 def parse_method(text: str) -> dict[str, str]:
-    """Partí method.md por los encabezados `## Título`: {título: texto}. Lo que va antes del primero se ignora."""
+    """Split method.md by its `## Title` headings: {title: text}. Anything before the first one is ignored."""
     text = text.lstrip("﻿").replace("\r\n", "\n")
     found = list(_HEADING.finditer(text))
     sections = {}
@@ -66,7 +66,7 @@ def parse_method(text: str) -> dict[str, str]:
 
 
 def read_method(path: Path | None = None) -> dict[str, str]:
-    """Las secciones de method.md. Sin archivo: {} (la pestaña dice qué falta en vez de romperse)."""
+    """The sections of method.md. No file: {} (the tab says what is missing instead of breaking)."""
     path = Path(path) if path is not None else METHOD_PATH
     if not path.is_file():
         return {}
@@ -74,52 +74,52 @@ def read_method(path: Path | None = None) -> dict[str, str]:
 
 
 def pending_sections(sections: dict[str, str]) -> list[str]:
-    """Encabezados de SECTIONS que faltan en el archivo o no tienen texto todavía."""
+    """Headings in SECTIONS that are missing from the file or have no text yet."""
     return [s for s in SECTIONS if not sections.get(s, "").strip()]
 
 
-# --- Tabla de variables (design 10.7, punto 2) ---------------------------------------------------------
+# --- Variables table (design 10.7, point 2) ---------------------------------------------------------
 
 
 def _decimals(unit: str) -> int:
-    # Las mismas cifras que las frases de la ficha: fracciones y precipitación con menos decimales.
-    return {"mm/año": 0, "fracción": 2}.get(unit, 1)
+    # The same digits as the card phrases: fractions and precipitation with fewer decimals.
+    return {"mm/yr": 0, "fraction": 2}.get(unit, 1)
 
 
 def variables_table(target: Target, earth_sources: dict[str, str] | None = None) -> pd.DataFrame:
-    """Una fila por variable física del objetivo: valor, regla, rango en la Tierra y fuentes.
+    """One row per physical variable of the target: value, rule, range on Earth and sources.
 
-    `earth_sources` (variable -> nombre de la fuente terrestre) va en el pie de la fila de la fuente; sale del manifiesto.
+    `earth_sources` (variable -> name of the Earth source) goes at the end of the row's source; it comes from the manifest.
     """
     earth_sources = earth_sources or {}
     rows = []
     for var in PHYSICAL_VARS:
         spec = target.vars.get(var)
-        if spec is None:  # variable opcional que el objetivo no tiene (polvo y viento en la Luna, TAI-52)
+        if spec is None:  # optional variable the target does not have (dust and wind on the Moon, TAI-52)
             continue
         d = _decimals(spec.unit)
         source = spec.source
         if earth_sources.get(var):
-            source = f"{source}. Tierra: {earth_sources[var]}"
+            source = f"{source}. Earth: {earth_sources[var]}"
         rows.append(
             {
                 "Variable": VAR_LABELS[var],
-                "Unidad": spec.unit,
-                "Valor (media ± desvío)": f"{fmt_num(spec.mean, d)} ± {fmt_num(spec.std, d)}",
-                "Regla": RULE_LABELS[spec.rule],
-                "Rango en la Tierra": f"{fmt_num(spec.earth_p01, d)} a {fmt_num(spec.earth_p99, d)}",
-                "Fuentes": source,
-                "Tipo de fuente": SOURCE_TYPE_LABELS[spec.source_type],
+                "Unit": spec.unit,
+                "Value (mean ± std)": f"{fmt_num(spec.mean, d)} ± {fmt_num(spec.std, d)}",
+                "Rule": RULE_LABELS[spec.rule],
+                "Range on Earth": f"{fmt_num(spec.earth_p01, d)} to {fmt_num(spec.earth_p99, d)}",
+                "Sources": source,
+                "Source type": SOURCE_TYPE_LABELS[spec.source_type],
             }
         )
     return pd.DataFrame(rows, columns=list(VARIABLE_COLUMNS))
 
 
-# --- Fuentes del manifiesto -------------------------------------------------------------------------------
+# --- Manifest sources -------------------------------------------------------------------------------
 
 
 def sources_table(manifest: Manifest) -> pd.DataFrame:
-    """Los datos de entrada de todos los pasos, sin repetir (un producto aparece una vez), en orden de paso."""
+    """The input data of every step, without repeats (a product appears once), in step order."""
     rows, seen = [], set()
     for step in manifest.steps:
         for item in step.inputs:
@@ -128,12 +128,12 @@ def sources_table(manifest: Manifest) -> pd.DataFrame:
             seen.add(item.product)
             rows.append(
                 {
-                    "Dato": item.name,
-                    "Producto": item.product,
+                    "Data": item.name,
+                    "Product": item.product,
                     "Portal": item.portal,
-                    "Licencia": item.license_note,
-                    "Tamaño (MB)": item.size_mb,
-                    "Enlace": item.url,
+                    "License": item.license_note,
+                    "Size (MB)": item.size_mb,
+                    "Link": item.url,
                 }
             )
     return pd.DataFrame(rows, columns=list(SOURCE_COLUMNS))
@@ -144,40 +144,40 @@ def _cell(x) -> str:
 
 
 def sources_markdown(manifest: Manifest) -> str:
-    """La tabla de fuentes como Markdown: las celdas se parten en vez de cortarse y el enlace se puede abrir."""
-    cols = ["Dato", "Producto", "Portal", "Licencia", "Enlace"]
+    """The sources table as Markdown: cells wrap instead of being cut off and the link can be opened."""
+    cols = ["Data", "Product", "Portal", "License", "Link"]
     lines = ["| " + " | ".join(cols) + " |", "|" + " --- |" * len(cols)]
     for r in sources_table(manifest).itertuples(index=False):
-        url = str(r.Enlace).strip().replace(" ", "%20").replace(")", "%29")
-        link = f"[Abrir]({url})" if url else ""
-        lines.append("| " + " | ".join([_cell(r.Dato), _cell(r.Producto), _cell(r.Portal), _cell(r.Licencia), link]) + " |")
+        url = str(r.Link).strip().replace(" ", "%20").replace(")", "%29")
+        link = f"[Open]({url})" if url else ""
+        lines.append("| " + " | ".join([_cell(r.Data), _cell(r.Product), _cell(r.Portal), _cell(r.License), link]) + " |")
     return "\n".join(lines)
 
 
 def grid_summary(manifest: Manifest) -> str:
-    """"Grilla de 1° con 21.357 celdas de tierra. Año de los datos: 2024." Sin grilla (paso 01 sin correr): solo el año."""
-    year = f"Año de los datos: {manifest.data_year}."
+    """"1° grid with 21,357 land cells. Data year: 2024." No grid (step 01 not run): just the year."""
+    year = f"Data year: {manifest.data_year}."
     if manifest.grid is None:
         return year
     g = manifest.grid
-    cells = f"{g.n_cells:,}".replace(",", ".")
-    return f"Grilla de {fmt_num(g.res_deg, 0 if float(g.res_deg).is_integer() else 2)}° con {cells} celdas de tierra. {year}"
+    cells = f"{g.n_cells:,}"
+    return f"{fmt_num(g.res_deg, 0 if float(g.res_deg).is_integer() else 2)}° grid with {cells} land cells. {year}"
 
 
-# --- Validación (design 10.7, punto 4) --------------------------------------------------------------------
+# --- Validation (design 10.7, point 4) --------------------------------------------------------------------
 
 
 def validation_table(target: TargetValidation) -> pd.DataFrame:
-    """Una fila por análogo conocido con su percentil y su resultado, tal cual están en validation.json."""
+    """One row per known analog with its percentile and its result, as they are in validation.json."""
     rows = [
         {
-            "Análogo": a.name,
-            "Cubierto": COVERED_LABELS[a.covered],
-            "Celdas": a.n_cells,
-            "Mejor puntaje": a.best_total,
-            "Puesto": a.best_rank,
-            "Percentil": a.percentile,
-            "Resultado": a.result,
+            "Analog": a.name,
+            "Covered": COVERED_LABELS[a.covered],
+            "Cells": a.n_cells,
+            "Best score": a.best_total,
+            "Rank": a.best_rank,
+            "Percentile": a.percentile,
+            "Result": a.result,
         }
         for a in target.analogs
     ]
@@ -185,24 +185,24 @@ def validation_table(target: TargetValidation) -> pd.DataFrame:
 
 
 def validation_summary(target: TargetValidation, report: ValidationReport) -> str:
-    """"Pasa: 2 de 3 análogos cubiertos superan el percentil 90". Los números salen del informe."""
-    threshold = f"{report.percentile_threshold:g}".replace(".", ",")
+    """"Pass: 2 of 3 covered analogs exceed the 90th percentile". The numbers come from the report."""
+    threshold = f"{report.percentile_threshold:g}"
     return (
-        f"{TARGET_RESULT_LABELS[target.result]}: {target.covered_passed} de {target.covered_total} análogos "
-        f"cubiertos superan el percentil {threshold}"
+        f"{TARGET_RESULT_LABELS[target.result]}: {target.covered_passed} of {target.covered_total} covered "
+        f"analogs exceed percentile {threshold}"
     )
 
 
 def weights_summary(report: ValidationReport, labels: dict[str, str]) -> str:
-    """"Pesos de la validación: Terreno 1, Temperatura 1, Agua y hielo 1, Interés astrobiológico 0,5"."""
+    """"Validation weights: Terrain 1, Temperature 1, Water and ice 1, Astrobiological interest 0.5"."""
     parts = [f"{labels[d]} {fmt_num(w, 0 if float(w).is_integer() else 1)}" for d, w in report.weights.as_dict().items()]
-    return "Pesos de la validación: " + ", ".join(parts)
+    return "Validation weights: " + ", ".join(parts)
 
 
 def result_legend(report: ValidationReport) -> str:
-    threshold = f"{report.percentile_threshold:g}".replace(".", ",")
+    threshold = f"{report.percentile_threshold:g}"
     parts = [f"{k}: {v}" for k, v in RESULT_LEGEND.items()]
-    return f"Percentil de corte: {threshold}. " + "; ".join(parts) + "."
+    return f"Cutoff percentile: {threshold}. " + "; ".join(parts) + "."
 
 
 __all__ = [

@@ -1,4 +1,4 @@
-"""Dimensión polvo y viento (TAI-52): paso 04_dust_wind, objetivo sin la dimensión (la Luna), puntaje y vista."""
+"""Dust and wind dimension (TAI-52): step 04_dust_wind, a target without the dimension (the Moon), score and view."""
 
 import importlib.util
 from pathlib import Path
@@ -31,7 +31,7 @@ step08 = _load("step08dw", "08_similarity.py")
 
 
 def _merra_month(folder: Path, collection: str, variable: str, month: int, value) -> Path:
-    """Un archivo mensual con la grilla de MERRA-2 (0,5° x 0,625°) y un valor por punto."""
+    """A monthly file on the MERRA-2 grid (0.5° x 0.625°) with one value per point."""
     lat = np.arange(-90, 90.01, 0.5)
     lon = np.arange(-180, 180, 0.625)
     data = np.broadcast_to(np.asarray(value, dtype="float32"), (1, lat.size, lon.size)).copy()
@@ -45,7 +45,7 @@ def _merra_month(folder: Path, collection: str, variable: str, month: int, value
 @pytest.fixture
 def raw(tmp_path):
     for m in range(1, 13):
-        _merra_month(tmp_path / "m2tmnxaer", "tavgM_2d_aer_Nx", "DUEXTTAU", m, 0.01 * m)  # media anual 0,065
+        _merra_month(tmp_path / "m2tmnxaer", "tavgM_2d_aer_Nx", "DUEXTTAU", m, 0.01 * m)  # annual mean 0.065
         _merra_month(tmp_path / "m2tmnxflx", "tavgM_2d_flx_Nx", "SPEED", m, 5.0)
     return tmp_path
 
@@ -67,10 +67,10 @@ def test_cells_get_the_annual_mean_of_the_monthly_means(raw):
     months = {c: step.find_months(c, year=2024, root=raw) for c in step.COLUMNS}
     out = step.dust_wind_cells(months, grid)
     assert list(out.columns) == ["cell_id", "dust_aod", "wind_ms"]
-    assert np.allclose(out["dust_aod"], 0.065) and np.allclose(out["wind_ms"], 5.0)  # también en los polos
+    assert np.allclose(out["dust_aod"], 0.065) and np.allclose(out["wind_ms"], 5.0)  # also at the poles
 
 
-# --- Objetivos sin la dimensión ---------------------------------------------------------
+# --- Targets without the dimension -------------------------------------------------------
 
 
 def _var(**kw):
@@ -90,7 +90,7 @@ def test_a_target_may_skip_the_optional_variables_but_not_the_core_ones():
     with pytest.raises(ValidationError):
         _target(CORE_VARS[1:])
     with pytest.raises(ValidationError):
-        _target([*CORE_VARS, "dust_aod", "humedad"])
+        _target([*CORE_VARS, "dust_aod", "humidity"])
 
 
 def _features(n=3):
@@ -118,19 +118,19 @@ def test_a_target_without_the_dimension_gets_null_dust_wind_and_the_same_totals(
 def test_dust_wind_does_not_decide_eligibility():
     sim = pd.DataFrame({"s_terrain": [0.5, np.nan], "s_temperature": [np.nan, np.nan], "s_water_ice": [0.5, 0.5],
                         "s_dust_wind": [0.5, 0.5], "bio_score": [0.0, 0.0]})
-    assert scoring.is_eligible(sim).tolist() == [True, False]  # la segunda tiene 2 dimensiones solo contando polvo
+    assert scoring.is_eligible(sim).tolist() == [True, False]  # the second has 2 dimensions only if dust is counted
 
 
 def test_weights_written_before_the_dimension_load_with_it_at_zero():
     assert models.Weights(terrain=1, temperature=1, water_ice=1, biology=0.5).dust_wind == 0.0
 
 
-# --- Ficha y vistas ------------------------------------------------------------------------
+# --- Card and views ------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("unit,expected", [
-    ("", "0,12 frente a 0,45 ± 0,15 del objetivo"),
-    ("m/s", "5,5 m/s frente a 4,0 ± 2,0 del objetivo"),
+    ("", "0.12 vs. the target's 0.45 ± 0.15"),
+    ("m/s", "5.5 m/s vs. the target's 4.0 ± 2.0"),
 ])
 def test_overlap_phrase_without_unit_has_no_double_space(unit, expected):
     x, mean = (0.12, 0.45) if unit == "" else (5.5, 4.0)
@@ -140,7 +140,7 @@ def test_overlap_phrase_without_unit_has_no_double_space(unit, expected):
 
 def test_directional_phrase_without_unit_closes_the_parenthesis():
     phrase = cards.variable_phrase("dust_aod", "directional_high", 0.3, 0.97, 0.45, 0.15, "")
-    assert phrase == "Mayor que el 97% de la tierra firme; el objetivo (0,45) queda fuera del rango terrestre"
+    assert phrase == "Higher than 97% of dry land; the target (0.45) lies outside the Earth range"
 
 
 def _card(with_dust: bool):
@@ -159,21 +159,21 @@ def _card(with_dust: bool):
 
 def test_radar_has_five_axes_with_the_dimension_and_four_without():
     labels, _ = card_view.radar_axes(_card(with_dust=True))
-    assert len(labels) == 5 and "Polvo y viento" in labels
+    assert len(labels) == 5 and "Dust and wind" in labels
     labels, _ = card_view.radar_axes(_card(with_dust=False))
-    assert len(labels) == 4 and not any("Polvo" in lbl for lbl in labels)
+    assert len(labels) == 4 and not any("Dust" in lbl for lbl in labels)
 
 
 def test_ranking_hides_the_column_only_when_it_is_empty():
-    table = pd.DataFrame({"Puesto": [1, 2], "Total": [0.5, 0.4], "Polvo y viento": [np.nan, np.nan]})
-    assert "Polvo y viento" not in ranking_view.visible_columns(table)
-    table.loc[0, "Polvo y viento"] = 0.3
-    assert "Polvo y viento" in ranking_view.visible_columns(table)
+    table = pd.DataFrame({"Rank": [1, 2], "Total": [0.5, 0.4], "Dust and wind": [np.nan, np.nan]})
+    assert "Dust and wind" not in ranking_view.visible_columns(table)
+    table.loc[0, "Dust and wind"] = 0.3
+    assert "Dust and wind" in ranking_view.visible_columns(table)
 
 
 def test_map_hover_shows_dust_wind_only_where_the_target_has_it():
     cells = pd.DataFrame({"s_terrain": [0.5], "s_temperature": [0.5], "s_water_ice": [0.5], "s_dust_wind": [np.nan],
                           "bio_score": [0.1]})
-    assert "Polvo y viento" not in map_view._scores_text(cells)[0]
+    assert "Dust and wind" not in map_view._scores_text(cells)[0]
     cells["s_dust_wind"] = 0.25
-    assert "Polvo y viento: 0.25" in map_view._scores_text(cells)[0]
+    assert "Dust and wind: 0.25" in map_view._scores_text(cells)[0]

@@ -14,7 +14,7 @@
       "analogs": [
         {
           "analog_id": "atacama_yungay",
-          "name": "Desierto de Atacama (Yungay)",
+          "name": "Atacama Desert (Yungay)",
           "covered": "yes",
           "n_cells": 6,
           "best_cell_id": 23510,
@@ -42,11 +42,11 @@
       "covered_total": 1,
       "covered_passed": 0,
       "n_eligible": 19240,
-      "note": "Fixture: menos de 2 análogos cubiertos",
+      "note": "Fixture: fewer than 2 covered analogs",
       "analogs": [
         {
           "analog_id": "mcmurdo_dry_valleys",
-          "name": "Valles Secos de McMurdo",
+          "name": "McMurdo Dry Valleys",
           "covered": "yes",
           "n_cells": 0,
           "best_cell_id": null,

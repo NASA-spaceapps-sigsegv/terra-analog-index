@@ -78,7 +78,7 @@ def _stats(slope: np.ndarray, rough: np.ndarray, inside: np.ndarray) -> dict[str
     for name, grid in (("slope_deg", slope), ("roughness_m", rough)):
         v = grid[inside & np.isfinite(grid)]
         if v.size == 0:
-            raise MissingInputError(f"el recorte no tiene píxeles válidos de {name}")
+            raise MissingInputError(f"the crop has no valid pixels of {name}")
         out[name] = (float(v.mean()), float(v.std()), int(v.size))
     return out
 
@@ -154,11 +154,11 @@ def load_earth_stats(path: Path = MANIFEST_PATH) -> dict[str, EarthStats]:
     stats = (entry or {}).get("earth_stats")
     if not stats:
         raise MissingInputError(
-            "falta earth_stats del paso 06 en manifest.json: el paso 06_features.py (TAI-18) todavía no corrió"
+            "earth_stats from step 06 is missing in manifest.json: step 06_features.py (TAI-18) has not run yet"
         )
     missing = [v for v in PHYSICAL_VARS if v not in stats]
     if missing:
-        raise MissingInputError(f"earth_stats del paso 06 no trae {missing}")
+        raise MissingInputError(f"earth_stats from step 06 lacks {missing}")
     return {v: EarthStats.model_validate(stats[v]) for v in PHYSICAL_VARS}
 
 
@@ -179,12 +179,12 @@ def build_targets(base: TargetsBaseFile, measured: dict, earth: dict, choose_rul
             if bv.source_type == "measured":
                 if var not in TERRAIN_VARS:
                     raise MissingInputError(
-                        f"{t.target_id}.{var} está marcada measured, pero no hay lector de temperatura: "
-                        "la decisión es de TAI-05; mientras tanto, marcarla literature con su cita"
+                        f"{t.target_id}.{var} is marked measured, but there is no temperature reader: "
+                        "the decision belongs to TAI-05; meanwhile, mark it literature with its citation"
                     )
                 got = measured.get(t.target_id, {}).get(var)
                 if got is None:
-                    raise MissingInputError(f"{t.target_id}.{var} está marcada measured y no se leyó el producto")
+                    raise MissingInputError(f"{t.target_id}.{var} is marked measured and the product was not read")
                 mean, std = got[0], got[1]
             else:
                 mean, std = bv.mean, bv.std
@@ -221,7 +221,7 @@ def measure_terrain(base: TargetsBaseFile, moon_dem, mars_dem, log) -> tuple[dic
             measured[t.target_id] = mola_cut_stats(mars_dem, b.lat_min, b.lat_max, b.lon_min, b.lon_max)
         for v in wanted:
             m, s, n = measured[t.target_id][v]
-            log.info("%s.%s: media %.2f, desvío %.2f, %d píxeles", t.target_id, v, m, s, n)
+            log.info("%s.%s: mean %.2f, std %.2f, %d pixels", t.target_id, v, m, s, n)
     return measured, used
 
 
@@ -244,14 +244,14 @@ def main() -> None:
     freshness = [BASE_PATH, FEATURES_PATH, Path(__file__), root / "tai" / "rules.py"]
     freshness += [Path(p) for p in (args.moon_dem, args.mars_dem) if not str(p).startswith("http")]
     if not args.force and is_up_to_date([OUTPUT], freshness):
-        log.info("al día")
+        log.info("up to date")
         return
 
     try:
         from tai import rules
         choose_rule = rules.choose_rule
     except (ImportError, AttributeError) as exc:
-        raise MissingInputError("falta tai.rules.choose_rule (TAI-18, de Juanma)") from exc
+        raise MissingInputError("tai.rules.choose_rule is missing (TAI-18, Juanma's)") from exc
 
     base = TargetsBaseFile.model_validate_json(BASE_PATH.read_text(encoding="utf-8"))
     earth = load_earth_stats()
@@ -260,7 +260,7 @@ def main() -> None:
 
     atomic_write_json(targets.model_dump(mode="json"), OUTPUT)
     notes = [
-        f"{t.target_id}.{v}: {t.vars[v].source_type}, regla {t.vars[v].rule}"
+        f"{t.target_id}.{v}: {t.vars[v].source_type}, rule {t.vars[v].rule}"
         for t in targets.targets for v in PHYSICAL_VARS if v in t.vars
     ]
     for line in notes:
@@ -270,10 +270,10 @@ def main() -> None:
             STEP,
             started,
             inputs=[
-                {"name": "Elevación de la Luna y Marte (LOLA y MOLA)", "product": "LDEM_80S_80MPP_ADJ, MOLA 463 m",
-                 "portal": "NASA PGDA y USGS Astrogeology", "url": "https://pgda.gsfc.nasa.gov/products/90",
+                {"name": "Elevation of the Moon and Mars (LOLA and MOLA)", "product": "LDEM_80S_80MPP_ADJ, MOLA 463 m",
+                 "portal": "NASA PGDA and USGS Astrogeology", "url": "https://pgda.gsfc.nasa.gov/products/90",
                  "files": len(used), "size_mb": round(sum(file_size_mb(p) for p in used), 1),
-                 "license_note": "Datos abiertos de NASA"},
+                 "license_note": "NASA open data"},
             ],
             outputs=[(OUTPUT, len(targets.targets))],
             columns={},

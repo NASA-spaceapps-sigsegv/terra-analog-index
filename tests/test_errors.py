@@ -20,9 +20,9 @@ def test_status_and_hierarchy(cls, status):
 
 
 def test_to_dict_matches_contract():
-    err = errors.TargetNotFoundError("No existe el sitio objetivo 'mars_gale'")
+    err = errors.TargetNotFoundError("Target site 'mars_gale' does not exist")
     assert err.to_dict() == {
         "error": "TargetNotFoundError",
-        "detail": "No existe el sitio objetivo 'mars_gale'",
+        "detail": "Target site 'mars_gale' does not exist",
         "http_status": 404,
     }

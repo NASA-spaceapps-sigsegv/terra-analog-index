@@ -1,4 +1,4 @@
-"""Fichas de sitio (design 11 y 12.1, contrato SiteCard, TAI-32)."""
+"""Site cards (design 11 and 12.1, SiteCard contract, TAI-32)."""
 
 import json
 import re
@@ -19,38 +19,38 @@ ROOT = Path(__file__).resolve().parents[1]
 CARDS_DIR = ROOT / "content" / "cards"
 WEIGHTS = Weights(terrain=1.0, temperature=1.0, water_ice=1.0, biology=0.5)
 
-# --- El ejemplo del contrato (Contratos JSON, sección 5) ----------------------------------
+# --- The contract example (JSON contracts, section 5) ----------------------------------
 
 EXAMPLE_VARS = {
     #              earth   mean    std   unit       rule               score  source_target                source_type
     "slope_deg": (3.5, 4.5, 2.0, "°", "overlap", 0.607, "MOLA, PDS Geosciences", "measured"),
     "roughness_m": (38.0, 52.0, 30.0, "m", "overlap", 0.627, "MOLA, PDS Geosciences", "measured"),
-    "tmin_c": (-4.2, -83.0, 5.0, "°C", "directional_low", 0.880, "Cita que cargue Santino", "literature"),
-    "trange_c": (31.6, 60.0, 8.0, "°C", "directional_high", 0.940, "Cita que cargue Santino", "literature"),
-    "precip_mm": (3.0, 0.0, 0.0, "mm/año", "directional_low", 0.990, "Por definición: no llueve", "definition"),
-    "ice_frac": (0.05, 0.0, 0.0, "fracción", "absence", 0.950, "Derivado de has_ice", "definition"),
+    "tmin_c": (-4.2, -83.0, 5.0, "°C", "directional_low", 0.880, "Citation for Santino to add", "literature"),
+    "trange_c": (31.6, 60.0, 8.0, "°C", "directional_high", 0.940, "Citation for Santino to add", "literature"),
+    "precip_mm": (3.0, 0.0, 0.0, "mm/yr", "directional_low", 0.990, "By definition: no rain", "definition"),
+    "ice_frac": (0.05, 0.0, 0.0, "fraction", "absence", 0.950, "Derived from has_ice", "definition"),
 }
 EXAMPLE_PHRASES = {
-    "slope_deg": "3,5 ° frente a 4,5 ± 2,0 del objetivo",
-    "roughness_m": "38,0 m frente a 52,0 ± 30,0 del objetivo",
-    "tmin_c": "Más fría que el 88% de la tierra firme; el objetivo (-83,0 °C) queda fuera del rango terrestre",
-    "trange_c": "Mayor que el 94% de la tierra firme; el objetivo (60,0 °C) queda fuera del rango terrestre",
-    "precip_mm": "Más seca que el 99% de la tierra firme; el objetivo (0 mm/año) queda fuera del rango terrestre",
-    "ice_frac": "Sin nieve ni hielo el 95% del año; el objetivo no tiene hielo en superficie",
+    "slope_deg": "3.5 ° vs. the target's 4.5 ± 2.0",
+    "roughness_m": "38.0 m vs. the target's 52.0 ± 30.0",
+    "tmin_c": "Colder than 88% of dry land; the target (-83.0 °C) lies outside the Earth range",
+    "trange_c": "Higher than 94% of dry land; the target (60.0 °C) lies outside the Earth range",
+    "precip_mm": "Drier than 99% of dry land; the target (0 mm/yr) lies outside the Earth range",
+    "ice_frac": "No snow or ice 95% of the year; the target has no surface ice",
 }
 EARTH_NAMES = {
-    "02_terrain": [("Modelo de elevación global, 1 km", "ETOPO")],
-    "03_temperature": [("MODIS, temperatura superficial mensual, 2024", "MOD11C3")],
-    "04_water_ice": [("GPM IMERG mensual, 2024", "GPM_3IMERGM"), ("MODIS, cobertura de nieve mensual, 2024", "MOD10CM"),
-                     ("MODIS, cobertura del suelo anual, 2024", "MCD12C1")],
+    "02_terrain": [("Global elevation model, 1 km", "ETOPO")],
+    "03_temperature": [("MODIS, monthly land surface temperature, 2024", "MOD11C3")],
+    "04_water_ice": [("GPM IMERG monthly, 2024", "GPM_3IMERGM"), ("MODIS, monthly snow cover, 2024", "MOD10CM"),
+                     ("MODIS, annual land cover, 2024", "MCD12C1")],
     "05_biology_ncbi": [("NCBI BioSample", "BioSample")],
 }
 MARS_LIMITS = [
-    "Gravedad de 3,71 m/s² (38% de la terrestre)",
-    "Atmósfera de dióxido de carbono con menos del 1% de la presión terrestre",
-    "Radiación ultravioleta y cósmica mucho mayor",
-    "Suelo con percloratos",
-    "Tormentas de polvo globales",
+    "Gravity of 3.71 m/s² (38% of Earth's)",
+    "Carbon dioxide atmosphere with less than 1% of Earth's pressure",
+    "Much higher ultraviolet and cosmic radiation",
+    "Perchlorate-bearing soil",
+    "Global dust storms",
 ]
 
 
@@ -69,7 +69,7 @@ def example_target(**changes) -> Target:
     var = {v: {"mean": m, "std": s, "unit": u, "rule": r, "source": src, "source_type": st,
                "earth_p01": 0.0, "earth_p99": 1.0, "earth_std": 1.0}
            for v, (_, m, s, u, r, _, src, st) in EXAMPLE_VARS.items()}
-    data = {"target_id": "mars_jezero", "label": "Marte, cráter Jezero", "body": "mars",
+    data = {"target_id": "mars_jezero", "label": "Mars, Jezero crater", "body": "mars",
             "bounds": {"lat_min": 17.9, "lat_max": 18.9, "lon_min": 77.0, "lon_max": 78.0},
             "has_ice": False, "has_ice_source": "Morgan et al. (2021)", "summary": "s",
             "unreplicable": MARS_LIMITS, "notes": [], "vars": var} | changes
@@ -84,8 +84,8 @@ def example_card(*, sim_changes=None, feature_changes=None, weights=WEIGHTS, car
     sim |= {"s_terrain": 0.617, "s_temperature": 0.910, "s_water_ice": 0.970, "bio_score": 0.398,
             "eligible": True, "known_analog": "atacama_yungay", "known_analog_km": 67.0}
     sim |= sim_changes or {}
-    analog = KnownAnalog(analog_id="atacama_yungay", name="Desierto de Atacama (Yungay)", lat=-24.08, lon=-69.92,
-                         radius_km=150, target_id="mars_jezero", basis="Hiperaridez y suelos casi sin vida",
+    analog = KnownAnalog(analog_id="atacama_yungay", name="Atacama Desert (Yungay)", lat=-24.08, lon=-69.92,
+                         radius_km=150, target_id="mars_jezero", basis="Hyperaridity and nearly lifeless soils",
                          covered="yes", source="Navarro-González 2003")
     return cards.build_card(
         cell_id=23510,
@@ -102,17 +102,17 @@ def example_card(*, sim_changes=None, feature_changes=None, weights=WEIGHTS, car
 
 def test_the_contract_example():
     card = example_card()
-    assert card.header.label == "24,5°S 69,5°O" and card.header.country == "Chile"
-    assert card.header.known_analog.name == "Desierto de Atacama (Yungay)"
+    assert card.header.label == "24.5°S 69.5°W" and card.header.country == "Chile"
+    assert card.header.known_analog.name == "Atacama Desert (Yungay)"
     assert card.header.known_analog.distance_km == 67.0
-    assert card.scores.total == pytest.approx(0.770, abs=1e-3)  # (0,617 + 0,910 + 0,970 + 0,5·0,398) / 3,5
-    assert [v.variable for v in card.variables] == list(CORE_VARS)  # el ejemplo no trae polvo y viento
+    assert card.scores.total == pytest.approx(0.770, abs=1e-3)  # (0.617 + 0.910 + 0.970 + 0.5·0.398) / 3.5
+    assert [v.variable for v in card.variables] == list(CORE_VARS)  # the example has no dust and wind
     assert {v.variable: v.phrase for v in card.variables} == EXAMPLE_PHRASES
     assert [d.dimension for d in card.similar_in] == ["temperature", "water_ice"]
     assert card.different_in == [] and card.similar_empty_phrase is None
-    assert card.different_empty_phrase == "Ninguna dimensión física se aleja de forma marcada"
-    assert card.biology.phrase == "15 registros de ambientes extremos en NCBI BioSample: halófilos, xerófilos"
-    assert card.biology.source == "NCBI BioSample, consulta del 14 de noviembre de 2026"
+    assert card.different_empty_phrase == "No physical dimension departs markedly"
+    assert card.biology.phrase == "15 extreme-environment records in NCBI BioSample: halophiles, xerophiles"
+    assert card.biology.source == "NCBI BioSample, queried on November 14, 2026"
     assert card.unreplicable == MARS_LIMITS
     assert card.manual is None
 
@@ -120,18 +120,18 @@ def test_the_contract_example():
 def test_sources_come_from_the_manifest_and_the_target():
     card = example_card()
     by_var = {v.variable: (v.source_earth, v.source_target) for v in card.variables}
-    assert by_var["slope_deg"] == ("Modelo de elevación global, 1 km", "MOLA, PDS Geosciences")
-    assert by_var["precip_mm"][0] == "GPM IMERG mensual, 2024"
-    assert by_var["ice_frac"][0] == "MODIS, cobertura de nieve mensual, 2024"
+    assert by_var["slope_deg"] == ("Global elevation model, 1 km", "MOLA, PDS Geosciences")
+    assert by_var["precip_mm"][0] == "GPM IMERG monthly, 2024"
+    assert by_var["ice_frac"][0] == "MODIS, monthly snow cover, 2024"
     sources = {s.name: s.used_for for s in card.sources}
-    assert sources["Modelo de elevación global, 1 km"] == ["slope_deg", "roughness_m"]
+    assert sources["Global elevation model, 1 km"] == ["slope_deg", "roughness_m"]
     assert sources["NCBI BioSample"] == ["bio_records", "bio_types"]
-    assert sources["Morgan et al. (2021)"] == ["ice_frac"]  # la cita detrás de "Derivado de has_ice"
+    assert sources["Morgan et al. (2021)"] == ["ice_frac"]  # the citation behind "Derived from has_ice"
     shown = {v for s in card.sources for v in s.used_for}
-    assert set(CORE_VARS) <= shown  # ninguna cifra sin fuente (RF-28)
+    assert set(CORE_VARS) <= shown  # no figure without a source (RF-28)
 
 
-# --- Las reglas de 12.1 ---------------------------------------------------------------------
+# --- The 12.1 rules ------------------------------------------------------------------------
 
 DIMENSION_SCORES = [0.0, 0.29, 0.3, 0.5, 0.69, 0.7, 1.0, np.nan]
 
@@ -153,14 +153,14 @@ def test_each_dimension_is_in_at_most_one_list(terrain, water):
 
 def test_empty_lists_get_their_fixed_phrases():
     card = example_card(sim_changes={"s_terrain": 0.5, "s_temperature": 0.5, "s_water_ice": 0.5})
-    assert card.similar_empty_phrase == "Ninguna dimensión física alcanza un parecido alto"
-    assert card.different_empty_phrase == "Ninguna dimensión física se aleja de forma marcada"
+    assert card.similar_empty_phrase == "No physical dimension reaches a high similarity"
+    assert card.different_empty_phrase == "No physical dimension departs markedly"
 
 
 @pytest.mark.parametrize("records,types,phrase", [
-    (0, "", "Sin registros en NCBI BioSample"),
-    (1, "psychrophile", "1 registro de ambientes extremos en NCBI BioSample: psicrófilos"),
-    (15, "halophile,xerophile", "15 registros de ambientes extremos en NCBI BioSample: halófilos, xerófilos"),
+    (0, "", "No records in NCBI BioSample"),
+    (1, "psychrophile", "1 extreme-environment record in NCBI BioSample: psychrophiles"),
+    (15, "halophile,xerophile", "15 extreme-environment records in NCBI BioSample: halophiles, xerophiles"),
 ])
 def test_limits_and_sampling_note_are_always_there(records, types, phrase):
     card = example_card(feature_changes={"bio_records": records, "bio_type_list": types})
@@ -175,18 +175,18 @@ def test_a_card_without_limits_is_rejected():
 
 
 @pytest.mark.parametrize("variable,rule,earth,score,mean,unit,expected", [
-    ("slope_deg", "overlap", 3.5, 0.6, 4.5, "°", "3,5 ° frente a 4,5 ± 2,0 del objetivo"),
+    ("slope_deg", "overlap", 3.5, 0.6, 4.5, "°", "3.5 ° vs. the target's 4.5 ± 2.0"),
     ("tmin_c", "directional_low", -60.0, 0.995, -223.0, "°C",
-     "Más fría que el 100% de la tierra firme; el objetivo (-223,0 °C) queda fuera del rango terrestre"),
-    ("precip_mm", "directional_low", 30.0, 0.9, 0.0, "mm/año",
-     "Más seca que el 90% de la tierra firme; el objetivo (0 mm/año) queda fuera del rango terrestre"),
+     "Colder than 100% of dry land; the target (-223.0 °C) lies outside the Earth range"),
+    ("precip_mm", "directional_low", 30.0, 0.9, 0.0, "mm/yr",
+     "Drier than 90% of dry land; the target (0 mm/yr) lies outside the Earth range"),
     ("trange_c", "directional_high", 20.0, 0.42, 152.0, "°C",
-     "Mayor que el 42% de la tierra firme; el objetivo (152,0 °C) queda fuera del rango terrestre"),
-    ("ice_frac", "presence", 0.25, 0.25, 1.0, "fracción", "Nieve o hielo el 25% del año; el objetivo tiene hielo"),
-    ("ice_frac", "absence", 0.25, 0.75, 0.0, "fracción",
-     "Sin nieve ni hielo el 75% del año; el objetivo no tiene hielo en superficie"),
-    ("slope_deg", "overlap", None, None, 4.5, "°", "Sin dato para esta celda"),
-    ("tmin_c", "directional_low", np.nan, np.nan, -80.0, "°C", "Sin dato para esta celda"),
+     "Higher than 42% of dry land; the target (152.0 °C) lies outside the Earth range"),
+    ("ice_frac", "presence", 0.25, 0.25, 1.0, "fraction", "Snow or ice 25% of the year; the target has ice"),
+    ("ice_frac", "absence", 0.25, 0.75, 0.0, "fraction",
+     "No snow or ice 75% of the year; the target has no surface ice"),
+    ("slope_deg", "overlap", None, None, 4.5, "°", "No data for this cell"),
+    ("tmin_c", "directional_low", np.nan, np.nan, -80.0, "°C", "No data for this cell"),
 ])
 def test_the_phrase_matches_the_rule(variable, rule, earth, score, mean, unit, expected):
     assert cards.variable_phrase(variable, rule, earth, score, mean, 2.0, unit) == expected
@@ -209,8 +209,8 @@ def test_a_card_that_is_not_eligible_has_no_total_and_says_why():
     assert card.notes[0] == cards.NOT_ELIGIBLE_NOTE
 
 
-@pytest.mark.parametrize("lat,lon,label", [(-24.5, -69.5, "24,5°S 69,5°O"), (0.5, 0.5, "0,5°N 0,5°E"),
-                                           (-89.5, 179.5, "89,5°S 179,5°E")])
+@pytest.mark.parametrize("lat,lon,label", [(-24.5, -69.5, "24.5°S 69.5°W"), (0.5, 0.5, "0.5°N 0.5°E"),
+                                           (-89.5, 179.5, "89.5°S 179.5°E")])
 def test_coordinate_label(lat, lon, label):
     assert cards.coord_label(lat, lon) == label
 
@@ -221,17 +221,17 @@ def test_bio_type_labels_match_the_config():
     assert set(cards.BIO_TYPE_LABELS) == set(BIO_TYPES)
 
 
-# --- Texto manual (11.3) --------------------------------------------------------------------
+# --- Manual text (11.3) ---------------------------------------------------------------------
 
-GOOD_MANUAL = "# Borde oriental del Salar de Atacama\n\n" + " ".join(["palabra"] * 180) + " [1].\n\n## Fuentes\n\n1. Autor (2020). Título.\n"
+GOOD_MANUAL = "# Eastern edge of the Salar de Atacama\n\n" + " ".join(["word"] * 180) + " [1].\n\n## Sources\n\n1. Author (2020). Title.\n"
 
 
 def test_a_manual_file_appears_without_touching_code(tmp_path):
     assert example_card(cards_dir=tmp_path).manual is None
     (tmp_path / "23510__mars_jezero.md").write_text(GOOD_MANUAL, encoding="utf-8")
     manual = example_card(cards_dir=tmp_path).manual
-    assert manual.title == "Borde oriental del Salar de Atacama"
-    assert manual.body_md.startswith("palabra") and "## Fuentes" in manual.body_md
+    assert manual.title == "Eastern edge of the Salar de Atacama"
+    assert manual.body_md.startswith("word") and "## Sources" in manual.body_md
 
 
 def test_a_manual_file_of_another_target_does_not_appear(tmp_path):
@@ -241,11 +241,11 @@ def test_a_manual_file_of_another_target_does_not_appear(tmp_path):
 
 @pytest.mark.parametrize("text,problem", [
     (GOOD_MANUAL, None),
-    (GOOD_MANUAL.replace("# Borde", "Borde"), "título"),
-    (GOOD_MANUAL.split("## Fuentes")[0], "Fuentes"),
-    (GOOD_MANUAL.replace("1. Autor (2020). Título.", "Pendiente."), "ítem"),
-    (GOOD_MANUAL + "\n## Otra sección\n", "última"),
-    ("# T\n\nCorto.\n\n## Fuentes\n\n1. A.\n", "palabras"),
+    (GOOD_MANUAL.replace("# Eastern", "Eastern"), "title"),
+    (GOOD_MANUAL.split("## Sources")[0], "Sources"),
+    (GOOD_MANUAL.replace("1. Author (2020). Title.", "Pending."), "list item"),
+    (GOOD_MANUAL + "\n## Another section\n", "last section"),
+    ("# T\n\nShort.\n\n## Sources\n\n1. A.\n", "words"),
 ])
 def test_manual_format_check(text, problem):
     problems = cards.manual_problems(text)
@@ -257,22 +257,22 @@ def test_manual_format_check(text, problem):
 
 @pytest.mark.parametrize("path", sorted(CARDS_DIR.glob("*.md")), ids=lambda p: p.name)
 def test_manual_texts_never_say_equal_or_identical_to_the_target(path):
-    """TAI-33: un puntaje alto no significa "igual a" la Luna o Marte (design 14, punto 1)."""
+    """TAI-33: a high score does not mean "equal to" the Moon or Mars (design 14, point 1)."""
     text = path.read_text(encoding="utf-8").lower()
-    assert not re.search(r"(igual|idéntic[oa]s?|iguales)\s+a", text), path.name
+    assert not re.search(r"\b(?:equal|identical)\s+to\b|\bthe\s+same\s+as\b", text), path.name
 
 
 @pytest.mark.parametrize("path", sorted(CARDS_DIR.glob("*.md")), ids=lambda p: p.name)
 def test_every_manual_file_has_title_and_sources(path):
     stem = path.stem
-    assert "__" in stem, f"{path.name}: el nombre debe ser <cell_id>__<target_id>.md"
+    assert "__" in stem, f"{path.name}: the name must be <cell_id>__<target_id>.md"
     cell, target = stem.split("__", 1)
-    assert cell.isdigit() and 0 <= int(cell) < 64800, f"{path.name}: cell_id inválido"
-    assert target in {"moon_south_pole", "mars_jezero"}, f"{path.name}: objetivo desconocido"
+    assert cell.isdigit() and 0 <= int(cell) < 64800, f"{path.name}: invalid cell_id"
+    assert target in {"moon_south_pole", "mars_jezero"}, f"{path.name}: unknown target"
     assert cards.manual_problems(path.read_text(encoding="utf-8")) == []
 
 
-# --- Servicio --------------------------------------------------------------------------------
+# --- Service ---------------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -285,7 +285,7 @@ def test_every_cell_of_the_test_data_gets_a_valid_card(bundle, target_id):
     for cell in bundle.similarity[target_id].index:
         card = services.get_site_card(bundle, cell, target_id, WEIGHTS, cards_dir=None)
         assert card.unreplicable and card.biology.sampling_note
-        assert len(card.variables) == len(bundle.targets.targets[0].vars)  # las seis y, si el objetivo las tiene, polvo y viento
+        assert len(card.variables) == len(bundle.targets.targets[0].vars)  # the six and, if the target has them, dust and wind
 
 
 def test_card_total_matches_the_ranking(bundle):

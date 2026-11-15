@@ -228,7 +228,7 @@ def water_ice_cells(imerg, snow_files, cover_file, grid, land, year=DATA_YEAR, l
     return out, p, ice
 
 
-def _input(name, product, url, files, license_note="Datos abiertos de NASA"):
+def _input(name, product, url, files, license_note="NASA open data"):
     return {
         "name": name,
         "product": product,
@@ -257,7 +257,7 @@ def main() -> None:
         and is_up_to_date([OUTPUT], [*raw, GRID_PATH, LAND_MASK_PATH, *code])
         and not last_run_partial(STEP)
     ):
-        log.info("al día")
+        log.info("up to date")
         return
 
     grid = load_grid()
@@ -276,18 +276,18 @@ def main() -> None:
 
     months = pd.Series(ice["n_months"]).value_counts().sort_index(ascending=False)
     notes = [
-        f"precip_mm nula en {p['null_south']} celdas al sur de {PRECIP_MIN_LAT:g}°: IMERG no mide la nieve "
-        "sobre la Antártida; ahí la dimensión agua y hielo usa solo ice_frac (diseño 4.3)",
-        f"precip_mm nula en {p['null_missing_month']} celdas más por meses sin dato",
-        f"precip_mm = 0 exacto en {p['zero']} celdas (centro del casquete de Groenlandia): IMERG no "
-        "estima la nieve sobre el hielo; se conservan como dato, pero no son un mínimo real",
-        f"ice_frac = 1 en {ice['n_perm']} celdas con más de la mitad de su tierra en hielo permanente "
-        f"(MCD12C1 {cover_year}, clase IGBP 15)",
-        f"ice_frac nula en {int(out['ice_frac'].isna().sum())} celdas sin mes válido de nieve ni hielo permanente",
-        "meses con dato de nieve (meses: celdas): " + ", ".join(f"{int(k)}: {int(v)}" for k, v in months.items()),
+        f"precip_mm null in {p['null_south']} cells south of {PRECIP_MIN_LAT:g}°: IMERG does not measure snow "
+        "over Antarctica; there the water and ice dimension uses only ice_frac (design 4.3)",
+        f"precip_mm null in {p['null_missing_month']} more cells because of months without data",
+        f"precip_mm = 0 exactly in {p['zero']} cells (center of the Greenland ice sheet): IMERG does not "
+        "estimate snow over ice; they are kept as data, but they are not a real minimum",
+        f"ice_frac = 1 in {ice['n_perm']} cells with more than half of their land under permanent ice "
+        f"(MCD12C1 {cover_year}, IGBP class 15)",
+        f"ice_frac null in {int(out['ice_frac'].isna().sum())} cells with no valid snow month and no permanent ice",
+        "months with snow data (months: cells): " + ", ".join(f"{int(k)}: {int(v)}" for k, v in months.items()),
     ]
     if cover_year != DATA_YEAR:
-        notes.append(f"MCD12C1 de {cover_year}: el de {DATA_YEAR} no está publicado")
+        notes.append(f"MCD12C1 from {cover_year}: the {DATA_YEAR} one is not published")
     if args.bbox:
         notes.append(bbox_note(args.bbox))
         log.warning("--bbox: %d cells computed, the rest stay null", int(inside.sum()))
@@ -300,11 +300,11 @@ def main() -> None:
             STEP,
             started,
             inputs=[
-                _input(f"GPM IMERG Final, precipitación mensual, {DATA_YEAR}", "GPM_3IMERGM v07",
+                _input(f"GPM IMERG Final, monthly precipitation, {DATA_YEAR}", "GPM_3IMERGM v07",
                        "https://disc.gsfc.nasa.gov/datasets/GPM_3IMERGM_07/summary", imerg),
-                _input(f"MODIS, cobertura de nieve mensual, {DATA_YEAR}", "MOD10CM v061",
+                _input(f"MODIS, monthly snow cover, {DATA_YEAR}", "MOD10CM v061",
                        "https://doi.org/10.5067/MODIS/MOD10CM.061", snow_files),
-                _input(f"MODIS, cobertura del suelo anual, {cover_year}", "MCD12C1 v061",
+                _input(f"MODIS, annual land cover, {cover_year}", "MCD12C1 v061",
                        "https://doi.org/10.5067/MODIS/MCD12C1.061", [cover_file]),
             ],
             outputs=[(OUTPUT, len(out))],

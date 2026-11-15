@@ -28,15 +28,15 @@ make app           # opens http://localhost:8501
 
 `make app-demo` runs the app on the small hand-made test data in `tests/fixtures/` instead.
 
-The app's interface is in Spanish. In the sidebar you pick the target (*Sitio objetivo*) and the
-weights; the map colors every cell by its total score; selecting a row of the ranking (*Mejores
-celdas*) opens that cell's card (*Ficha*), with a radar of its dimensions, Earth against target for
-each variable, the sources, and the limits that no place on Earth can replicate. *Descargar CSV*, under
-the ranking, saves the table as it is shown (same rows and columns). *Mostrar cuevas y tubos de lava*,
-off by default, adds known caves and lava tubes studied as Moon and Mars analogs to the map, with
-the reason and the source on hover. It is informative only and changes no score.
+In the sidebar you pick the *Target site* and the weights; the map colors every cell by its total
+score; selecting a row of the ranking (*Best cells*) opens that cell's *Card*, with a radar of its
+dimensions, Earth against target for each variable, the sources, and the limits that no place on Earth
+can replicate. *Download CSV*, under the ranking, saves the table as it is shown (same rows and
+columns). *Show caves and lava tubes*, off by default, adds known caves and lava tubes studied as Moon
+and Mars analogs to the map, with the reason and the source on hover. It is informative only and
+changes no score.
 
-The *Método* tab shows how the numbers are made: what the tool does, the variables of each target with
+The *Method* tab shows how the numbers are made: what the tool does, the variables of each target with
 their sources, the data and its licenses, the scoring rules, the validation table (every known analog
 with its percentile and `pass`, `fail` or `info`), the limits and the credits. Its text is in
 `content/method.md`; every figure and table comes from `data/processed/`.
@@ -76,7 +76,7 @@ make data
 ```
 
 **4. Run the pipeline.** Steps run in order and the run stops at the first failure. A step whose outputs
-are newer than its inputs and its code reports *al día* and does nothing; `FORCE=1` reruns it anyway.
+are newer than its inputs and its code reports *up to date* and does nothing; `FORCE=1` reruns it anyway.
 Because freshness is based on file times, a `git checkout` that touches a step's code makes that step
 and everything after it run again.
 
@@ -124,7 +124,7 @@ its daytime wind (about 4 m/s) is within Earth's range, so the score measures cl
 
 To validate the method, the known analogs in `config/known_analogs.csv` (field sites that research
 teams already use) should land in the top 10% of their target's ranking. The results, including the
-ones that fail and why, are in `data/processed/validation.json` and in the app's *Método* tab.
+ones that fail and why, are in `data/processed/validation.json` and in the app's *Method* tab.
 
 ## Data and credits
 
@@ -185,12 +185,12 @@ source of every value it shows.
 
 | Folder | Contents |
 | --- | --- |
-| `tai/` | Shared core: constants, grid geometry, contract models, scoring rules, site cards, *Método* tables. No Streamlit, no network, no file writes |
+| `tai/` | Shared core: constants, grid geometry, contract models, scoring rules, site cards, *Method* tables. No Streamlit, no network, no file writes |
 | `pipeline/` | Steps `01_grid.py` to `09_validation.py` and shared utilities in `common.py` |
-| `ui/` | Streamlit views: sidebar, map, ranking, site card, *Método* tab |
+| `ui/` | Streamlit views: sidebar, map, ranking, site card, *Method* tab |
 | `config/` | Hand-edited inputs: target profiles, known analogs, caves and lava tubes, NCBI search terms |
 | `content/cards/` | Hand-written text for finalist cards, `<cell_id>__<target_id>.md` |
-| `content/method.md` | Fixed text of the *Método* tab, one `## ` heading per section |
+| `content/method.md` | Fixed text of the *Method* tab, one `## ` heading per section |
 | `data/raw/`, `data/interim/` | Downloads and intermediate files (not versioned; see `data/raw/README.md`) |
 | `data/processed/` | What the app reads (versioned) |
 | `scripts/` | Control maps, card and secret checks |
@@ -211,7 +211,7 @@ created from `develop` and merged back with the tests passing. Commits follow
 ## Team
 
 - **Juanma**: repository and grid, terrain, temperature, water and ice, known analogs, similarity, ranking, site card, caves and lava tubes layer, deployment
-- **Alan**: NCBI layer, target profiles, scoring, validation, map, *Método* tab
+- **Alan**: NCBI layer, target profiles, scoring, validation, map, *Method* tab
 - **Santino**: scientific criteria, data sources, target values, NCBI search terms, method text, card texts, pitch
 - **Santiago**: app skeleton, control maps, README, video
 

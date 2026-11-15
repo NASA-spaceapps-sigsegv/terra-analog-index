@@ -1,18 +1,18 @@
-# Norte de la isla de Ellesmere (Nunavut, Canadá)
+# Northern Ellesmere Island (Nunavut, Canada)
 
-Esta celda de 1° está en el norte de la isla de Ellesmere, en el Ártico alto. Con los pesos iniciales es la mejor del polo sur lunar fuera de la Antártida: terreno y agua y hielo puntúan alto, y el total es 0,67 [1].
+This 1° cell lies in the north of Ellesmere Island, in the High Arctic. With the default weights it is the best one for the lunar south pole outside Antarctica: terrain and water and ice score high, and the total is 0.67 [1].
 
-**Qué se sabe.** El parque nacional Quttinirpaaq, en la misma isla, tiene condiciones de desierto polar, con permafrost continuo y una capa activa poco profunda [2]. No encontramos esta celda descrita como análogo lunar. El análogo declarado más cercano es el cráter Haughton (isla Devon), a unos 720 km [1][3].
+**What is known.** Quttinirpaaq National Park, on the same island, has polar-desert conditions, with continuous permafrost and a shallow active layer [2]. We did not find this cell described as a lunar analog. The nearest declared analog is Haughton Crater (Devon Island), about 720 km away [1][3].
 
-**Para qué serviría (hipótesis).** Probar perforación y toma de muestras en suelo con hielo y frío extremo. En Eureka, también en Ellesmere, la NASA desarrolla una perforadora liviana para estudiar el permafrost profundo [4].
+**What it could be used for (hypothesis).** Testing drilling and sampling in icy ground and extreme cold. At Eureka, also on Ellesmere, NASA is developing a lightweight drill to study deep permafrost [4].
 
-**Dónde falla la analogía.** El rango térmico diario es de 0,9 °C, frente a los 152 °C del polo sur lunar, y la temperatura mínima es de −37 °C, no −223 °C [1]. El 0,89 en temperatura dice que es de las más frías de la Tierra, no que se parezca al objetivo. Los 176 mm de precipitación por año vienen de un satélite y parecen altos para un desierto polar de precipitación baja [1][2]; sospechamos que los sobrestima.
+**Where the analogy breaks down.** The daily temperature range is 0.9 °C, versus 152 °C at the lunar south pole, and the minimum temperature is −37 °C, not −223 °C [1]. The 0.89 in temperature says it is among the coldest places on Earth, not that it resembles the target. The 176 mm of precipitation per year come from a satellite and seem high for a low-precipitation polar desert [1][2]; we suspect they are overestimated.
 
-**Qué verificar en el terreno.** Pendiente y rugosidad a escala de rover, hielo dentro del suelo y datos de estaciones meteorológicas.
+**What to check in the field.** Slope and roughness at rover scale, ice within the ground and data from weather stations.
 
-## Fuentes
+## Sources
 
-1. Terra Analog Index, `data/processed/`: celda 61661 frente a `moon_south_pole`, pesos iniciales; distancia a los análogos de `config/known_analogs.csv`.
-2. Parks Canada, «Ecosystems and habitats», Parque Nacional Quttinirpaaq. https://parks.canada.ca/pn-np/nu/quttinirpaaq/nature/environnement-environment/habitats
-3. Lee, P. et al. (2007), LPSC XXXVIII, resumen 2426 (la cita de Haughton en `config/known_analogs.csv`).
-4. NASA, «Haughton-Mars Project (HMP), Canadian Arctic». https://www.nasa.gov/mission/haughton-mars-project-hmp-canadian-arctic
+1. Terra Analog Index, `data/processed/`: cell 61661 against `moon_south_pole`, default weights; distance to the analogs in `config/known_analogs.csv`.
+2. Parks Canada, "Ecosystems and habitats", Quttinirpaaq National Park. https://parks.canada.ca/pn-np/nu/quttinirpaaq/nature/environnement-environment/habitats
+3. Lee, P. et al. (2007), LPSC XXXVIII, abstract 2426 (the Haughton citation in `config/known_analogs.csv`).
+4. NASA, "Haughton-Mars Project (HMP), Canadian Arctic". https://www.nasa.gov/mission/haughton-mars-project-hmp-canadian-arctic

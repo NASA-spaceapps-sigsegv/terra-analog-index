@@ -1,18 +1,18 @@
-# Altiplano norte: Parque Nacional Sajama (Bolivia)
+# Northern Altiplano: Sajama National Park (Bolivia)
 
-Esta celda está en el altiplano boliviano e incluye el Parque Nacional Sajama [3]. Es la 50.ª del ranking de Jezero fuera de los análogos conocidos, con 0,72 [1].
+This cell lies on the Bolivian Altiplano and includes Sajama National Park [3]. It ranks 50th for Jezero outside the known analogs, with 0.72 [1].
 
-**Qué se sabe.** El parque ocupa alturas de 4.200 a 6.542 m [3], y su clima es seco y frío todo el año, con nevadas ocasionales [2]. No encontramos este sitio descrito como análogo de Marte. El análogo declarado más cercano es el volcán Licancabur y sus lagos de altura, a unos 490 km [1][4].
+**What is known.** The park spans altitudes from 4,200 to 6,542 m [3], and its climate is dry and cold all year, with occasional snowfall [2]. We did not find this site described as a Mars analog. The nearest declared analog is Licancabur Volcano and its high-altitude lakes, about 490 km away [1][4].
 
-**Para qué serviría (hipótesis).** Ensayar instrumentos y operaciones a gran altura, con radiación ultravioleta alta y fuerte amplitud térmica, que son las razones por las que el equipo usa Licancabur como análogo [4].
+**What it could be used for (hypothesis).** Testing instruments and operations at high altitude, with high ultraviolet radiation and a wide temperature range, which are the reasons the team uses Licancabur as an analog [4].
 
-**Dónde falla la analogía.** Llueve mucho más que en Jezero: el parque registra unos 400 mm por año [3] y nuestro dato satelital da 267 mm, contra 0 mm del objetivo [1]. Es una puna con humedales de altura llamados bofedales [2], y su temperatura mínima es de −5 °C, frente a −80 °C en Jezero [1]. El 0,72 de puntaje total sale en buena parte de que el terreno coincide, con pendiente y rugosidad altas, y baja porque su dimensión de polvo y viento puntúa solo 0,39 [1].
+**Where the analogy breaks down.** It rains much more than at Jezero: the park records about 400 mm per year [3] and our satellite data give 267 mm, against 0 mm for the target [1]. It is a puna with high-altitude wetlands called bofedales [2], and its minimum temperature is −5 °C, versus −80 °C at Jezero [1]. A good part of the 0.72 total comes from the terrain matching, with high slope and roughness, and it drops because its dust and wind dimension scores only 0.39 [1].
 
-**Qué verificar en el terreno.** Si los suelos de las zonas más secas del altiplano y de los salares cercanos tienen una química comparable, y si hay datos meteorológicos de estaciones más precisos que los del satélite.
+**What to check in the field.** Whether the soils of the driest parts of the Altiplano and of the nearby salt flats have comparable chemistry, and whether there are weather-station data more precise than the satellite's.
 
-## Fuentes
+## Sources
 
-1. Terra Analog Index, `data/processed/`: celda 25671 frente a `mars_jezero`, pesos iniciales; distancia a los análogos de `config/known_analogs.csv`.
-2. Key Biodiversity Areas, ficha de Sajama (Bolivia). https://www.keybiodiversityareas.org/site/factsheet/14358
-3. Wikipedia, «Sajama National Park» (coordenadas, alturas, precipitación y temperatura de la estación de Cosapa). https://en.wikipedia.org/wiki/Sajama_National_Park
-4. Cabrol, N. A. et al. (2009), The High-Lakes Project, *Journal of Geophysical Research* 114, G00D06 (la cita de Licancabur en `config/known_analogs.csv`).
+1. Terra Analog Index, `data/processed/`: cell 25671 against `mars_jezero`, default weights; distance to the analogs in `config/known_analogs.csv`.
+2. Key Biodiversity Areas, Sajama factsheet (Bolivia). https://www.keybiodiversityareas.org/site/factsheet/14358
+3. Wikipedia, "Sajama National Park" (coordinates, altitudes, precipitation and temperature at the Cosapa station). https://en.wikipedia.org/wiki/Sajama_National_Park
+4. Cabrol, N. A. et al. (2009), The High-Lakes Project, *Journal of Geophysical Research* 114, G00D06 (the Licancabur citation in `config/known_analogs.csv`).

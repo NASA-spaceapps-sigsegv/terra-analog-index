@@ -1,19 +1,19 @@
-"""Mapa de la pestaña Explorar (design 10.3, TAI-30).
+"""Map in the Explore tab (design 10.3, TAI-30).
 
-Las celdas se pintan como una imagen, no como miles de formas vectoriales. Con una traza Scattergeo
-(un marcador o un polígono por celda) arrastrar o hacer zoom redibujaba unos 21 000 elementos SVG y el
-mapa iba a 2 o 3 cuadros por segundo. Una imagen la compone el navegador en la GPU: mover y ampliar el
-mapa es continuo, y al ampliar las celdas siguen siendo cuadrados sin huecos.
+The cells are painted as an image, not as thousands of vector shapes. With a Scattergeo trace (one
+marker or polygon per cell) dragging or zooming redrew about 21,000 SVG elements and the map ran at
+2 or 3 frames per second. An image is composited by the browser on the GPU: panning and zooming the
+map is smooth, and when zoomed in the cells are still squares with no gaps.
 
-- Mundo: un Heatmap de 180 × 360 en ejes de longitud y latitud (proyección equirrectangular). Un píxel
-  es una celda, así que el zoom muestra cuadrados exactos, y el texto del cursor viene incluido.
-- Polo sur y Polo norte: una imagen PNG calculada con la proyección ortográfica centrada en el polo
-  (cada píxel busca su celda), con marcadores WebGL transparentes encima para el texto del cursor.
-  Mercator no sirve: corta cerca de 85° y las celdas antárticas más australes no se verían.
+- World: a 180 × 360 Heatmap on longitude and latitude axes (equirectangular projection). One pixel
+  is one cell, so zooming shows exact squares, and the hover text comes built in.
+- South pole and North pole: a PNG image computed with the orthographic projection centered on the
+  pole (each pixel looks up its cell), with transparent WebGL markers on top for the hover text.
+  Mercator does not work: it cuts off near 85° and the southernmost Antarctic cells would not show.
 
-La selección se hace desde el ranking, no con clic en el mapa.
+Selection is done from the ranking, not by clicking on the map.
 
-`build_figure` solo arma la figura (se prueba sin Streamlit); `render_map` la dibuja.
+`build_figure` only builds the figure (tested without Streamlit); `render_map` draws it.
 """
 
 from __future__ import annotations
@@ -36,20 +36,20 @@ from tai.constants import GRID_RES_DEG, N_LAT, N_LON
 if TYPE_CHECKING:
     from tai.models import Cave, MapLayer
 
-GRAY = "#c8c8c8"  # celdas sin datos suficientes
+GRAY = "#c8c8c8"  # cells without enough data
 OCEAN = "#14171c"
-SELECTED_COLOR = "#e53935"  # contorno de la celda elegida
-ANALOG_BORDER = "#ffffff"  # anillo de los análogos conocidos
+SELECTED_COLOR = "#e53935"  # outline of the selected cell
+ANALOG_BORDER = "#ffffff"  # ring of the known analogs
 COLORSCALE = "Viridis"
-INSUFFICIENT = "Datos insuficientes"
-NO_DATA = "sin dato"  # lo que se ve en el cursor si una dimensión es nula
-HOVER_FILL = "rgba(0,0,0,0)"  # marcadores del cursor: el cursor usa la posición de los datos, no lo que se ve
-POLAR_PX = 900  # lado de la imagen de las vistas polares, en píxeles (una celda ocupa varios)
+INSUFFICIENT = "Insufficient data"
+NO_DATA = "no data"  # what the hover shows if a dimension is null
+HOVER_FILL = "rgba(0,0,0,0)"  # hover markers: the hover uses the data position, not what is visible
+POLAR_PX = 900  # side of the polar views image, in pixels (one cell spans several)
 RING_SIZE = 20
-CAVE_COLOR = "#ff5ec4"  # cuevas y tubos de lava (TAI-53): rosa, que no aparece en Viridis ni en el gris
+CAVE_COLOR = "#ff5ec4"  # caves and lava tubes (TAI-53): pink, which appears neither in Viridis nor in the gray
 CAVE_SIZE = 13
-CAVES_NAME = "Cuevas y tubos de lava"
-HOVER_WRAP = 60  # caracteres por renglón en el cursor de una cueva
+CAVES_NAME = "Caves and lava tubes"
+HOVER_WRAP = 60  # characters per line in a cave's hover
 SELECTED_SIZE = 28
 
 PROJECTIONS = ("world", "south_pole", "north_pole")
@@ -59,7 +59,7 @@ _HOVER_ROW = "<b>%{text}</b><br>Lat %{y:.1f}°, lon %{x:.1f}°"
 
 
 def _viridis_lut() -> np.ndarray:
-    """256 colores RGB de la escala, para pintar la imagen sin pasar por Plotly."""
+    """256 RGB colors of the scale, to paint the image without going through Plotly."""
     colors = pc.sample_colorscale(COLORSCALE, [i / 255 for i in range(256)])
     return np.array([[int(v) for v in c[4:-1].split(",")] for c in colors], dtype=np.uint8)
 
@@ -69,11 +69,11 @@ _GRAY_RGB = np.array([int(GRAY[i : i + 2], 16) for i in (1, 3, 5)], dtype=np.uin
 _OCEAN_RGB = np.array([int(OCEAN[i : i + 2], 16) for i in (1, 3, 5)], dtype=np.uint8)
 
 
-# --- Celdas y texto del cursor -------------------------------------------------
+# --- Cells and hover text ------------------------------------------------------
 
 
 def _index(lat, lon) -> tuple[np.ndarray, np.ndarray]:
-    """Fila y columna de la grilla de 1° de cada celda, a partir de su centro."""
+    """Row and column in the 1° grid of each cell, from its center."""
     li = np.floor(np.asarray(lat, dtype="float64") / GRID_RES_DEG + N_LAT / 2).astype(int)
     lj = np.floor(np.asarray(lon, dtype="float64") / GRID_RES_DEG + N_LON / 2).astype(int)
     return np.clip(li, 0, N_LAT - 1), np.clip(lj, 0, N_LON - 1)
@@ -86,34 +86,34 @@ def _grid(li, lj, values, fill=np.nan, dtype="float64") -> np.ndarray:
 
 
 def _scores_text(cells) -> np.ndarray:
-    """"<br>Terreno: 0.62<br>…": lo que no depende de los pesos, listo para el cursor."""
+    """"<br>Terrain: 0.62<br>…": what does not depend on the weights, ready for the hover."""
 
     def two(col):
         v = cells[col].to_numpy(dtype="float64")
         return np.where(np.isnan(v), NO_DATA, np.char.mod("%.2f", v))
 
     text = (
-        np.char.add("<br>Terreno: ", two("s_terrain"))
-        + np.char.add("<br>Temperatura: ", two("s_temperature"))
-        + np.char.add("<br>Agua y hielo: ", two("s_water_ice"))
+        np.char.add("<br>Terrain: ", two("s_terrain"))
+        + np.char.add("<br>Temperature: ", two("s_temperature"))
+        + np.char.add("<br>Water and ice: ", two("s_water_ice"))
     )
-    # Polvo y viento (TAI-52) solo si el objetivo tiene la dimensión: en la Luna sería "sin dato" en todas.
+    # Dust and wind (TAI-52) only if the target has the dimension: on the Moon it would be "no data" everywhere.
     if cells["s_dust_wind"].notna().any():
-        text = text + np.char.add("<br>Polvo y viento: ", two("s_dust_wind"))
-    return text + np.char.add("<br>Astrobiología: ", two("bio_score"))
+        text = text + np.char.add("<br>Dust and wind: ", two("s_dust_wind"))
+    return text + np.char.add("<br>Astrobiology: ", two("bio_score"))
 
 
 def _place_text(cells) -> np.ndarray:
-    """País y, si lo hay, el análogo conocido: el encabezado del cursor."""
-    country = cells["country"].fillna("Sin país").astype(str)
+    """Country and, if any, the known analog: the hover header."""
+    country = cells["country"].fillna("No country").astype(str)
     analog = cells["known_analog"].fillna("")
-    return country.where(analog == "", country + "<br>Análogo conocido: " + analog).to_numpy()
+    return country.where(analog == "", country + "<br>Known analog: " + analog).to_numpy()
 
 
 def _analog_centers(cells) -> tuple[np.ndarray, np.ndarray]:
-    """Un punto por análogo conocido: el centro de las celdas que caen dentro de su radio.
+    """One point per known analog: the center of the cells that fall within its radius.
 
-    La longitud se promedia como ángulo para no fallar cerca de ±180°.
+    Longitude is averaged as an angle so it does not break near ±180°.
     """
     lat, lon = [], []
     for _, g in cells[cells["known_analog"].notna()].groupby("known_analog"):
@@ -124,7 +124,7 @@ def _analog_centers(cells) -> tuple[np.ndarray, np.ndarray]:
 
 
 def _cell_outline(lat: float, lon: float, steps: int = 1) -> tuple[np.ndarray, np.ndarray]:
-    """El cuadrado de 1° centrado en (lat, lon), cerrado, con `steps` tramos por lado."""
+    """The 1° square centered on (lat, lon), closed, with `steps` segments per side."""
     h = GRID_RES_DEG / 2
     t = np.linspace(0.0, 1.0, steps + 1)
     south, north, west, east = lat - h, lat + h, lon - h, lon + h
@@ -134,14 +134,14 @@ def _cell_outline(lat: float, lon: float, steps: int = 1) -> tuple[np.ndarray, n
     return np.append(lats[:n], lats[0]), np.append(lons[:n], lons[0])
 
 
-# --- Proyección polar ortográfica ----------------------------------------------
+# --- Polar orthographic projection ---------------------------------------------
 
 
 def _project(lat, lon, hemisphere: int) -> tuple[np.ndarray, np.ndarray]:
-    """(x, y) en el disco unitario de una vista ortográfica centrada en el polo.
+    """(x, y) on the unit disk of an orthographic view centered on the pole.
 
-    Sur: el meridiano 0 hacia arriba y el este en sentido horario. Norte: el meridiano 0 hacia abajo y el
-    este en sentido antihorario, como en Scattergeo con la misma rotación.
+    South: meridian 0 pointing up and east clockwise. North: meridian 0 pointing down and east
+    counterclockwise, as in Scattergeo with the same rotation.
     """
     rho = np.cos(np.radians(np.asarray(lat, dtype="float64")))
     lam = np.radians(np.asarray(lon, dtype="float64"))
@@ -150,9 +150,9 @@ def _project(lat, lon, hemisphere: int) -> tuple[np.ndarray, np.ndarray]:
 
 
 def _png_uri(rgba: np.ndarray) -> str:
-    """PNG RGBA de 8 bits como data URI, sin depender de Pillow."""
+    """8-bit RGBA PNG as a data URI, without depending on Pillow."""
     h, w, _ = rgba.shape
-    raw = np.concatenate([np.zeros((h, 1), np.uint8), rgba.reshape(h, w * 4)], axis=1).tobytes()  # filtro 0 por fila
+    raw = np.concatenate([np.zeros((h, 1), np.uint8), rgba.reshape(h, w * 4)], axis=1).tobytes()  # filter 0 per row
 
     def chunk(tag: bytes, data: bytes) -> bytes:
         return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
@@ -167,13 +167,13 @@ def _png_uri(rgba: np.ndarray) -> str:
 
 
 def _polar_image(total_grid: np.ndarray, painted: np.ndarray, hemisphere: int) -> str:
-    """Imagen del polo: cada píxel del disco busca la celda de 1° que le toca.
+    """Image of the pole: each pixel of the disk looks up the 1° cell it belongs to.
 
-    `total_grid` tiene el total (NaN donde no hay valor) y `painted` dice dónde hay celda; las que tienen
-    celda pero no total salen en gris, y donde no hay celda (el mar) queda transparente.
+    `total_grid` holds the total (NaN where there is no value) and `painted` says where there is a cell;
+    those with a cell but no total come out gray, and where there is no cell (the sea) it stays transparent.
     """
     axis = (np.arange(POLAR_PX) + 0.5) / POLAR_PX * 2 - 1
-    x, y = np.meshgrid(axis, -axis)  # la primera fila de la imagen es la de arriba, y = +1
+    x, y = np.meshgrid(axis, -axis)  # the first row of the image is the top one, y = +1
     rho = np.hypot(x, y)
     inside = rho <= 1
     lat = hemisphere * np.degrees(np.arccos(np.clip(rho, 0, 1)))
@@ -182,25 +182,25 @@ def _polar_image(total_grid: np.ndarray, painted: np.ndarray, hemisphere: int) -
     lj = np.floor(lon + N_LON / 2).astype(int) % N_LON
     total = total_grid[li, lj]
     rgba = np.zeros((POLAR_PX, POLAR_PX, 4), dtype=np.uint8)
-    rgba[inside, :3] = _OCEAN_RGB  # el mar del disco, opaco: las imágenes de Plotly quedan debajo de las demás trazas
+    rgba[inside, :3] = _OCEAN_RGB  # the disk's sea, opaque: Plotly images sit below the other traces
     rgba[inside, 3] = 255
     has_total = inside & ~np.isnan(total)
     rgba[has_total, :3] = _LUT[np.clip(np.rint(total[has_total] * 255), 0, 255).astype(int)]
     gray = inside & painted[li, lj] & np.isnan(total)
     rgba[gray, :3] = _GRAY_RGB
-    # Plotly pone la primera fila de la imagen en y0 y sigue hacia arriba: se la da vuelta para que el sur quede abajo.
+    # Plotly puts the image's first row at y0 and goes up from there: it is flipped so south ends up at the bottom.
     return _png_uri(rgba[::-1].copy())
 
 
 def _globe_outline(hemisphere: int) -> go.Scatter:
-    """El borde del globo y una cuadrícula tenue cada 30°, para dar contexto sin mapa de fondo."""
+    """The globe's edge and a faint graticule every 30°, for context without a base map."""
     t = np.radians(np.linspace(0, 360, 181))
     xs, ys = [np.sin(t)], [np.cos(t)]
-    for lat in (hemisphere * 30.0, hemisphere * 60.0):  # paralelos
+    for lat in (hemisphere * 30.0, hemisphere * 60.0):  # parallels
         r = np.cos(np.radians(lat))
         xs += [np.array([np.nan]), r * np.sin(t)]
         ys += [np.array([np.nan]), r * np.cos(t)]
-    for lon in range(0, 360, 30):  # meridianos
+    for lon in range(0, 360, 30):  # meridians
         x, y = _project(np.array([0.0, hemisphere * 89.9]), np.array([lon, lon]), hemisphere)
         xs += [np.array([np.nan]), x]
         ys += [np.array([np.nan]), y]
@@ -210,11 +210,11 @@ def _globe_outline(hemisphere: int) -> go.Scatter:
     )
 
 
-# --- Trazas comunes -------------------------------------------------------------
+# --- Common traces --------------------------------------------------------------
 
 
 def _colorbar_trace() -> go.Scatter:
-    """Barra de color de las vistas polares: una traza de un punto fuera del mapa que solo aporta la escala."""
+    """Color bar of the polar views: a one-point trace off the map that only contributes the scale."""
     return go.Scatter(
         x=[None],
         y=[None],
@@ -225,11 +225,11 @@ def _colorbar_trace() -> go.Scatter:
             cmin=0,
             cmax=1,
             showscale=True,
-            colorbar=dict(title=dict(text="Puntaje total"), thickness=12, len=0.7),
+            colorbar=dict(title=dict(text="Total score"), thickness=12, len=0.7),
         ),
         hoverinfo="skip",
         showlegend=False,
-        name="Puntaje total",
+        name="Total score",
     )
 
 
@@ -242,23 +242,23 @@ def _legend_gray_trace() -> go.Scatter:
 
 def _rings_trace(x, y) -> go.Scatter:
     return go.Scatter(
-        x=x, y=y, mode="markers", name="Análogo conocido",
+        x=x, y=y, mode="markers", name="Known analog",
         marker=dict(symbol="circle-open", size=RING_SIZE, color=ANALOG_BORDER, line=dict(width=2.5)),
         hoverinfo="skip", showlegend=True,
     )
 
 
 def _cave_hover(cave: Cave) -> str:
-    """Nombre, tipo, por qué interesa y fuente, en renglones cortos (el cursor de Plotly no corta líneas)."""
+    """Name, type, why it matters and source, in short lines (Plotly's hover does not wrap lines)."""
     def wrap(text: str) -> str:
         return "<br>".join(html.escape(line) for line in textwrap.wrap(text, HOVER_WRAP))
 
     return (f"<b>{html.escape(cave.name)}</b><br>{CAVE_KINDS[cave.kind]}<br>{wrap(cave.relevance)}"
-            f"<br><i>Fuente: {wrap(cave.source)}</i>")
+            f"<br><i>Source: {wrap(cave.source)}</i>")
 
 
 def _caves_trace(x, y, caves: Sequence[Cave]) -> go.Scatter:
-    """Capa informativa: un triángulo por cueva, con su propio texto de cursor. No es una celda ni tiene puntaje."""
+    """Informational layer: one triangle per cave, with its own hover text. It is not a cell and has no score."""
     return go.Scatter(
         x=x, y=y, mode="markers", name=CAVES_NAME,
         marker=dict(symbol="triangle-up", size=CAVE_SIZE, color=CAVE_COLOR, line=dict(width=1, color="#000000")),
@@ -267,21 +267,21 @@ def _caves_trace(x, y, caves: Sequence[Cave]) -> go.Scatter:
 
 
 def _selected_traces(x_outline, y_outline, x, y) -> list[go.Scatter]:
-    """La celda elegida: su contorno, que escala con el zoom, y un marcador más grande que el anillo."""
+    """The selected cell: its outline, which scales with zoom, and a marker larger than the ring."""
     return [
         go.Scatter(
-            x=x_outline, y=y_outline, mode="lines", name="Contorno de la celda elegida",
+            x=x_outline, y=y_outline, mode="lines", name="Selected cell outline",
             line=dict(width=2.5, color=SELECTED_COLOR), hoverinfo="skip", showlegend=False,
         ),
         go.Scatter(
-            x=x, y=y, mode="markers", name="Celda elegida",
+            x=x, y=y, mode="markers", name="Selected cell",
             marker=dict(symbol="square-open", size=SELECTED_SIZE, color=SELECTED_COLOR, line=dict(width=3, color=SELECTED_COLOR)),
             hoverinfo="skip", showlegend=False,
         ),
     ]
 
 
-# --- Figura ---------------------------------------------------------------------
+# --- Figure ---------------------------------------------------------------------
 
 
 def _world(fig: go.Figure, cells, selected_cell_id, caves: Sequence[Cave] = ()) -> None:
@@ -295,8 +295,8 @@ def _world(fig: go.Figure, cells, selected_cell_id, caves: Sequence[Cave] = ()) 
     xs = np.arange(N_LON) * GRID_RES_DEG - 180 + GRID_RES_DEG / 2
     ys = np.arange(N_LAT) * GRID_RES_DEG - 90 + GRID_RES_DEG / 2
 
-    # Sin datos: una capa gris, debajo, solo si hay celdas así (con los datos reales no hay ninguna y se ahorra
-    # un megabyte). Solo hay cursor donde hay celda (hoverongaps=False).
+    # No data: a gray layer, underneath, only if there are such cells (with the real data there are none and a
+    # megabyte is saved). There is hover only where there is a cell (hoverongaps=False).
     gray = ~has_total
     if gray.any():
         fig.add_trace(
@@ -309,12 +309,12 @@ def _world(fig: go.Figure, cells, selected_cell_id, caves: Sequence[Cave] = ()) 
         )
     fig.add_trace(
         go.Heatmap(
-            name="Celdas elegibles", x=xs, y=ys, z=_grid(li[has_total], lj[has_total], total[has_total]), zmin=0, zmax=1,
+            name="Eligible cells", x=xs, y=ys, z=_grid(li[has_total], lj[has_total], total[has_total]), zmin=0, zmax=1,
             colorscale=COLORSCALE, hoverongaps=False,
             text=_grid(li[has_total], lj[has_total], head[has_total], fill="", dtype=object),
             customdata=_grid(li[has_total], lj[has_total], _scores_text(cells)[has_total], fill="", dtype=object),
-            hovertemplate=_HOVER_ROW + "<br>Puntaje total: <b>%{z:.2f}</b>%{customdata}<extra></extra>",
-            colorbar=dict(title=dict(text="Puntaje total"), thickness=12, len=0.7),
+            hovertemplate=_HOVER_ROW + "<br>Total score: <b>%{z:.2f}</b>%{customdata}<extra></extra>",
+            colorbar=dict(title=dict(text="Total score"), thickness=12, len=0.7),
         )
     )
     if gray.any():
@@ -336,7 +336,7 @@ def _world(fig: go.Figure, cells, selected_cell_id, caves: Sequence[Cave] = ()) 
     ticks_x = list(range(-180, 181, 60))
     fig.update_xaxes(
         range=[-180, 180], tickvals=ticks_x, constrain="domain", showgrid=True, gridcolor="rgba(255,255,255,0.07)",
-        ticktext=[f"{abs(v)}°{'O' if v < 0 else 'E' if v > 0 else ''}" for v in ticks_x], zeroline=False, showline=False,
+        ticktext=[f"{abs(v)}°{'W' if v < 0 else 'E' if v > 0 else ''}" for v in ticks_x], zeroline=False, showline=False,
         tickfont=dict(size=10, color="#8b929c"),
     )
     ticks_y = [-60, -30, 0, 30, 60]
@@ -359,15 +359,15 @@ def _polar(fig: go.Figure, cells, projection: str, selected_cell_id, caves: Sequ
     total_grid = _grid(li, lj, total)
     painted = _grid(li, lj, True, fill=False, dtype=bool)
 
-    # Imagen del globo con sus celdas, y encima la cuadrícula.
+    # Image of the globe with its cells, and the graticule on top.
     step = 2 / POLAR_PX
     fig.add_trace(
         go.Image(source=_png_uri_cached(total_grid, painted, hemi), x0=-1 + step / 2, dx=step, y0=-1 + step / 2, dy=step,
-                 hoverinfo="skip", name="Celdas")
+                 hoverinfo="skip", name="Cells")
     )
     fig.add_trace(_globe_outline(hemi))
 
-    # Cursor: marcadores transparentes en WebGL, solo en las celdas del hemisferio visible.
+    # Hover: transparent WebGL markers, only on the cells of the visible hemisphere.
     visible = lat * hemi > 0
     x, y = _project(lat, lon, hemi)
     head = _place_text(cells)
@@ -376,12 +376,12 @@ def _polar(fig: go.Figure, cells, projection: str, selected_cell_id, caves: Sequ
     place = "<b>" + head + "</b><br>Lat " + lat_s + "°, lon " + lon_s + "°"
     text = np.where(
         has_total,
-        place + "<br>Puntaje total: <b>" + np.char.mod("%.2f", np.where(has_total, total, 0.0)) + "</b>" + tail,
+        place + "<br>Total score: <b>" + np.char.mod("%.2f", np.where(has_total, total, 0.0)) + "</b>" + tail,
         place + f"<br>{INSUFFICIENT}",
     )
     fig.add_trace(
         go.Scattergl(
-            x=x[visible], y=y[visible], mode="markers", name="Celdas elegibles", hovertext=text[visible], hoverinfo="text",
+            x=x[visible], y=y[visible], mode="markers", name="Eligible cells", hovertext=text[visible], hoverinfo="text",
             marker=dict(symbol="square", size=10, color=HOVER_FILL), showlegend=False,
         )
     )
@@ -393,7 +393,7 @@ def _polar(fig: go.Figure, cells, projection: str, selected_cell_id, caves: Sequ
     keep = a_lat * hemi > 0
     ax, ay = _project(a_lat[keep], a_lon[keep], hemi)
     fig.add_trace(_rings_trace(ax, ay))
-    shown = [c for c in caves if c.lat * hemi > 0]  # solo las del hemisferio visible
+    shown = [c for c in caves if c.lat * hemi > 0]  # only those in the visible hemisphere
     if shown:
         cx, cy = _project(np.array([c.lat for c in shown]), np.array([c.lon for c in shown]), hemi)
         fig.add_trace(_caves_trace(cx, cy, shown))
@@ -416,7 +416,7 @@ _IMAGE_CACHE: dict = {}
 
 
 def _png_uri_cached(total_grid, painted, hemisphere) -> str:
-    """La imagen polar de los mismos totales no se recalcula (Streamlit vuelve a correr la página a cada clic)."""
+    """The polar image for the same totals is not recomputed (Streamlit reruns the page on every click)."""
     key = (hemisphere, hash(total_grid.tobytes()), hash(painted.tobytes()))
     if key not in _IMAGE_CACHE:
         if len(_IMAGE_CACHE) > 16:
@@ -427,11 +427,11 @@ def _png_uri_cached(total_grid, painted, hemisphere) -> str:
 
 def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: int | None = None,
                  caves: Sequence[Cave] = ()) -> go.Figure:
-    """Mundo: un Heatmap de longitud y latitud. Polos: una imagen con la proyección ortográfica.
+    """World: a longitude/latitude Heatmap. Poles: an image with the orthographic projection.
 
-    `caves`: la capa de cuevas y tubos de lava (TAI-53); vacía, el mapa no la dibuja."""
+    `caves`: the caves and lava tubes layer (TAI-53); if empty, the map does not draw it."""
     if projection not in PROJECTIONS:
-        raise ValueError(f"projection debe ser una de {list(PROJECTIONS)}, no {projection!r}")
+        raise ValueError(f"projection must be one of {list(PROJECTIONS)}, not {projection!r}")
     fig = go.Figure()
     if projection == "world":
         _world(fig, layer.cells, selected_cell_id, caves)
@@ -444,7 +444,7 @@ def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: i
         legend=dict(orientation="h", yanchor="bottom", y=1.0, xanchor="left", x=0.0),
         hoverlabel=dict(align="left"),
         dragmode="pan",
-        uirevision=projection,  # conserva el zoom al mover pesos; la vista se reinicia al cambiar de proyección
+        uirevision=projection,  # keeps the zoom when moving weights; the view resets when changing projection
     )
     return fig
 

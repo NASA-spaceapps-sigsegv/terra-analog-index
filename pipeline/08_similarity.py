@@ -85,13 +85,13 @@ def load_analogs(path: Path = ANALOGS_IN, target_ids=TARGET_IDS) -> list[models.
     require_inputs([path])
     df = pd.read_csv(path, dtype={"analog_id": str, "target_id": str})
     if list(df.columns) != list(KNOWN_ANALOGS_COLUMNS):
-        raise OutputValidationError(f"known_analogs.csv: columnas {list(df.columns)}, se esperan {list(KNOWN_ANALOGS_COLUMNS)}")
+        raise OutputValidationError(f"known_analogs.csv: columns {list(df.columns)}, expected {list(KNOWN_ANALOGS_COLUMNS)}")
     analogs = [models.KnownAnalog.model_validate(r) for r in df.to_dict(orient="records")]
     unknown = sorted({a.target_id for a in analogs} - set(target_ids))
     if unknown:
-        raise OutputValidationError(f"known_analogs.csv: target_id desconocidos {unknown}")
+        raise OutputValidationError(f"known_analogs.csv: unknown target_id {unknown}")
     if df.duplicated(subset=["analog_id", "target_id"]).any():
-        raise OutputValidationError("known_analogs.csv: filas repetidas (analog_id, target_id)")
+        raise OutputValidationError("known_analogs.csv: duplicated rows (analog_id, target_id)")
     return analogs
 
 
@@ -100,11 +100,11 @@ def load_caves(path: Path = CAVES_IN) -> list[models.Cave]:
     require_inputs([path])
     df = pd.read_csv(path, dtype={"cave_id": str})
     if list(df.columns) != list(CAVES_COLUMNS):
-        raise OutputValidationError(f"caves.csv: columnas {list(df.columns)}, se esperan {list(CAVES_COLUMNS)}")
+        raise OutputValidationError(f"caves.csv: columns {list(df.columns)}, expected {list(CAVES_COLUMNS)}")
     caves = [models.Cave.model_validate(r) for r in df.to_dict(orient="records")]
     repeated = sorted(df.loc[df["cave_id"].duplicated(), "cave_id"])
     if repeated:
-        raise OutputValidationError(f"caves.csv: cave_id repetidos {repeated}")
+        raise OutputValidationError(f"caves.csv: duplicated cave_id {repeated}")
     return caves
 
 
@@ -154,7 +154,7 @@ def build_similarity(features: pd.DataFrame, grid: pd.DataFrame, targets: models
     """similarity.parquet for every target in targets.json, and n_max of bio_records."""
     cells = features.merge(grid[["cell_id", "lat", "lon", "area_km2"]], on="cell_id", how="left")
     if cells["area_km2"].isna().any():
-        raise OutputValidationError("features.parquet tiene celdas que no están en la grilla")
+        raise OutputValidationError("features.parquet has cells that are not in the grid")
     area = cells["area_km2"].to_numpy(dtype=np.float64)
     lat, lon = cells["lat"].to_numpy(dtype=np.float64), cells["lon"].to_numpy(dtype=np.float64)
     n_max = int(cells["bio_records"].max()) if len(cells) else 0
@@ -166,7 +166,7 @@ def build_similarity(features: pd.DataFrame, grid: pd.DataFrame, targets: models
 def check_scores(sim: pd.DataFrame) -> None:
     bad = [c for c in SCORE_COLUMNS if ((sim[c] < 0) | (sim[c] > 1)).any()]
     if bad:
-        raise OutputValidationError(f"puntajes fuera de 0..1 en {bad}")
+        raise OutputValidationError(f"scores outside 0..1 in {bad}")
 
 
 def main() -> None:
@@ -180,7 +180,7 @@ def main() -> None:
             ROOT / "tai" / "scoring.py", ROOT / "tai" / "constants.py"]
     if (not args.force and is_up_to_date([OUTPUT, ANALOGS_OUT, CAVES_OUT], [*inputs, *code])
             and not last_run_partial(STEP)):
-        log.info("al día")
+        log.info("up to date")
         return
 
     grid = load_grid()
@@ -193,17 +193,17 @@ def main() -> None:
     notes = []
     missing = [tid for tid in TARGET_IDS if tid not in {t.target_id for t in targets.targets}]
     if missing:
-        notes.append(f"targets.json no trae {missing}: similarity.parquet queda sin esas filas")
+        notes.append(f"targets.json lacks {missing}: similarity.parquet is left without those rows")
         log.warning(notes[-1])
     if n_max == 0:
-        notes.append("ninguna celda tiene registros biológicos: bio_score vale 0 en todas")
+        notes.append("no cell has biological records: bio_score is 0 everywhere")
         log.warning(notes[-1])
     if last_run_partial("06_features"):
-        notes.append(f"{PARTIAL_NOTE_PREFIX} features.parquet viene de una corrida parcial")
+        notes.append(f"{PARTIAL_NOTE_PREFIX} features.parquet comes from a partial run")
         log.warning(notes[-1])
     for tid, g in sim.groupby("target_id"):
-        line = (f"{tid}: {int(g['eligible'].sum())} celdas elegibles de {len(g)}; "
-                f"{int(g['known_analog'].notna().sum())} celdas de análogos conocidos")
+        line = (f"{tid}: {int(g['eligible'].sum())} eligible cells of {len(g)}; "
+                f"{int(g['known_analog'].notna().sum())} known-analog cells")
         notes.append(line)
         log.info(line)
 
@@ -218,12 +218,12 @@ def main() -> None:
         step_entry(
             STEP,
             started,
-            inputs=[{"name": "Variables por celda, perfiles objetivo, análogos conocidos y cuevas",
+            inputs=[{"name": "Per-cell variables, target profiles, known analogs and caves",
                      "product": "features.parquet, targets.json, known_analogs.csv, caves.csv",
-                     "portal": "Pipeline del proyecto (pasos 06 y 07; config de TAI-17 y TAI-53)",
+                     "portal": "Project pipeline (steps 06 and 07; config from TAI-17 and TAI-53)",
                      "url": "https://github.com/NASA-spaceapps-sigsegv/terra-analog-index",
                      "files": len(inputs), "size_mb": round(sum(file_size_mb(p) for p in inputs), 1),
-                     "license_note": "Datos derivados del proyecto"}],
+                     "license_note": "Project-derived data"}],
             outputs=[(OUTPUT, len(sim)), (ANALOGS_OUT, len(analogs_df)), (CAVES_OUT, len(caves_df))],
             columns=column_stats(sim, SCORE_COLUMNS),
             notes=notes,

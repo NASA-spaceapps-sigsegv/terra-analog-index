@@ -1,7 +1,7 @@
-"""Carga y validación de data/processed/ (design 9.4).
+"""Loading and validation of data/processed/ (design 9.4).
 
-Sin Streamlit, sin red, sin escritura. Todo lo que falla lanza
-DataNotAvailableError con el nombre del archivo y el paso que lo genera.
+No Streamlit, no network, no writing. Anything that fails raises
+DataNotAvailableError with the file name and the step that produces it.
 """
 
 import json
@@ -17,7 +17,7 @@ from tai.errors import DataNotAvailableError
 from tai.models import Cave, KnownAnalog, Manifest, TargetsFile, ValidationReport
 from tai.schemas import CAVES_COLUMNS, KNOWN_ANALOGS_COLUMNS
 
-# archivo -> paso del pipeline que lo genera
+# file -> pipeline step that produces it
 REQUIRED_FILES = MappingProxyType(
     {
         "grid.parquet": "01_grid",
@@ -28,31 +28,31 @@ REQUIRED_FILES = MappingProxyType(
         "known_analogs.csv": "08_similarity",
         "caves.csv": "08_similarity",
         "validation.json": "09_validation",
-        "manifest.json": "cualquier paso del pipeline",
+        "manifest.json": "any pipeline step",
     }
 )
 
 
 @dataclass(frozen=True)
 class DataBundle:
-    """Todo lo que lee la app. No se modifica después de cargarlo."""
+    """Everything the app reads. It is not modified after loading."""
 
-    grid: pd.DataFrame  # indexada por cell_id
-    features: pd.DataFrame  # indexada por cell_id
+    grid: pd.DataFrame  # indexed by cell_id
+    features: pd.DataFrame  # indexed by cell_id
     bio_samples: pd.DataFrame
-    similarity: Mapping[str, pd.DataFrame]  # target_id -> tabla indexada por cell_id
+    similarity: Mapping[str, pd.DataFrame]  # target_id -> table indexed by cell_id
     targets: TargetsFile
     known_analogs: tuple[KnownAnalog, ...]
-    caves: tuple[Cave, ...]  # capa informativa del mapa (TAI-53)
+    caves: tuple[Cave, ...]  # informational map layer (TAI-53)
     validation: ValidationReport
     manifest: Manifest
 
 
 def data_signature(path: Path) -> tuple:
-    """(archivo, mtime) de cada archivo requerido; None si falta.
+    """(file, mtime) of each required file; None if missing.
 
-    Sirve de clave de caché: si alguien borra o cambia un archivo, la clave
-    cambia y la app vuelve a cargar (y a avisar) en vez de usar datos viejos."""
+    Used as a cache key: if someone deletes or changes a file, the key
+    changes and the app reloads (and warns) instead of using stale data."""
     path = Path(path)
     sig = []
     for name in REQUIRED_FILES:
@@ -62,13 +62,13 @@ def data_signature(path: Path) -> tuple:
 
 
 def _fail(name: str, why: str) -> DataNotAvailableError:
-    return DataNotAvailableError(f"{name}: {why}. Lo genera el paso {REQUIRED_FILES[name]}.")
+    return DataNotAvailableError(f"{name}: {why}. It is produced by step {REQUIRED_FILES[name]}.")
 
 
 def _require(path: Path, name: str) -> Path:
     f = path / name
     if not f.is_file():
-        raise _fail(name, f"no está en {path}")
+        raise _fail(name, f"not found in {path}")
     return f
 
 
@@ -76,11 +76,11 @@ def _read_table(path: Path, name: str, schema_name: str) -> pd.DataFrame:
     f = _require(path, name)
     try:
         df = pd.read_parquet(f)
-    except Exception as exc:  # archivo corrupto, formato inesperado
-        raise _fail(name, f"no se pudo leer ({exc})") from exc
+    except Exception as exc:  # corrupt file, unexpected format
+        raise _fail(name, f"could not be read ({exc})") from exc
     problems = schemas.check_schema(df, schema_name)
     if problems:
-        raise _fail(name, "no cumple su contrato (" + "; ".join(problems) + ")")
+        raise _fail(name, "does not meet its contract (" + "; ".join(problems) + ")")
     return df
 
 
@@ -88,20 +88,20 @@ def _read_json(path: Path, name: str, model):
     f = _require(path, name)
     try:
         return model.model_validate(json.loads(f.read_text(encoding="utf-8")))
-    except (OSError, ValueError) as exc:  # JSONDecodeError y ValidationError son ValueError
-        raise _fail(name, f"no valida contra su modelo ({exc})") from exc
+    except (OSError, ValueError) as exc:  # JSONDecodeError and ValidationError are ValueError
+        raise _fail(name, f"does not validate against its model ({exc})") from exc
 
 
 def _read_csv_rows(path: Path, name: str, columns: tuple[str, ...], model) -> tuple:
-    """Filas de un CSV de configuración ya validado por el paso 08, una por instancia de `model`."""
+    """Rows of a config CSV already validated by step 08, one per instance of `model`."""
     f = _require(path, name)
     try:
         df = pd.read_csv(f)
         if tuple(df.columns) != columns:
-            raise ValueError(f"columnas {list(df.columns)}, se esperaban {list(columns)}")
+            raise ValueError(f"columns {list(df.columns)}, expected {list(columns)}")
         return tuple(model.model_validate(r) for r in df.to_dict(orient="records"))
     except (OSError, ValueError) as exc:
-        raise _fail(name, f"no es válido ({exc})") from exc
+        raise _fail(name, f"is not valid ({exc})") from exc
 
 
 def _read_known_analogs(path: Path) -> tuple[KnownAnalog, ...]:
@@ -109,7 +109,7 @@ def _read_known_analogs(path: Path) -> tuple[KnownAnalog, ...]:
 
 
 def load_bundle(path: Path | str) -> DataBundle:
-    """Lee los 9 archivos de `path`, los valida y arma el DataBundle."""
+    """Read the 9 files in `path`, validate them and build the DataBundle."""
     path = Path(path)
     grid = _read_table(path, "grid.parquet", "grid")
     features = _read_table(path, "features.parquet", "features")
@@ -121,14 +121,14 @@ def load_bundle(path: Path | str) -> DataBundle:
     validation = _read_json(path, "validation.json", ValidationReport)
     manifest = _read_json(path, "manifest.json", Manifest)
 
-    # Una fila por celda y objetivo (la unicidad de la clave ya la comprobó check_schema).
+    # One row per cell and target (check_schema already checked that the key is unique).
     target_ids = [t.target_id for t in targets.targets]
     if set(sim["target_id"]) != set(target_ids):
-        raise _fail("similarity.parquet", f"los objetivos {sorted(set(sim['target_id']))} no coinciden con targets.json {sorted(target_ids)}")
+        raise _fail("similarity.parquet", f"the targets {sorted(set(sim['target_id']))} do not match targets.json {sorted(target_ids)}")
     if not set(sim["cell_id"]) <= set(grid["cell_id"]):
-        raise _fail("similarity.parquet", "hay cell_id que no están en grid.parquet")
+        raise _fail("similarity.parquet", "there are cell_ids that are not in grid.parquet")
     if len(sim) != len(grid) * len(target_ids):
-        raise _fail("similarity.parquet", f"tiene {len(sim)} filas y debería tener {len(grid) * len(target_ids)} (una por celda y objetivo)")
+        raise _fail("similarity.parquet", f"has {len(sim)} rows and should have {len(grid) * len(target_ids)} (one per cell and target)")
 
     by_target = {t: sim[sim["target_id"] == t].set_index("cell_id") for t in target_ids}
     return DataBundle(

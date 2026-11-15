@@ -1,4 +1,4 @@
-"""Reglas de puntaje (TAI-18, design 5.1 a 5.5 y 12.1)."""
+"""Scoring rules (TAI-18, design 5.1 to 5.5 and 12.1)."""
 
 import math
 
@@ -18,12 +18,12 @@ def test_overlap_is_1_at_the_target_mean():
 
 
 def test_overlap_matches_the_design_example():
-    # x = 6, media 4,5, desvío 2, desvío terrestre 5: sigma = 2, S = exp(-0,75)
+    # x = 6, mean 4.5, std 2, Earth std 5: sigma = 2, S = exp(-0.75)
     assert rules.overlap([6.0], 4.5, 2.0, 5.0)[0] == pytest.approx(0.472, abs=5e-4)
 
 
 def test_overlap_sigma_floor_acts():
-    # desvío del objetivo 0,1 y terrestre 5: el piso da sigma = 0,5, no 0,1
+    # target std 0.1 and Earth std 5: the floor gives sigma = 0.5, not 0.1
     got = rules.overlap([5.0], 4.5, 0.1, 5.0)[0]
     assert got == pytest.approx(math.exp(-1.0))
     assert got > rules.overlap([5.0], 4.5, 0.1, 0.0)[0]
@@ -39,7 +39,7 @@ def test_overlap_with_no_spread_at_all():
     assert list(rules.overlap([0.0, 1.0, NAN], 0.0, 0.0, 0.0)[:2]) == [1.0, 0.0]
 
 
-# --- direccionales (5.3) -----------------------------------------------------
+# --- directional (5.3) -------------------------------------------------------
 
 
 def test_directional_most_extreme_cell_scores_1():
@@ -62,7 +62,7 @@ def test_directional_equal_areas_give_plain_shares():
 
 
 def test_directional_is_weighted_by_area():
-    # la celda fría ocupa 3/4 del área: la templada es "más fría o igual que" solo su propio 1/4
+    # the cold cell covers 3/4 of the area: the temperate one is "colder than or equal to" only its own 1/4
     x = np.array([-40.0, 10.0])
     area = np.array([3.0, 1.0])
     assert list(rules.directional_low(x, area)) == [1.0, 0.25]
@@ -91,7 +91,7 @@ def test_directional_rejects_bad_areas():
         rules.directional_low([1.0, 2.0], [1.0, 0.0])
 
 
-# --- presence y absence (5.4) ------------------------------------------------
+# --- presence and absence (5.4) -----------------------------------------------
 
 
 def test_presence_and_absence_add_up_to_1():
@@ -116,7 +116,7 @@ def test_score_variable_dispatches_and_rejects_unknown_rules():
         rules.score_variable("nope", x, 1.0, 0, 0, 0)
 
 
-# --- elección de la regla (5.1) ----------------------------------------------
+# --- choice of rule (5.1) ---------------------------------------------------
 
 
 @pytest.mark.parametrize("mean,expected", [(-83.0, "directional_low"), (10.0, "overlap"),
@@ -142,7 +142,7 @@ def test_choose_rule_rejects_unknown_variables_and_null_means():
         rules.choose_rule("tmin_c", float("nan"), 0.0, 1.0, False)
 
 
-# --- dimensión y biología (5.5) ----------------------------------------------
+# --- dimension and biology (5.5) --------------------------------------------
 
 
 def test_dimension_is_the_mean_of_the_variables_with_data():
@@ -164,12 +164,12 @@ def test_bio_score_with_no_records_anywhere_is_all_0():
     assert list(rules.bio_score([0, 0], [0, 0])) == [0.0, 0.0]
 
 
-# --- estadísticas terrestres ponderadas (paso 06) ----------------------------
+# --- weighted Earth statistics (step 06) ------------------------------------
 
 
 def test_weighted_quantile_follows_the_area():
     x = np.array([1.0, 2.0, 3.0, NAN])
-    assert rules.weighted_quantile(x, [1, 1, 1, 50], 0.5) == 2.0  # el nulo no cuenta
+    assert rules.weighted_quantile(x, [1, 1, 1, 50], 0.5) == 2.0  # the null does not count
     assert rules.weighted_quantile(x, [10, 1, 1, 1], 0.5) == 1.0
     assert rules.weighted_quantile(x, 1.0, 0.0) == 1.0 and rules.weighted_quantile(x, 1.0, 1.0) == 3.0
 

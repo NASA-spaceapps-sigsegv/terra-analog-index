@@ -1,57 +1,57 @@
-## Qué hace
+## What it does
 
-_Terra Analog Index_ es un buscador global que compara la Tierra celda por celda contra sitios lunares o marcianos para devolver un perfil de similitud por dimensión, permitiendo identificar cuáles características son bien copiadas y dónde falla la analogía. Incorpora una capa de habitabilidad para priorizar regiones con presencia documentada de extremófilos.
+_Terra Analog Index_ is a global search tool that compares the Earth cell by cell against lunar or Martian sites and returns a similarity profile per dimension, showing which features are well matched and where the analogy breaks down. It adds a habitability layer to prioritize regions with documented extremophiles.
 
-## Datos usados
+## Data used
 
-Todos los cálculos terrestres se basan en registros normalizados del año calendario 2024, abarcando límites geográficos de Natural Earth, modelos de elevación global a 1 km de ETOPO, polvo y viento de MERRA-2, temperaturas superficiales mensuales de MODIS, precipitaciones de GPM IMERG y registros de biodiversidad extrema extraídos de NCBI BioSample. Los datos correspondientes a la Luna y a Marte se obtuvieron de misiones oficiales como LRO (LOLA y Diviner), MOLA y MEDA, complementados cuando fue necesario con valores de literatura científica citados en el lugar.
+All Earth calculations are based on normalized records from calendar year 2024, covering Natural Earth geographic boundaries, ETOPO 1 km global elevation models, MERRA-2 dust and wind, MODIS monthly surface temperatures, GPM IMERG precipitation and extreme-biodiversity records extracted from NCBI BioSample. The Moon and Mars data come from official missions such as LRO (LOLA and Diviner), MOLA and MEDA, complemented where needed with values from the scientific literature, cited in place.
 
-## Cómo se calcula
+## How it is calculated
 
-Cada celda de 1° de la Tierra se compara con el sitio objetivo en estas dimensiones: terreno (pendiente y rugosidad), temperatura (mínima y rango diario), agua y hielo (precipitación y nieve o hielo), polvo y viento (espesor óptico del polvo y viento en superficie) e interés astrobiológico. Polvo y viento solo existe para Marte: la Luna no tiene atmósfera, así que su puntaje total no la incluye.
+Each 1° cell on Earth is compared with the target site on these dimensions: terrain (slope and roughness), temperature (minimum and daily range), water and ice (precipitation and snow or ice), dust and wind (dust optical depth and surface wind) and astrobiological interest. Dust and wind only exists for Mars: the Moon has no atmosphere, so its total score does not include it.
 
-Cada variable física recibe un puntaje de 0 a 1 con una de tres reglas. La regla se elige sola, según dónde cae el valor del objetivo respecto de la Tierra, y queda escrita en `targets.json` para poder auditarla: la tabla de arriba muestra la que se usó en cada variable.
+Each physical variable gets a score from 0 to 1 with one of three rules. The rule is chosen automatically, depending on where the target's value falls relative to Earth, and it is written in `targets.json` so it can be audited: the table above shows the one used for each variable.
 
-- **Parecido.** La Tierra cubre el valor del objetivo, así que el puntaje baja a medida que la celda se aleja de ese valor.
-- **Direccional.** El objetivo está más allá de lo que alcanza la Tierra, como la temperatura mínima lunar. Se premia estar entre los lugares más extremos del planeta en esa dirección. Un 0,95 significa «más frío que el 95 % de la tierra firme con dato», no «95 % igual a la Luna».
-- **Presencia o ausencia.** Para la nieve y el hielo, según si el objetivo tiene hielo o no.
+- **Similarity.** Earth covers the target's value, so the score drops as the cell moves away from that value.
+- **Directional.** The target lies beyond what Earth reaches, like the lunar minimum temperature. Being among the most extreme places on the planet in that direction is rewarded. A 0.95 means "colder than 95% of dry land with data", not "95% equal to the Moon".
+- **Presence or absence.** For snow and ice, depending on whether the target has ice or not.
 
-Cada dimensión es el promedio de las variables que tienen dato. El **interés astrobiológico** no mide parecido con el objetivo: cuenta los registros y los tipos de extremófilos documentados en NCBI BioSample (con logaritmo, para que una celda muy muestreada no domine) y es igual para ambos objetivos.
+Each dimension is the average of the variables that have data. **Astrobiological interest** does not measure similarity to the target: it counts the records and types of extremophiles documented in NCBI BioSample (on a log scale, so a heavily sampled cell does not dominate) and is the same for both targets.
 
-El **puntaje total** es el promedio de las dimensiones con dato, ponderado por los pesos que mueve el visitante, y el ranking se recalcula en vivo. Una celda entra al ranking si tiene dato en al menos dos de las tres dimensiones físicas centrales (terreno, temperatura, agua y hielo); polvo y viento no cuenta para eso.
+The **total score** is the average of the dimensions with data, weighted by the weights the visitor moves, and the ranking is recomputed live. A cell enters the ranking if it has data in at least two of the three core physical dimensions (terrain, temperature, water and ice); dust and wind does not count for that.
 
-## Validación
+## Validation
 
-La prueba científica más importante es que el índice vuelva a encontrar los análogos que la comunidad ya usa. Cada análogo conocido declara por qué se lo usa y si las dimensiones del índice lo cubren: uno elegido por su geología volcánica o por su aislamiento no puede ser redescubierto por un índice que no mide eso, así que se informa pero no cuenta para aprobar.
+The most important scientific test is that the index rediscovers the analogs the community already uses. Each known analog states why it is used and whether the index's dimensions cover it: one chosen for its volcanic geology or its isolation cannot be rediscovered by an index that does not measure those things, so it is reported but does not count toward passing.
 
-Un análogo cubierto **pasa** si su mejor celda, con los pesos iniciales, queda en el percentil 90 o más de las celdas elegibles. Un objetivo pasa si tiene al menos dos análogos cubiertos y pasan al menos dos tercios. La tabla de abajo sale de `validation.json` y muestra cada análogo con su percentil y su resultado: `pass`, `fail` o `info`.
+A covered analog **passes** if its best cell, with the default weights, sits at the 90th percentile or above of the eligible cells. A target passes if it has at least two covered analogs and at least two thirds of them pass. The table below comes from `validation.json` and shows each analog with its percentile and its result: `pass`, `fail` or `info`.
 
-Si un objetivo no pasa, se revisan en este orden los datos y las unidades, el recorte del objetivo, el piso del desvío y los pesos iniciales, y se documenta lo hecho. No se agregan excepciones por celda ni se ajusta hasta que «dé bien»: un resultado negativo bien explicado vale más que uno forzado.
+If a target does not pass, the data and units, the target's crop, the standard-deviation floor and the default weights are reviewed in that order, and what was done is documented. No per-cell exceptions are added and nothing is tuned until it "comes out right": a well-explained negative result is worth more than a forced one.
 
-## Límites
+## Limits
 
-Estos son los límites que el método declara y que conviene tener presentes al leer un puntaje.
+These are the limits the method declares, worth keeping in mind when reading a score.
 
-- **Condiciones irreplicables en la Tierra**: Algunas condiciones marcianas y lunares, como la gravedad reducida, la atmósfera marciana de CO2, o los suelos ricos en percloratos no pueden ser reproducidas en la Tierra. Ningún análogo va a ser perfecto.
-- **Los puntajes direccionales no miden distancia al objetivo.** Un 0,95 en temperatura dice «entre lo más frío de la Tierra», no «95 % igual a la Luna»: la Tierra nunca llega a esos valores. La ficha de cada sitio siempre muestra el valor real del objetivo.
-- **El interés astrobiológico refleja dónde se investigó.** Los sitios famosos suben y los inexplorados quedan en 0. Un lago hipersalino cuenta como evidencia de halófilos sin verificar qué se secuenció, y si un tipo supera los 5 000 registros se toman los primeros que devuelve NCBI (el manifiesto guarda el total real). Por eso el peso inicial es 0,5 y cada ficha lo aclara.
-- **Los análogos «nuevos» pueden no serlo.** Una celda que no está en la lista del equipo puede estar estudiada igual; por eso se presentan como candidatos poco documentados.
-- **Las celdas miden 1°.** Un cráter, un salar o una cueva se diluyen en el promedio de la celda.
-- **Faltan dimensiones que el enunciado menciona:** geología y mineralogía, subsuelo y operación de rovers. Los análogos elegidos por esos motivos se informan, pero no cuentan para aprobar.
-- **Polvo y viento en la Tierra salen de un reanálisis** (MERRA-2, un modelo), no de una observación, y el viento terrestre está a unos 10 m de altura mientras que Perseverance lo mide a 1,5 m.
-- **Un solo año de datos** (el que indica la grilla, arriba) puede no ser representativo del clima.
-- **Se usa la temperatura de superficie, no la del aire,** y el rango térmico lunar, de un ciclo de unos 29,5 días, no equivale al diurno terrestre.
-- **Nieve y precipitación en los polos.** Sin luz no hay dato óptico de nieve en la noche polar, y el producto de precipitación puede ser poco fiable sobre la Antártida.
-- **Sesgo de datos biológicos**: Se toman los 5 000 primeros datos de cada tipo de extremófilos de BioSample, pero algunos grupos tienen más (salados: 11 485, fríos: 12 164, ácidos: 8 621, cálidos: 25 557). Además, es un tipo de datos menos homogéneo que los demás. Algunos sitios más investigados abundan en muestras, como parte de China, mientras que hay regiones menos exploradas que podrían tener vida extremófila. El logaritmo ayuda a atenuar el efecto, pero no lo elimina.
+- **Conditions that cannot be replicated on Earth**: some Martian and lunar conditions, such as reduced gravity, the Martian CO2 atmosphere or perchlorate-rich soils, cannot be reproduced on Earth. No analog will be perfect.
+- **Directional scores do not measure distance to the target.** A 0.95 in temperature says "among the coldest on Earth", not "95% equal to the Moon": Earth never reaches those values. Each site's card always shows the target's real value.
+- **Astrobiological interest reflects where research was done.** Famous sites go up and unexplored ones stay at 0. A hypersaline lake counts as evidence of halophiles without checking what was sequenced, and if a type exceeds 5,000 records the first ones NCBI returns are taken (the manifest keeps the real total). That is why the default weight is 0.5 and every card says so.
+- **"New" analogs may not be new.** A cell that is not on the team's list may be studied anyway; that is why they are presented as poorly documented candidates.
+- **Cells are 1° across.** A crater, a salt flat or a cave gets diluted in the cell average.
+- **Some dimensions the challenge mentions are missing:** geology and mineralogy, the subsurface and rover operations. Analogs chosen for those reasons are reported, but they do not count toward passing.
+- **Dust and wind on Earth come from a reanalysis** (MERRA-2, a model), not from an observation, and Earth's wind is at about 10 m height while Perseverance measures it at 1.5 m.
+- **A single year of data** (the one stated under the grid, above) may not be representative of the climate.
+- **Surface temperature is used, not air temperature,** and the lunar temperature range, over a cycle of about 29.5 days, is not equivalent to Earth's daily range.
+- **Snow and precipitation at the poles.** Without light there is no optical snow data during the polar night, and the precipitation product can be unreliable over Antarctica.
+- **Biological data bias**: the first 5,000 records of each extremophile type are taken from BioSample, but some groups have more (salt: 11,485, cold: 12,164, acid: 8,621, heat: 25,557). It is also a less homogeneous kind of data than the rest. Some heavily studied sites abound in samples, such as parts of China, while less explored regions could host extremophile life. The logarithm helps soften the effect, but does not remove it.
 
-## Créditos
+## Credits
 
-**Equipo sigsegv.**:
-- Juan Manuel Hernández: repositorio y grilla, terreno, temperatura, agua y hielo, análogos conocidos, similitud, ranking, ficha y despliegue.
-- Alan Moreno: capa biológica de NCBI, perfiles de los objetivos, puntaje, validación, mapa y esta pestaña.
-- Santino Rimondotto: criterios científicos, fuentes, valores de los objetivos, términos de búsqueda, textos y pitch.
-- Santiago Walter: esqueleto de la app, mapas de control, README y video.
+**Team sigsegv**:
+- Juan Manuel Hernández: repository and grid, terrain, temperature, water and ice, known analogs, similarity, ranking, card and deployment.
+- Alan Moreno: NCBI biology layer, target profiles, scoring, validation, map and this tab.
+- Santino Rimondotto: scientific criteria, sources, target values, search terms, texts and pitch.
+- Santiago Walter: app skeleton, control maps, README and video.
 
-**Datos.** Las fuentes y sus licencias están en la tabla de «Datos usados». Los datos conservan sus propios términos; el código tiene licencia GNU GPL v3.
+**Data.** The sources and their licenses are in the "Data used" table. The data keep their own terms; the code is licensed under the GNU GPL v3.
 
-**Uso de IA.** El equipo usó Claude Code (Anthropic) como asistente de programación. Los commits en los que ayudó llevan una línea `Co-Authored-By` en el historial del repositorio. También se utilizaron Claude y Gemini para redacción y filtración temprana de literatura.
+**Use of AI.** The team used Claude Code (Anthropic) as a programming assistant. The commits it helped with carry a `Co-Authored-By` line in the repository history. Claude and Gemini were also used for writing and for early literature screening.

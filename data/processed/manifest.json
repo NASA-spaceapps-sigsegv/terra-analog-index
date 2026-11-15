@@ -10,27 +10,27 @@
   "steps": [
     {
       "step": "01_grid",
-      "ran_at": "2026-11-15T02:46:29Z",
-      "duration_s": 1.3,
-      "git_commit": "83e06a9",
+      "ran_at": "2026-11-15T16:57:45Z",
+      "duration_s": 3.3,
+      "git_commit": "46ff765",
       "inputs": [
         {
-          "name": "Natural Earth, tierra 1:50m",
+          "name": "Natural Earth, land 1:50m",
           "product": "ne_50m_land",
           "portal": "Natural Earth",
           "url": "https://www.naturalearthdata.com/downloads/50m-physical-vectors/",
           "files": 1,
           "size_mb": 1.6,
-          "license_note": "Dominio público"
+          "license_note": "Public domain"
         },
         {
-          "name": "Natural Earth, países 1:50m",
+          "name": "Natural Earth, countries 1:50m",
           "product": "ne_50m_admin_0_countries",
           "portal": "Natural Earth",
           "url": "https://www.naturalearthdata.com/downloads/50m-cultural-vectors/",
           "files": 1,
           "size_mb": 3.1,
-          "license_note": "Dominio público"
+          "license_note": "Public domain"
         }
       ],
       "outputs": [
@@ -79,8 +79,8 @@
       },
       "earth_stats": null,
       "notes": [
-        "21357 celdas con land_frac >= 0.5",
-        "país por el centro: 21141; por mayoría de píxeles: 216; sin país: 0"
+        "21357 cells with land_frac >= 0.5",
+        "country by center: 21141; by pixel majority: 216; no country: 0"
       ]
     },
     {
@@ -90,11 +90,11 @@
       "git_commit": "83e06a9",
       "inputs": [
         {
-          "name": "ETOPO 2022, elevación de superficie, 30 segundos de arco",
+          "name": "ETOPO 2022, surface elevation, 30 arc-seconds",
           "product": "ETOPO_2022_v1_30s_surface",
           "portal": "NOAA NCEI",
           "url": "https://www.ncei.noaa.gov/products/etopo-global-relief-model",
-          "license_note": "Dominio público (NOAA)",
+          "license_note": "Public domain (NOAA)",
           "files": 1,
           "size_mb": 1642.3
         }
@@ -122,8 +122,8 @@
       },
       "earth_stats": null,
       "notes": [
-        "resolución base 1.0 km; ventana de rugosidad 5 x 5 píxeles; DEM a 120 px/grado",
-        "0 celdas sin dato de terreno (0.0%)"
+        "base resolution 1.0 km; roughness window 5 x 5 pixels; DEM at 120 px/degree",
+        "0 cells without terrain data (0.0%)"
       ]
     },
     {
@@ -133,13 +133,13 @@
       "git_commit": "83e06a9",
       "inputs": [
         {
-          "name": "MODIS, temperatura superficial mensual, 2024",
+          "name": "MODIS, monthly land surface temperature, 2024",
           "product": "MOD11C3 v061",
           "portal": "NASA Earthdata (LP DAAC)",
           "url": "https://doi.org/10.5067/MODIS/MOD11C3.061",
           "files": 12,
           "size_mb": 877.9,
-          "license_note": "Datos abiertos de NASA"
+          "license_note": "NASA open data"
         }
       ],
       "outputs": [
@@ -165,10 +165,10 @@
       },
       "earth_stats": null,
       "notes": [
-        "celdas sin dato: tmin_c 0, trange_c 0",
-        "890 celdas con rango anual negativo llevado a 0 (meseta de hielo, dentro del error de MODIS)",
-        "meses con dato nocturno (meses: celdas): 12: 20741, 11: 360, 10: 148, 9: 68, 8: 25, 7: 14, 6: 1",
-        "meses con dato diurno y nocturno (meses: celdas): 12: 20678, 11: 410, 10: 161, 9: 68, 8: 25, 7: 13, 6: 1, 5: 1"
+        "cells without data: tmin_c 0, trange_c 0",
+        "890 cells with a negative annual range set to 0 (ice plateau, within MODIS error)",
+        "months with night data (months: cells): 12: 20741, 11: 360, 10: 148, 9: 68, 8: 25, 7: 14, 6: 1",
+        "months with day and night data (months: cells): 12: 20678, 11: 410, 10: 161, 9: 68, 8: 25, 7: 13, 6: 1, 5: 1"
       ]
     },
     {
@@ -178,22 +178,22 @@
       "git_commit": "2689d54",
       "inputs": [
         {
-          "name": "MERRA-2, espesor óptico del polvo mensual, 2024",
+          "name": "MERRA-2, monthly dust optical depth, 2024",
           "product": "M2TMNXAER v5.12.4 (DUEXTTAU)",
           "portal": "NASA Earthdata (GES DISC)",
           "url": "https://doi.org/10.5067/FH9A0MLJPC7N",
           "files": 12,
           "size_mb": 1006.8,
-          "license_note": "Datos abiertos de NASA"
+          "license_note": "NASA open data"
         },
         {
-          "name": "MERRA-2, velocidad del viento en superficie mensual, 2024",
+          "name": "MERRA-2, monthly surface wind speed, 2024",
           "product": "M2TMNXFLX v5.12.4 (SPEED)",
           "portal": "NASA Earthdata (GES DISC)",
           "url": "https://doi.org/10.5067/0JRLVL8YV2Y4",
           "files": 12,
           "size_mb": 926.4,
-          "license_note": "Datos abiertos de NASA"
+          "license_note": "NASA open data"
         }
       ],
       "outputs": [
@@ -219,7 +219,7 @@
       },
       "earth_stats": null,
       "notes": [
-        "celdas sin dato: dust_aod 0, wind_ms 0"
+        "cells without data: dust_aod 0, wind_ms 0"
       ]
     },
     {
@@ -229,31 +229,31 @@
       "git_commit": "2689d54",
       "inputs": [
         {
-          "name": "GPM IMERG Final, precipitación mensual, 2024",
+          "name": "GPM IMERG Final, monthly precipitation, 2024",
           "product": "GPM_3IMERGM v07",
           "portal": "NASA Earthdata",
           "url": "https://disc.gsfc.nasa.gov/datasets/GPM_3IMERGM_07/summary",
           "files": 12,
           "size_mb": 224.6,
-          "license_note": "Datos abiertos de NASA"
+          "license_note": "NASA open data"
         },
         {
-          "name": "MODIS, cobertura de nieve mensual, 2024",
+          "name": "MODIS, monthly snow cover, 2024",
           "product": "MOD10CM v061",
           "portal": "NASA Earthdata",
           "url": "https://doi.org/10.5067/MODIS/MOD10CM.061",
           "files": 12,
           "size_mb": 16.8,
-          "license_note": "Datos abiertos de NASA"
+          "license_note": "NASA open data"
         },
         {
-          "name": "MODIS, cobertura del suelo anual, 2024",
+          "name": "MODIS, annual land cover, 2024",
           "product": "MCD12C1 v061",
           "portal": "NASA Earthdata",
           "url": "https://doi.org/10.5067/MODIS/MCD12C1.061",
           "files": 1,
           "size_mb": 1244.3,
-          "license_note": "Datos abiertos de NASA"
+          "license_note": "NASA open data"
         }
       ],
       "outputs": [
@@ -279,12 +279,12 @@
       },
       "earth_stats": null,
       "notes": [
-        "precip_mm nula en 6041 celdas al sur de -60°: IMERG no mide la nieve sobre la Antártida; ahí la dimensión agua y hielo usa solo ice_frac (diseño 4.3)",
-        "precip_mm nula en 0 celdas más por meses sin dato",
-        "precip_mm = 0 exacto en 49 celdas (centro del casquete de Groenlandia): IMERG no estima la nieve sobre el hielo; se conservan como dato, pero no son un mínimo real",
-        "ice_frac = 1 en 6766 celdas con más de la mitad de su tierra en hielo permanente (MCD12C1 2024, clase IGBP 15)",
-        "ice_frac nula en 19 celdas sin mes válido de nieve ni hielo permanente",
-        "meses con dato de nieve (meses: celdas): 12: 17835, 11: 1331, 10: 772, 9: 914, 8: 377, 7: 68, 0: 60"
+        "precip_mm null in 6041 cells south of -60°: IMERG does not measure snow over Antarctica; there the water and ice dimension uses only ice_frac (design 4.3)",
+        "precip_mm null in 0 more cells because of months without data",
+        "precip_mm = 0 exactly in 49 cells (center of the Greenland ice sheet): IMERG does not estimate snow over ice; they are kept as data, but they are not a real minimum",
+        "ice_frac = 1 in 6766 cells with more than half of their land under permanent ice (MCD12C1 2024, IGBP class 15)",
+        "ice_frac null in 19 cells with no valid snow month and no permanent ice",
+        "months with snow data (months: cells): 12: 17835, 11: 1331, 10: 772, 9: 914, 8: 377, 7: 68, 0: 60"
       ]
     },
     {
@@ -300,7 +300,7 @@
           "url": "https://www.ncbi.nlm.nih.gov/biosample",
           "files": 127,
           "size_mb": 76.4,
-          "license_note": "Datos públicos de NCBI"
+          "license_note": "NCBI public data"
         }
       ],
       "outputs": [
@@ -331,14 +331,14 @@
       },
       "earth_stats": null,
       "notes": [
-        "halophile: total en NCBI 11485, bajados 5000, con coordenadas 4710, en tierra 3103",
-        "psychrophile: total en NCBI 12164, bajados 5000, con coordenadas 4771, en tierra 2991",
-        "xerophile: total en NCBI 4943, bajados 4943, con coordenadas 3718, en tierra 3651",
-        "acidophile: total en NCBI 8621, bajados 5000, con coordenadas 4988, en tierra 4957",
-        "thermophile: total en NCBI 25557, bajados 5000, con coordenadas 4923, en tierra 4922",
-        "radioresistant: total en NCBI 205, bajados 205, con coordenadas 182, en tierra 154",
-        "muestras únicas en tierra: 19769 en 237 celdas",
-        "tope de 5000 registros por tipo alcanzado en: halophile, psychrophile, acidophile, thermophile (design 7.6)"
+        "halophile: total in NCBI 11485, downloaded 5000, with coordinates 4710, on land 3103",
+        "psychrophile: total in NCBI 12164, downloaded 5000, with coordinates 4771, on land 2991",
+        "xerophile: total in NCBI 4943, downloaded 4943, with coordinates 3718, on land 3651",
+        "acidophile: total in NCBI 8621, downloaded 5000, with coordinates 4988, on land 4957",
+        "thermophile: total in NCBI 25557, downloaded 5000, with coordinates 4923, on land 4922",
+        "radioresistant: total in NCBI 205, downloaded 205, with coordinates 182, on land 154",
+        "unique samples on land: 19769 in 237 cells",
+        "cap of 5000 records per type reached for: halophile, psychrophile, acidophile, thermophile (design 7.6)"
       ]
     },
     {
@@ -348,13 +348,13 @@
       "git_commit": "2689d54",
       "inputs": [
         {
-          "name": "Archivos intermedios de los pasos 02 a 05",
+          "name": "Intermediate files from steps 02 to 05",
           "product": "terrain.parquet, temperature.parquet, water_ice.parquet, dust_wind.parquet, biology.parquet",
-          "portal": "Pipeline del proyecto",
+          "portal": "Project pipeline",
           "url": "https://github.com/NASA-spaceapps-sigsegv/terra-analog-index",
           "files": 5,
           "size_mb": 1.5,
-          "license_note": "Datos derivados del proyecto"
+          "license_note": "Project-derived data"
         }
       ],
       "outputs": [
@@ -481,7 +481,7 @@
         }
       },
       "notes": [
-        "celdas por dimensiones físicas con dato: 3: 21357"
+        "cells by physical dimensions with data: 3: 21357"
       ]
     },
     {
@@ -491,13 +491,13 @@
       "git_commit": "b0272c6",
       "inputs": [
         {
-          "name": "Elevación de la Luna y Marte (LOLA y MOLA)",
+          "name": "Elevation of the Moon and Mars (LOLA and MOLA)",
           "product": "LDEM_80S_80MPP_ADJ, MOLA 463 m",
-          "portal": "NASA PGDA y USGS Astrogeology",
+          "portal": "NASA PGDA and USGS Astrogeology",
           "url": "https://pgda.gsfc.nasa.gov/products/90",
           "files": 1,
           "size_mb": 189.2,
-          "license_note": "Datos abiertos de NASA"
+          "license_note": "NASA open data"
         }
       ],
       "outputs": [
@@ -510,20 +510,20 @@
       "columns": {},
       "earth_stats": null,
       "notes": [
-        "moon_south_pole.slope_deg: measured, regla overlap",
-        "moon_south_pole.roughness_m: measured, regla overlap",
-        "moon_south_pole.tmin_c: literature, regla directional_low",
-        "moon_south_pole.trange_c: literature, regla directional_high",
-        "moon_south_pole.precip_mm: definition, regla directional_low",
-        "moon_south_pole.ice_frac: definition, regla presence",
-        "mars_jezero.slope_deg: measured, regla overlap",
-        "mars_jezero.roughness_m: measured, regla overlap",
-        "mars_jezero.tmin_c: literature, regla directional_low",
-        "mars_jezero.trange_c: literature, regla directional_high",
-        "mars_jezero.precip_mm: definition, regla directional_low",
-        "mars_jezero.ice_frac: definition, regla absence",
-        "mars_jezero.dust_aod: literature, regla directional_high",
-        "mars_jezero.wind_ms: literature, regla overlap"
+        "moon_south_pole.slope_deg: measured, rule overlap",
+        "moon_south_pole.roughness_m: measured, rule overlap",
+        "moon_south_pole.tmin_c: literature, rule directional_low",
+        "moon_south_pole.trange_c: literature, rule directional_high",
+        "moon_south_pole.precip_mm: definition, rule directional_low",
+        "moon_south_pole.ice_frac: definition, rule presence",
+        "mars_jezero.slope_deg: measured, rule overlap",
+        "mars_jezero.roughness_m: measured, rule overlap",
+        "mars_jezero.tmin_c: literature, rule directional_low",
+        "mars_jezero.trange_c: literature, rule directional_high",
+        "mars_jezero.precip_mm: definition, rule directional_low",
+        "mars_jezero.ice_frac: definition, rule absence",
+        "mars_jezero.dust_aod: literature, rule directional_high",
+        "mars_jezero.wind_ms: literature, rule overlap"
       ]
     },
     {
@@ -533,13 +533,13 @@
       "git_commit": "b0272c6",
       "inputs": [
         {
-          "name": "Variables por celda, perfiles objetivo, análogos conocidos y cuevas",
+          "name": "Per-cell variables, target profiles, known analogs and caves",
           "product": "features.parquet, targets.json, known_analogs.csv, caves.csv",
-          "portal": "Pipeline del proyecto (pasos 06 y 07; config de TAI-17 y TAI-53)",
+          "portal": "Project pipeline (steps 06 and 07; config from TAI-17 and TAI-53)",
           "url": "https://github.com/NASA-spaceapps-sigsegv/terra-analog-index",
           "files": 5,
           "size_mb": 1.2,
-          "license_note": "Datos derivados del proyecto"
+          "license_note": "Project-derived data"
         }
       ],
       "outputs": [
@@ -641,8 +641,8 @@
       },
       "earth_stats": null,
       "notes": [
-        "mars_jezero: 21357 celdas elegibles de 21357; 36 celdas de análogos conocidos",
-        "moon_south_pole: 21357 celdas elegibles de 21357; 48 celdas de análogos conocidos"
+        "mars_jezero: 21357 eligible cells of 21357; 36 known-analog cells",
+        "moon_south_pole: 21357 eligible cells of 21357; 48 known-analog cells"
       ]
     },
     {
@@ -652,13 +652,13 @@
       "git_commit": "b0272c6",
       "inputs": [
         {
-          "name": "Similitud por celda y análogos conocidos",
+          "name": "Per-cell similarity and known analogs",
           "product": "similarity.parquet, known_analogs.csv",
-          "portal": "Pipeline del proyecto (pasos 08 y 01)",
+          "portal": "Project pipeline (steps 08 and 01)",
           "url": "https://github.com/NASA-spaceapps-sigsegv/terra-analog-index",
           "files": 3,
           "size_mb": 0.9,
-          "license_note": "Datos derivados del proyecto"
+          "license_note": "Project-derived data"
         }
       ],
       "outputs": [
@@ -676,8 +676,8 @@
       "columns": {},
       "earth_stats": null,
       "notes": [
-        "moon_south_pole: pass (2 de 3 análogos cubiertos en el percentil 90 o más; 21357 celdas elegibles)",
-        "mars_jezero: pass (2 de 3 análogos cubiertos en el percentil 90 o más; 21357 celdas elegibles)"
+        "moon_south_pole: pass (2 of 3 covered analogs at percentile 90 or above; 21357 eligible cells)",
+        "mars_jezero: pass (2 of 3 covered analogs at percentile 90 or above; 21357 eligible cells)"
       ]
     }
   ]

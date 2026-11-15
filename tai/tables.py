@@ -1,6 +1,6 @@
-"""La tabla del ranking, compartida por la vista (ui/ranking_view.py) y la descarga en CSV (TAI-50).
+"""The ranking table, shared by the view (ui/ranking_view.py) and the CSV download (TAI-50).
 
-RF-34 pide que el CSV traiga las mismas filas y columnas que la tabla: las dos salen de acá.
+RF-34 requires the CSV to carry the same rows and columns as the table: both come from here.
 """
 
 from __future__ import annotations
@@ -9,29 +9,29 @@ import pandas as pd
 
 from tai.models import Ranking
 
-# campo de RankingItem -> nombre de la columna en la interfaz
+# RankingItem field -> column name in the interface
 COLUMNS = {
-    "rank": "Puesto",
+    "rank": "Rank",
     "lat": "Lat",
     "lon": "Lon",
-    "country": "País",
+    "country": "Country",
     "total": "Total",
-    "s_terrain": "Terreno",
-    "s_temperature": "Temperatura",
-    "s_water_ice": "Agua y hielo",
-    "s_dust_wind": "Polvo y viento",
-    "bio_score": "Astrobiología",
-    "known_analog": "Análogo conocido",
+    "s_terrain": "Terrain",
+    "s_temperature": "Temperature",
+    "s_water_ice": "Water and ice",
+    "s_dust_wind": "Dust and wind",
+    "bio_score": "Astrobiology",
+    "known_analog": "Known analog",
 }
-SCORE_COLUMNS = ("Total", "Terreno", "Temperatura", "Agua y hielo", "Polvo y viento", "Astrobiología")
-OPTIONAL_COLUMNS = ("Polvo y viento",)  # se ocultan si el objetivo no tiene la dimensión (la Luna)
+SCORE_COLUMNS = ("Total", "Terrain", "Temperature", "Water and ice", "Dust and wind", "Astrobiology")
+OPTIONAL_COLUMNS = ("Dust and wind",)  # hidden if the target lacks the dimension (the Moon)
 _SCORE_FIELDS = ("total", "s_terrain", "s_temperature", "s_water_ice", "s_dust_wind", "bio_score")
 
 
 def ranking_table(ranking: Ranking) -> pd.DataFrame:
-    """Una fila por celda, en el orden del ranking, con los nombres de columna de la interfaz.
+    """One row per cell, in ranking order, with the interface's column names.
 
-    Los puntajes nulos quedan como NaN: la tabla los muestra como "sin dato"."""
+    Null scores stay NaN: the table shows them as "no data"."""
     rows = [item.model_dump() for item in ranking.items]
     df = pd.DataFrame(rows, columns=list(COLUMNS))
     df["known_analog"] = [a["name"] if a else None for a in df["known_analog"]]
@@ -41,5 +41,5 @@ def ranking_table(ranking: Ranking) -> pd.DataFrame:
 
 
 def visible_columns(table: pd.DataFrame) -> list[str]:
-    """Las columnas a mostrar: una dimensión opcional vacía en toda la tabla (polvo y viento en la Luna) se oculta."""
+    """The columns to show: an optional dimension that is empty across the whole table (dust and wind on the Moon) is hidden."""
     return [c for c in table.columns if not (c in OPTIONAL_COLUMNS and table[c].isna().all())]

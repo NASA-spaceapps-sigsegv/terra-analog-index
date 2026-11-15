@@ -4,7 +4,7 @@
     "types": [
         {
             "extremophile_type": "halophile",
-            "label": "Halófilos (sal)",
+            "label": "Halophiles (salt)",
             "search_by": "environment",
             "terms": [
                 "hypersaline",
@@ -17,7 +17,7 @@
         },
         {
             "extremophile_type": "psychrophile",
-            "label": "Psicrófilos (frío)",
+            "label": "Psychrophiles (cold)",
             "search_by": "environment",
             "terms": [
                 "permafrost",
@@ -28,7 +28,7 @@
         },
         {
             "extremophile_type": "xerophile",
-            "label": "Xerófilos (aridez)",
+            "label": "Xerophiles (dryness)",
             "search_by": "environment",
             "terms": [
                 "desert soil",
@@ -39,7 +39,7 @@
         },
         {
             "extremophile_type": "acidophile",
-            "label": "Acidófilos (ácido)",
+            "label": "Acidophiles (acid)",
             "search_by": "environment",
             "terms": [
                 "acid mine drainage",
@@ -48,7 +48,7 @@
         },
         {
             "extremophile_type": "thermophile",
-            "label": "Termófilos (calor)",
+            "label": "Thermophiles (heat)",
             "search_by": "environment",
             "terms": [
                 "hot spring",
@@ -58,7 +58,7 @@
         },
         {
             "extremophile_type": "radioresistant",
-            "label": "Radiorresistentes",
+            "label": "Radioresistant",
             "search_by": "organism",
             "terms": [
                 "Deinococcus",

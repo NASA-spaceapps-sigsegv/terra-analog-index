@@ -1,5 +1,5 @@
-"""Pasos 06 (unión de variables) y 08 (similitud) de TAI-18, con mundos chicos armados a mano,
-y una corrida de punta a punta 06 -> 07 -> 08 -> 09 con los archivos reales de config/."""
+"""Steps 06 (variable join) and 08 (similarity) of TAI-18, with small hand-built worlds,
+and an end-to-end run 06 -> 07 -> 08 -> 09 with the real files in config/."""
 
 import importlib.util
 import json
@@ -29,7 +29,7 @@ NAN = np.nan
 
 
 def make_grid(cells):
-    """cells: lista de (lat, lon) de puntos; una celda por punto."""
+    """cells: list of (lat, lon) points; one cell per point."""
     cid = np.array([geo.cell_id_of(la, lo) for la, lo in cells], dtype="int32")
     lat_idx, lon_idx = geo.split_cell_id(cid)
     lat, lon = geo.cell_center(cid)
@@ -42,7 +42,7 @@ def make_grid(cells):
 
 
 def parts_for(grid, values, bio=None):
-    """values: {variable: lista alineada con la grilla}. Los intermedios traen todas las celdas."""
+    """values: {variable: list aligned with the grid}. The intermediate files carry every cell."""
     ids = grid["cell_id"]
     part = lambda cols: pd.DataFrame({"cell_id": ids, **{c: pd.array(values.get(c, [NAN] * len(ids)), dtype="float32")
                                                          for c in cols}})
@@ -87,13 +87,13 @@ def test_coverage_and_n_physical_count_what_has_data():
                 dust_aod=[0.05, NAN, NAN], wind_ms=[NAN, 6.0, NAN])
     f = step06.build_features(GRID3, parts_for(GRID3, v))
     assert list(f["coverage"]) == [7, 1, 2]
-    assert list(f["n_physical"]) == [3, 0, 2]  # polvo y viento no cuenta: no decide la elegibilidad (TAI-52)
+    assert list(f["n_physical"]) == [3, 0, 2]  # dust and wind does not count: it does not decide eligibility (TAI-52)
 
 
 def test_cells_missing_from_an_intermediate_stay_null_not_zero():
     parts = parts_for(GRID3, values3())
-    parts["terrain"] = parts["terrain"].iloc[:1]  # el terreno trae solo la primera celda
-    parts["biology"] = parts["biology"].iloc[:0]  # sin registros biológicos
+    parts["terrain"] = parts["terrain"].iloc[:1]  # terrain has only the first cell
+    parts["biology"] = parts["biology"].iloc[:0]  # no biological records
     f = step06.build_features(GRID3, parts)
     assert f["slope_deg"].isna().tolist() == [False, True, True]
     assert list(f["bio_records"]) == [0, 0, 0] and list(f["bio_type_list"]) == ["", "", ""]
@@ -108,7 +108,7 @@ def test_bio_type_list_is_alphabetical():
 def test_intermediate_outside_the_grid_or_without_columns_fails():
     parts = parts_for(GRID3, values3())
     parts["temperature"] = pd.concat([parts["temperature"], parts["temperature"].iloc[:1].assign(cell_id=1)])
-    with pytest.raises(OutputValidationError, match="fuera de la grilla"):
+    with pytest.raises(OutputValidationError, match="outside the grid"):
         step06.build_features(GRID3, parts)
     parts = parts_for(GRID3, values3())
     parts["water_ice"] = parts["water_ice"].drop(columns="ice_frac")
@@ -123,9 +123,9 @@ def test_earth_stats_are_weighted_by_area_and_validate():
     for s in stats.values():
         models.EarthStats.model_validate(s)
         assert s["p01"] <= s["p99"]
-    # con tres celdas, los percentiles 1 y 99 caen en los extremos
+    # with three cells, percentiles 1 and 99 fall at the ends
     assert stats["tmin_c"]["p01"] == -60.0 and stats["tmin_c"]["p99"] == 20.0
-    assert stats["precip_mm"]["p99"] == 1200.0  # el nulo no cuenta
+    assert stats["precip_mm"]["p99"] == 1200.0  # the null does not count
 
 
 def test_earth_stats_fail_if_a_variable_has_no_data():
@@ -148,7 +148,7 @@ def target(target_id="mars_jezero", has_ice=False, rules_=None, earth_std=5.0):
         has_ice=has_ice, has_ice_source="x", summary="", unreplicable=[], notes=[],
         vars={v: {"mean": means[v], "std": 2.0, "unit": "u", "rule": rules_[v], "source": "x",
                   "source_type": "literature", "earth_p01": 0.0, "earth_p99": 1.0, "earth_std": earth_std}
-              for v in CORE_VARS})  # sin polvo y viento: es opcional (TAI-52)
+              for v in CORE_VARS})  # no dust and wind: it is optional (TAI-52)
 
 
 def analog(analog_id, lat, lon, radius_km=150.0, target_id="mars_jezero"):
@@ -170,16 +170,16 @@ def test_similarity_follows_the_contract_one_row_per_cell_and_target():
 
 def test_variable_scores_follow_their_rules():
     sim = similarity()
-    assert sim.loc[0, "sv_slope_deg"] == 1.0  # en la media del objetivo
-    assert sim.loc[2, "sv_tmin_c"] == 1.0  # la más fría
-    assert sim.loc[0, "sv_trange_c"] == 1.0  # el mayor rango
+    assert sim.loc[0, "sv_slope_deg"] == 1.0  # at the target mean
+    assert sim.loc[2, "sv_tmin_c"] == 1.0  # the coldest
+    assert sim.loc[0, "sv_trange_c"] == 1.0  # the widest range
     assert list(sim["sv_ice_frac"]) == pytest.approx([0.95, 1.0, 0.0])  # absence
-    assert np.isnan(sim.loc[2, "sv_precip_mm"])  # nulo sigue nulo
+    assert np.isnan(sim.loc[2, "sv_precip_mm"])  # null stays null
 
 
 def test_dimension_is_the_mean_of_its_variables_with_data():
     sim = similarity()
-    assert sim.loc[2, "s_water_ice"] == pytest.approx(sim.loc[2, "sv_ice_frac"])  # precip nula: solo hielo
+    assert sim.loc[2, "s_water_ice"] == pytest.approx(sim.loc[2, "sv_ice_frac"])  # null precip: ice only
     assert sim.loc[0, "s_temperature"] == pytest.approx((sim.loc[0, "sv_tmin_c"] + 1.0) / 2, abs=1e-3)
 
 
@@ -202,15 +202,15 @@ def test_bio_score_matches_the_design_and_is_the_same_for_every_target():
 
 def test_known_analog_is_the_nearest_within_its_radius_and_per_target():
     center = GRID3.loc[0, ["lat", "lon"]].astype(float)
-    near = analog("cerca", center["lat"] + 0.3, center["lon"])  # unos 33 km
-    far = analog("lejos", center["lat"] + 1.0, center["lon"])  # unos 111 km
+    near = analog("near", center["lat"] + 0.3, center["lon"])  # about 33 km
+    far = analog("far", center["lat"] + 1.0, center["lon"])  # about 111 km
     other = analog("de_la_luna", center["lat"], center["lon"], target_id="moon_south_pole")
     tiny = analog("radio_chico", center["lat"] + 0.3, center["lon"], radius_km=10)
     sim = similarity(targets=[target("moon_south_pole", has_ice=True), target("mars_jezero")],
                      analogs=[far, near, other, tiny])
     mars = sim[sim["target_id"] == "mars_jezero"].reset_index(drop=True)
     moon = sim[sim["target_id"] == "moon_south_pole"].reset_index(drop=True)
-    assert mars.loc[0, "known_analog"] == "cerca" and mars.loc[0, "known_analog_km"] == pytest.approx(33.4, abs=0.5)
+    assert mars.loc[0, "known_analog"] == "near" and mars.loc[0, "known_analog_km"] == pytest.approx(33.4, abs=0.5)
     assert mars["known_analog"].isna().tolist() == [False, True, True]
     assert moon.loc[0, "known_analog"] == "de_la_luna" and moon.loc[0, "known_analog_km"] == 0.0
 
@@ -227,14 +227,14 @@ def test_load_analogs_rejects_unknown_targets_and_wrong_columns(tmp_path):
     df = pd.read_csv(good)
     bad = tmp_path / "a.csv"
     df.assign(target_id="venus").to_csv(bad, index=False)
-    with pytest.raises(OutputValidationError, match="desconocidos"):
+    with pytest.raises(OutputValidationError, match="unknown"):
         step08.load_analogs(bad)
     df.drop(columns="basis").to_csv(bad, index=False)
-    with pytest.raises(OutputValidationError, match="columnas"):
+    with pytest.raises(OutputValidationError, match="columns"):
         step08.load_analogs(bad)
 
 
-# --- De punta a punta: 06 -> 07 -> 08 -> 09 con config/ real -----------------
+# --- End to end: 06 -> 07 -> 08 -> 09 with the real config/ ------------------
 
 
 def test_end_to_end_with_the_real_config_files():
@@ -242,7 +242,7 @@ def test_end_to_end_with_the_real_config_files():
     step09 = _load("step09", "09_validation.py")
     from tai import rules
 
-    # Un mundo chico: los puntos de los análogos (fríos, secos) y celdas templadas y húmedas de relleno.
+    # A small world: the analog points (cold, dry) and temperate, humid filler cells.
     analogs = step08.load_analogs(ROOT / "config" / "known_analogs.csv")
     pts = [(a.lat, a.lon) for a in analogs] + [(-3.5 + i, -60.5 + i) for i in range(30)]
     grid = make_grid(pts).drop_duplicates("cell_id").reset_index(drop=True)
@@ -253,7 +253,7 @@ def test_end_to_end_with_the_real_config_files():
               "trange_c": np.r_[np.full(n_an, 30.0), np.full(n - n_an, 8.0)],
               "precip_mm": np.r_[np.full(n_an, 20.0), np.full(n - n_an, 2000.0)],
               "ice_frac": np.r_[np.full(n_an, 0.3), np.zeros(n - n_an)],
-              # TAI-52: análogos polvorientos y con viento moderado, como Jezero
+              # TAI-52: dusty analogs with moderate wind, like Jezero
               "dust_aod": np.r_[np.full(n_an, 0.3), np.full(n - n_an, 0.02)],
               "wind_ms": np.r_[np.full(n_an, 4.0), np.full(n - n_an, 8.0)]}
     f = step06.build_features(grid, parts_for(grid, values))
@@ -273,5 +273,5 @@ def test_end_to_end_with_the_real_config_files():
     report = step09.build_report(sim, grid, analogs)
     models.ValidationReport.model_validate_json(report.model_dump_json())
     assert {t.target_id for t in report.targets} == set(TARGET_IDS)
-    assert all(t.covered_total >= 3 for t in report.targets)  # TAI-17: 3 cubiertos por objetivo
+    assert all(t.covered_total >= 3 for t in report.targets)  # TAI-17: 3 covered per target
     json.dumps(report.model_dump(mode="json"), allow_nan=False)

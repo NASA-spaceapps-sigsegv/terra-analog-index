@@ -1,6 +1,6 @@
 """Regenerate the Parquet fixtures in this folder.
 
-Values follow the examples in "Contratos JSON e interfaces". Numbers are
+Values follow the examples in "JSON contracts and interfaces". Numbers are
 illustrative, not results. Usage: python tests/fixtures/make_fixtures.py
 """
 
@@ -20,8 +20,8 @@ from tai.constants import OPTIONAL_VARS, PHYSICAL_VARS, TARGET_IDS  # noqa: E402
 CELLS = [
     (1620, 1.0, None),  # Antarctica, 85.5 S
     (23510, 1.0, "Chile"),  # Atacama (design 2.1 example)
-    (40870, 1.0, "Argelia"),  # Sahara
-    (45893, 0.8, "España"),  # Rio Tinto (validation example)
+    (40870, 1.0, "Algeria"),  # Sahara
+    (45893, 0.8, "Spain"),  # Rio Tinto (validation example)
 ]
 
 
@@ -97,7 +97,7 @@ def similarity() -> pd.DataFrame:
                 f"sv_{v}": (None if pd.isna(f[v]) else round(0.2 + 0.6 * ((base + i / 7) % 1), 3))
                 for i, v in enumerate(PHYSICAL_VARS)
             }
-            # targets.json de ejemplo no trae polvo y viento (TAI-52, opcional): sin puntaje en ningún objetivo.
+            # the sample targets.json has no dust and wind (TAI-52, optional): no score for any target.
             sv |= {f"sv_{v}": None for v in OPTIONAL_VARS}
             dims = {
                 "s_terrain": ("sv_slope_deg", "sv_roughness_m"),

@@ -1,6 +1,6 @@
-"""Barra lateral (design 10.2). Dibuja los controles y devuelve su estado.
+"""Sidebar (design 10.2). Draws the controls and returns their state.
 
-No lee archivos ni calcula puntajes: recibe la lista de objetivos ya cargada.
+It reads no files and computes no scores: it receives the already loaded list of targets.
 """
 
 from dataclasses import dataclass
@@ -10,17 +10,17 @@ import streamlit as st
 from tai.constants import DEFAULT_WEIGHTS, DIMENSIONS, WEIGHT_STEP
 from tai.models import TargetSummary
 
-PROJECTIONS = {"world": "Mundo", "south_pole": "Polo sur", "north_pole": "Polo norte"}
+PROJECTIONS = {"world": "World", "south_pole": "South pole", "north_pole": "North pole"}
 WEIGHT_LABELS = {
-    "terrain": "Terreno",
-    "temperature": "Temperatura",
-    "water_ice": "Agua y hielo",
-    "dust_wind": "Polvo y viento",
-    "biology": "Interés astrobiológico",
+    "terrain": "Terrain",
+    "temperature": "Temperature",
+    "water_ice": "Water and ice",
+    "dust_wind": "Dust and wind",
+    "biology": "Astrobiological interest",
 }
-BIOLOGY_NOTE = "No mide parecido con el objetivo: mide registros de vida en ambientes extremos."
-CAVES_HELP = "Sitios subterráneos estudiados como análogos de los tubos de lava de la Luna y Marte. Solo informativos: no cambian los puntajes."
-DUST_WIND_NOTE = "Solo Marte: la Luna no tiene atmósfera, ni viento ni polvo en suspensión."
+BIOLOGY_NOTE = "It does not measure similarity to the target: it measures records of life in extreme environments."
+CAVES_HELP = "Underground sites studied as analogs of lava tubes on the Moon and Mars. Informational only: they do not change the scores."
+DUST_WIND_NOTE = "Mars only: the Moon has no atmosphere, no wind and no airborne dust."
 
 
 def weight_key(dim: str) -> str:
@@ -32,13 +32,13 @@ class SidebarState:
     target_id: str
     weights: dict[str, float]
     hide_known: bool
-    show_caves: bool  # capa de cuevas y tubos de lava (TAI-53), apagada al abrir
+    show_caves: bool  # caves and lava tubes layer (TAI-53), off on open
     projection: str  # world, south_pole, north_pole
 
 
 def _init_session(target_ids: list[str]) -> None:
     ss = st.session_state
-    if ss.get("target_id") not in target_ids:  # primera vez, o un objetivo que ya no existe
+    if ss.get("target_id") not in target_ids:  # first time, or a target that no longer exists
         ss["target_id"] = target_ids[0]
     for dim in DIMENSIONS:
         ss.setdefault(weight_key(dim), DEFAULT_WEIGHTS[dim])
@@ -64,25 +64,25 @@ def render_sidebar(targets: list[TargetSummary]) -> SidebarState:
     with st.sidebar:
         st.header("Terra Analog Index")
         st.radio(
-            "Sitio objetivo",
+            "Target site",
             options=list(labels),
             format_func=labels.get,
             key="target_id",
-            on_change=_clear_selection,  # cambiar de objetivo limpia la celda elegida
+            on_change=_clear_selection,  # changing target clears the selected cell
         )
 
-        st.subheader("Pesos")
+        st.subheader("Weights")
         for dim in DIMENSIONS:
             st.slider(WEIGHT_LABELS[dim], 0.0, 1.0, step=WEIGHT_STEP, key=weight_key(dim))
             if dim == "biology":
                 st.caption(BIOLOGY_NOTE)
             elif dim == "dust_wind":
                 st.caption(DUST_WIND_NOTE)
-        st.button("Restablecer pesos", on_click=_reset_weights)
+        st.button("Reset weights", on_click=_reset_weights)
 
-        st.checkbox("Ocultar análogos conocidos", key="hide_known")
-        st.checkbox("Mostrar cuevas y tubos de lava", key="show_caves", help=CAVES_HELP)
-        st.radio("Vista del mapa", options=list(PROJECTIONS), format_func=PROJECTIONS.get, key="projection")
+        st.checkbox("Hide known analogs", key="hide_known")
+        st.checkbox("Show caves and lava tubes", key="show_caves", help=CAVES_HELP)
+        st.radio("Map view", options=list(PROJECTIONS), format_func=PROJECTIONS.get, key="projection")
 
     ss = st.session_state
     return SidebarState(

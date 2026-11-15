@@ -1,4 +1,4 @@
-"""TAI-30 dentro de la app: el mapa aparece en Explorar y sigue a los controles."""
+"""TAI-30 inside the app: the map appears in Explore and follows the controls."""
 
 from pathlib import Path
 
@@ -17,7 +17,7 @@ def app(data_dir, monkeypatch):
 def test_explore_shows_the_map_and_no_placeholder(app):
     assert not app.exception and not app.error
     assert len(app.get("plotly_chart")) == 1
-    assert not any("El mapa llega" in i.value for i in app.info)
+    assert not any("The map arrives" in i.value for i in app.info)
 
 
 def test_all_weights_zero_keeps_the_gray_map_and_shows_the_warning(app):
@@ -25,7 +25,7 @@ def test_all_weights_zero_keeps_the_gray_map_and_shows_the_warning(app):
         app.sidebar.slider(key=f"w_{dim}").set_value(0.0)
     app.run()
     assert not app.exception
-    assert any("Subí al menos un peso" in w.value for w in app.warning)
+    assert any("Raise at least one weight" in w.value for w in app.warning)
     assert len(app.get("plotly_chart")) == 1
 
 

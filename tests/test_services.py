@@ -22,10 +22,10 @@ def test_list_targets(bundle):
 
 def test_ranking_order_and_ties(bundle):
     r = services.get_ranking(bundle, MOON, DEFAULT_WEIGHTS)
-    assert ids(r) == [104, 102, 100, 101, 105]  # 103 no es elegible; 100 y 101 empatan -> cell_id
+    assert ids(r) == [104, 102, 100, 101, 105]  # 103 is not eligible; 100 and 101 tie -> cell_id
     assert [x.rank for x in r.items] == [1, 2, 3, 4, 5]
     assert r.total_eligible == 5
-    assert r.items[0].s_temperature is None  # nulo se conserva, no pasa a 0
+    assert r.items[0].s_temperature is None  # null is kept, it does not become 0
 
 
 def test_moving_a_weight_changes_the_order(bundle):
