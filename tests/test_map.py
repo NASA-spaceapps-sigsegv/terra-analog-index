@@ -458,3 +458,9 @@ def _timed(fn, *args) -> float:
     t0 = time.perf_counter()
     fn(*args)
     return time.perf_counter() - t0
+
+
+@pytest.mark.parametrize("view", ["world", "south_pole", "north_pole"])
+def test_hiding_known_analogs_removes_the_rings(bundle, view):
+    fig = map_view.build_figure(layer_of(bundle), view, show_analogs=False)
+    assert not [t for t in fig.data if t.name == "Análogo conocido"]
