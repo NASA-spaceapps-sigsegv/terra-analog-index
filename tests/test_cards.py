@@ -1,6 +1,7 @@
 """Fichas de sitio (design 11 y 12.1, contrato SiteCard, TAI-32)."""
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -252,6 +253,13 @@ def test_manual_format_check(text, problem):
         assert problems == []
     else:
         assert any(problem in p for p in problems), problems
+
+
+@pytest.mark.parametrize("path", sorted(CARDS_DIR.glob("*.md")), ids=lambda p: p.name)
+def test_manual_texts_never_say_equal_or_identical_to_the_target(path):
+    """TAI-33: un puntaje alto no significa "igual a" la Luna o Marte (design 14, punto 1)."""
+    text = path.read_text(encoding="utf-8").lower()
+    assert not re.search(r"(igual|idéntic[oa]s?|iguales)\s+a", text), path.name
 
 
 @pytest.mark.parametrize("path", sorted(CARDS_DIR.glob("*.md")), ids=lambda p: p.name)
