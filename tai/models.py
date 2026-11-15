@@ -397,3 +397,113 @@ class MapLayer(BaseModel):
             "cells": rows,
         }
 
+
+
+# --- Respuesta de get_site_card (contracts 5) ----------------------------------
+
+PhysicalDimension = Literal["terrain", "temperature", "water_ice"]
+
+
+class CardAnalog(_Model):
+    analog_id: str
+    name: str = Field(min_length=1)
+    distance_km: float | None = Field(ge=0)
+    basis: str
+
+
+class CardHeader(_Model):
+    lat: float
+    lon: float
+    label: str  # "24,5°S 69,5°O"
+    country: str | None
+    area_km2: float = Field(gt=0)
+    known_analog: CardAnalog | None
+
+
+class CardScores(_Model):
+    total: float | None = Field(ge=0, le=1)  # nulo si la celda no es elegible o los pesos suman 0
+    terrain: float | None = Field(ge=0, le=1)
+    temperature: float | None = Field(ge=0, le=1)
+    water_ice: float | None = Field(ge=0, le=1)
+    biology: float = Field(ge=0, le=1)
+
+
+class CardVariable(_Model):
+    variable: str
+    label: str
+    dimension: PhysicalDimension
+    unit: str
+    earth_value: float | None
+    target_mean: float
+    target_std: float = Field(ge=0)
+    score: float | None = Field(ge=0, le=1)
+    rule: Rule
+    phrase: str = Field(min_length=1)
+    source_earth: str
+    source_target: str
+    source_type: SourceType
+
+
+class CardDimension(_Model):
+    dimension: PhysicalDimension
+    label: str
+    score: float = Field(ge=0, le=1)
+
+
+class BioTypeRef(_Model):
+    extremophile_type: ExtremophileType
+    label: str
+
+
+class CardBiology(_Model):
+    records: int = Field(ge=0)
+    types: list[BioTypeRef]
+    phrase: str = Field(min_length=1)
+    sampling_note: str = Field(min_length=1)
+    source: str
+
+
+class ManualText(_Model):
+    title: str = Field(min_length=1)
+    body_md: str
+    path: str
+
+
+class CardSource(_Model):
+    name: str = Field(min_length=1)
+    used_for: list[str] = Field(min_length=1)
+
+
+class SiteCard(_Model):
+    """Todo lo que muestra la ficha, ya redactado: la vista no arma frases ni decide umbrales."""
+
+    cell_id: int = Field(ge=0)
+    target_id: str
+    target_label: str
+    header: CardHeader
+    weights: Weights
+    eligible: bool
+    scores: CardScores
+    variables: list[CardVariable]
+    similar_in: list[CardDimension]
+    different_in: list[CardDimension]
+    similar_empty_phrase: str | None
+    different_empty_phrase: str | None
+    biology: CardBiology
+    unreplicable: list[str] = Field(min_length=1)
+    notes: list[str]
+    manual: ManualText | None
+    sources: list[CardSource]
+
+    @model_validator(mode="after")
+    def _rules(self):
+        if [v.variable for v in self.variables] != list(PHYSICAL_VARS):
+            raise ValueError(f"variables must be the six physical variables in order: {PHYSICAL_VARS}")
+        both = {d.dimension for d in self.similar_in} & {d.dimension for d in self.different_in}
+        if both:
+            raise ValueError(f"a dimension cannot be both similar and different: {sorted(both)}")
+        if (self.similar_empty_phrase is None) != bool(self.similar_in):
+            raise ValueError("similar_empty_phrase is set exactly when similar_in is empty")
+        if (self.different_empty_phrase is None) != bool(self.different_in):
+            raise ValueError("different_empty_phrase is set exactly when different_in is empty")
+        return self
