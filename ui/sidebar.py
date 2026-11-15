@@ -4,7 +4,9 @@ It computes no scores and reads no data: it receives the already loaded list of 
 logo image shown at the top.
 """
 
+import base64
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 import streamlit as st
@@ -24,6 +26,18 @@ LOGO_PATH = Path(__file__).resolve().parents[1] / "docs" / "img" / "logo" / "log
 BIOLOGY_NOTE = "It does not measure similarity to the target: it measures records of life in extreme environments."
 CAVES_HELP = "Underground sites studied as analogs of lava tubes on the Moon and Mars. Informational only: they do not change the scores."
 DUST_WIND_NOTE = "Mars only: the Moon has no atmosphere, no wind and no airborne dust."
+
+
+@lru_cache(maxsize=1)
+def logo_html() -> str | None:
+    """The logo as a plain <img> tag. st.image would add a full-screen button on hover, which a logo does not need."""
+    if not LOGO_PATH.is_file():
+        return None
+    data = base64.b64encode(LOGO_PATH.read_bytes()).decode("ascii")
+    return (
+        f'<img src="data:image/svg+xml;base64,{data}" alt="Terra Analog Index" '
+        'style="display:block;width:100%;height:auto;margin:0 0 0.75rem 0">'
+    )
 
 
 def weight_key(dim: str) -> str:
@@ -65,8 +79,9 @@ def render_sidebar(targets: list[TargetSummary]) -> SidebarState:
     _init_session(list(labels))
 
     with st.sidebar:
-        if LOGO_PATH.is_file():  # logo with the name; the plain title is the fallback if the file is missing
-            st.image(str(LOGO_PATH), width="stretch")
+        logo = logo_html()
+        if logo:  # logo with the name; the plain title is the fallback if the file is missing
+            st.markdown(logo, unsafe_allow_html=True)
         else:
             st.header("Terra Analog Index")
         st.radio(
