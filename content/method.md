@@ -4,7 +4,7 @@ _Terra Analog Index_ es un buscador global que compara la Tierra celda por celda
 
 ## Datos usados
 
-Todos los cálculos terrestres se basan _en registros normalizados del año calendario 2024, abarcando modelos de elevación global a 1 km, temperaturas superficiales mensuales de MODIS, precipitaciones de GPM IMERG_ --- (Necesito la lista de fuentes terrestres) --- y registros de biodiversidad extrema extraídos de NCBI BioSample. Los datos correspondientes a la Luna y a Marte se obtuvieron de misiones oficiales como LRO (LOLA y Diviner), MOLA y MEDA, complementados cuando fue necesario con valores de literatura científica citados en el lugar.
+Todos los cálculos terrestres se basan en registros normalizados del año calendario 2024, abarcando límites geográficos de Natural Earth, modelos de elevación global a 1 km de ETOPO, polvo y viento de MERRA-2, temperaturas superficiales mensuales de MODIS, precipitaciones de GPM IMERG y registros de biodiversidad extrema extraídos de NCBI BioSample. Los datos correspondientes a la Luna y a Marte se obtuvieron de misiones oficiales como LRO (LOLA y Diviner), MOLA y MEDA, complementados cuando fue necesario con valores de literatura científica citados en el lugar.
 
 ## Cómo se calcula
 

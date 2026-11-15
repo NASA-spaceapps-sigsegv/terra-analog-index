@@ -30,8 +30,12 @@
 
 ### Datos para las celdas
 
-
+- Natural Earth
+- ETOPO 2022
+- MODIS
+- MERRA-2
+- GPM IMERG
 
 ### Datos biológicos
 
-- BioSample de NCBI
+- NCBI BioSample
