@@ -21,6 +21,7 @@ from tai.errors import (
 )
 from tai.io import DataBundle, data_signature, load_bundle
 from tai.constants import SCORE_DECIMALS_UI
+from ui import map_view
 from ui.sidebar import SidebarState, render_sidebar
 
 st.set_page_config(page_title="Terra Analog Index", page_icon="🛰️", layout="wide")
@@ -78,7 +79,8 @@ def ranking_table(ranking) -> pd.DataFrame:
 
 
 def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
-    st.info("El mapa llega el domingo (TAI-30).")
+    layer = services.get_map_layer(bundle, state.target_id, state.weights)
+    map_view.render_map(layer, state.projection, st.session_state.get("selected_cell_id"))
     left, right = st.columns([4, 6])
     with left:
         st.subheader("Mejores celdas")

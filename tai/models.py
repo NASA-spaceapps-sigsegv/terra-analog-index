@@ -9,6 +9,7 @@ import re
 from datetime import datetime
 from typing import Literal
 
+import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from tai.constants import (
@@ -352,3 +353,47 @@ class Ranking(_Model):
     limit: int = Field(ge=1)
     total_eligible: int = Field(ge=0)  # elegibles antes de aplicar limit (y después de hide_known)
     items: list[RankingItem]
+
+
+# --- Respuesta de get_map_layer (contracts 4.4) ------------------------------
+
+MAP_CELL_COLUMNS = (
+    "cell_id", "lat", "lon", "country", "total", "s_terrain", "s_temperature",
+    "s_water_ice", "bio_score", "eligible", "known_analog",
+)
+
+
+class MapLayer(BaseModel):
+    """Todas las celdas de la grilla para un objetivo y unos pesos, sin ordenar.
+
+    `cells` es una tabla (una fila por celda, columnas de MAP_CELL_COLUMNS) para que el mapa
+    se arme sin recorrer objetos; `to_dict` da la forma JSON del contrato, con null en vez
+    de NaN. `total` es nulo si la celda no es elegible (o si todos los pesos valen 0).
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True, arbitrary_types_allowed=True)
+
+    target_id: str
+    weights: Weights
+    n_cells: int = Field(ge=0)
+    n_eligible: int = Field(ge=0)
+    cells: pd.DataFrame
+
+    @model_validator(mode="after")
+    def _columns(self):
+        if tuple(self.cells.columns) != MAP_CELL_COLUMNS:
+            raise ValueError(f"cells must have exactly the columns {MAP_CELL_COLUMNS}")
+        if len(self.cells) != self.n_cells:
+            raise ValueError("n_cells must equal the number of rows of cells")
+        return self
+
+    def to_dict(self) -> dict:
+        rows = self.cells.astype(object).where(self.cells.notna(), None).to_dict(orient="records")
+        return {
+            "target_id": self.target_id,
+            "weights": self.weights.as_dict(),
+            "n_cells": self.n_cells,
+            "n_eligible": self.n_eligible,
+            "cells": rows,
+        }
+
