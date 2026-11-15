@@ -74,19 +74,6 @@ Después de bajar MOD11C3: `python pipeline/03_temperature.py` (requiere el paso
 
 Después de bajar IMERG, MOD10CM y MCD12C1: `python pipeline/04_water_ice.py`. Necesita los 12 meses de IMERG y de MOD10CM; para MCD12C1 usa el de `DATA_YEAR` o, si todavía no salió, el último anterior. Escribe `data/interim/water_ice.parquet`. La precipitación queda nula al sur de 60° S, porque IMERG no mide la nieve sobre la Antártida (diseño 4.3).
 
-## Luna y Marte (TAI-05)
-
-| Objetivo | Variable | Producto | Enlace | measured / literature | Formato y proyección |
-| --- | --- | --- | --- | --- | --- |
-| moon_south_pole | slope_deg, roughness_m | LOLA polar (a confirmar) | | | |
-| moon_south_pole | tmin_c, trange_c | Diviner polar (a confirmar) | | | |
-| moon_south_pole | precip_mm, ice_frac | Por definición / has_ice | — | definition | — |
-| mars_jezero | slope_deg, roughness_m | MOLA (a confirmar) | | | |
-| mars_jezero | tmin_c, trange_c | | | | |
-| mars_jezero | precip_mm, ice_frac | Por definición / has_ice | — | definition | — |
-
-Recorte de Jezero a confirmar con Mars Trek (supuesto A2): latitud 17,9 a 18,9 N; longitud 77,0 a 78,0 E.
-
 ## NCBI BioSample (paso 05)
 
 No se descarga a mano: el paso 05 guarda cada lote crudo en `data/raw/05_biology/<tipo>_<inicio>.xml`.
@@ -95,7 +82,7 @@ No se descarga a mano: el paso 05 guarda cada lote crudo en `data/raw/05_biology
 
 No hay archivos que bajar a mano: el paso consulta NCBI con los términos de `config/bio_terms.json` y guarda cada lote crudo en `data/raw/05_biology/<tipo>_<inicio>.xml` (no se versiona). Si se corta, se vuelve a correr y solo pide los lotes que faltan.
 
-Variables de entorno (en un `.env` local o en la terminal; nunca en el repositorio): `NCBI_EMAIL` (obligatoria) y `NCBI_API_KEY` (opcional: 10 pedidos por segundo en vez de 3).
+Variables de entorno (en la terminal o en un `.env` local, que el `Makefile` carga; nunca en el repositorio): `NCBI_EMAIL` (obligatoria) y `NCBI_API_KEY` (opcional: 10 pedidos por segundo en vez de 3).
 
 ```bash
 python pipeline/05_biology_ncbi.py --type halophile --max-records 200
@@ -126,4 +113,4 @@ Relevamiento del 14 de noviembre de 2026. Los enlaces de elevación se comprobar
 
 ### Paso 07: cómo se corre
 
-`python pipeline/07_targets.py` lee `config/targets_base.json` (Santino), `earth_stats` del manifiesto (lo escribe el paso 06) y los dos DEM de elevación. Pone la regla de cada variable con `tai.rules.choose_rule` (TAI-18). Para la Luna hay que bajar el LDEM de 80 m a `data/raw/07_targets/` (189 MB); el de Marte se lee por HTTP si no está en esa carpeta.
+`python pipeline/07_targets.py` lee `config/targets_base.json` (Santino), `earth_stats` del manifiesto (lo escribe el paso 06) y los dos DEM de elevación. Pone la regla de cada variable con `tai.rules.choose_rule` (TAI-18). Para la Luna hay que bajar el LDEM de 80 m a `data/raw/07_targets/` (189 MB) con `make data-moon` (también lo baja `make data`); el de Marte se lee por HTTP si no está en esa carpeta.
