@@ -24,6 +24,8 @@ NO_DATA = "sin dato"
 MANUAL_HEADING = "Para qué sirve en la exploración"
 LIMITS_HEADING = "Límites que ningún sitio terrestre replica"
 RADAR_COLOR = "#21918c"  # verde de la escala Viridis del mapa
+RADAR_GRID = "rgba(128,128,128,0.45)"  # gris semitransparente: se ve en tema claro y oscuro
+RADAR_TICKS = (0.3, 0.7, 1.0)  # los umbrales de "se aleja" y "se parece", y el máximo
 # Altura fija de las filas de la tabla de variables, en píxeles. st.dataframe solo parte el texto si la
 # altura pasa de 64 px (4rem), y es la misma para todas las filas: 84 px entran tres líneas de "Lectura".
 VARIABLE_ROW_HEIGHT = 84
@@ -71,7 +73,22 @@ def radar_figure(card: SiteCard) -> go.Figure:
         )
     )
     fig.update_layout(
-        polar=dict(radialaxis=dict(range=[0, 1], tickvals=[0.3, 0.7, 1.0], angle=90, tickangle=90)),
+        polar=dict(
+            # Fondo transparente: toma el del tema, así el texto del tema (claro en oscuro) se lee.
+            bgcolor="rgba(0,0,0,0)",
+            radialaxis=dict(
+                range=[0, 1],
+                tickvals=RADAR_TICKS,
+                ticktext=[_score_text(t) for t in RADAR_TICKS],
+                # Entre Terreno (0°) y Temperatura (90°): los números no quedan sobre un eje ni bajo un vértice.
+                angle=45,
+                tickangle=0,
+                showline=False,
+                gridcolor=RADAR_GRID,
+                tickfont=dict(size=12),
+            ),
+            angularaxis=dict(gridcolor=RADAR_GRID, linecolor=RADAR_GRID),
+        ),
         showlegend=False,
         height=320,
         margin=dict(l=60, r=60, t=30, b=30),
