@@ -9,6 +9,7 @@ from streamlit.testing.v1 import AppTest
 from tai.constants import DEFAULT_WEIGHTS, DIMENSIONS
 from tests.test_dust_wind import _card
 from ui import card_view, device, guide, map_view, share
+from ui.map_view import FOCUS_KEY
 from ui.ranking_view import SCROLL_KEY, SELECTED_KEY
 
 APP = str(Path(__file__).resolve().parents[1] / "streamlit_app.py")
@@ -212,3 +213,65 @@ def test_the_calculating_notice_is_css_on_the_running_state_and_nothing_is_left_
     assert 'data-test-script-state="running"' in guide.STYLES and "Calculating" in guide.STYLES
     assert "SELECTED_COLOR" not in guide.STYLES and "CAVE_COLOR" not in guide.STYLES
     assert map_view.SELECTED_COLOR in guide.STYLES and map_view.CAVE_COLOR in guide.STYLES
+
+
+# --- the list of the best 20 and the zoom on a cell ----------------------------------------------------------------------
+
+
+def best_list(at):
+    found = [g for g in at.get("button_group") if g.key and g.key.startswith("best_list_")]
+    assert len(found) == 1
+    return found[0]
+
+
+def map_range(at) -> tuple[float, float]:
+    spec = json.loads(at.get("plotly_chart")[0].proto.spec)["layout"]
+    return tuple(spec["xaxis"]["range"])
+
+
+def test_the_best_cells_are_a_row_of_small_numbers_and_the_map_starts_whole(app):
+    pills = best_list(app)
+    assert pills.options == ["1", "2", "3", "4"] or pills.options[0] == "1"  # the test data have 5 eligible cells: 1 to 5
+    assert pills.value in (None, []) and map_range(app) == (-180, 180)
+    assert any("tap a number to zoom the map" in c.value for c in app.caption)
+
+
+def test_tapping_a_number_zooms_the_map_on_that_cell_and_opens_its_card(app):
+    best_list(app).select(int(app.get("button_group")[0].options[1])).run()  # the second one
+    assert not app.exception and not app.error
+    assert app.session_state[FOCUS_KEY] == app.session_state[SELECTED_KEY]
+    x0, x1 = map_range(app)
+    assert x1 - x0 == 36.0 and "Limits no site on Earth replicates" in text(app)  # zoomed, and the card is below
+    assert SCROLL_KEY not in app.session_state  # the map stays in front: no scroll
+    assert any("Open its card" in c.value for c in app.caption)
+
+
+def test_tapping_the_open_number_again_or_the_back_button_returns_to_the_whole_map(app):
+    options = app.get("button_group")[0].options
+    best_list(app).select(int(options[1])).run()
+    assert FOCUS_KEY in app.session_state
+    best_list(app).unselect(int(options[1])).run()
+    assert FOCUS_KEY not in app.session_state and map_range(app) == (-180, 180)
+    best_list(app).select(int(options[0])).run()
+    next(b for b in app.button if b.label == "Back to full view").click().run()
+    assert FOCUS_KEY not in app.session_state and map_range(app) == (-180, 180)
+
+
+def test_changing_the_target_takes_the_map_back_to_the_whole_world(app):
+    best_list(app).select(int(app.get("button_group")[0].options[0])).run()
+    assert FOCUS_KEY in app.session_state
+    app.sidebar.radio(key="target_id").set_value(MARS).run()
+    assert FOCUS_KEY not in app.session_state and map_range(app) == (-180, 180)
+
+
+def test_the_focus_survives_moving_a_weight_so_the_zoom_is_not_lost(app):
+    best_list(app).select(int(app.get("button_group")[0].options[0])).run()
+    before = map_range(app)
+    app.sidebar.slider(key="w_terrain").set_value(0.5).run()
+    assert not app.exception and FOCUS_KEY in app.session_state
+    assert map_range(app) == before
+
+
+def test_the_copy_button_script_runs_in_its_own_scope_so_a_rerun_does_not_redeclare_it(app):
+    body = next(h.proto.body for h in app.get("html") if "tai-copy" in h.proto.body)
+    assert "(() =>" in body and "})();" in body  # a top-level `const button` threw "already declared" on every rerun

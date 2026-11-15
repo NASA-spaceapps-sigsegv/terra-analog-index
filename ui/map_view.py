@@ -58,10 +58,11 @@ HINT_PICKABLE = "Tap or click to open its card"
 HINT_LIST = "Open its card from the list below"  # the phone: see render_map
 NO_SCORE_NAME = "Cells without a score"
 MAP_KEY = "map_chart"  # session key of the chart: its selection (a tap on a numbered dot) is read in a callback
+FOCUS_KEY = "map_focus_cell"  # the cell the map is zoomed on (from the 1-20 list or a tap on a dot)
 TOP_KEY = "map_top_trace"  # (curve number, cell_ids) of the numbered dots drawn in the last run
 # Figure height, in px. The map sits beside the best cells, so it is narrower than the page: the world view (2:1) needs
 # less height than the poles (square). On a phone it is narrower still.
-HEIGHT = {"world": 400, "south_pole": 500, "north_pole": 500}
+HEIGHT = {"world": 620, "south_pole": 640, "north_pole": 640}  # the map is the page: it takes the room
 COMPACT_HEIGHT = {"world": 330, "south_pole": 420, "north_pole": 420}
 
 PROJECTIONS = ("world", "south_pole", "north_pole")
@@ -578,15 +579,51 @@ def _png_uri_cached(total_grid, painted, hemisphere) -> str:
     return _IMAGE_CACHE[key]
 
 
+def focus_view(projection: str, lat: float, lon: float) -> tuple[tuple[float, float], tuple[float, float]]:
+    """The axis ranges that frame one cell: a window around it, shifted (never cut) to stay inside the whole map.
+
+    World: 36 x 18 degrees (the map is 2:1). Poles: 0.36 units of the disk, which is about 20 degrees of latitude."""
+    (x_lo, x_hi), (y_lo, y_hi) = VIEW_LIMITS[projection]
+    if projection == "world":
+        cx, cy, hx, hy = lon, lat, 18.0, 9.0
+    else:
+        px, py = _project(np.array([lat]), np.array([lon]), _HEMISPHERE[projection])
+        cx, cy, hx, hy = float(px[0]), float(py[0]), 0.18, 0.18
+
+    def fit(c: float, h: float, lo: float, hi: float) -> tuple[float, float]:
+        a, b = c - h, c + h
+        if a < lo:
+            a, b = lo, lo + 2 * h
+        if b > hi:
+            a, b = hi - 2 * h, hi
+        return a, b
+
+    return fit(cx, hx, x_lo, x_hi), fit(cy, hy, y_lo, y_hi)
+
+
+def _focus_of(cells, cell_id: int | None, projection: str) -> tuple[float, float] | None:
+    """(lat, lon) of the cell to zoom on; None if there is none, it is not in the layer, or the pole view does not show it."""
+    if cell_id is None:
+        return None
+    row = cells[cells["cell_id"] == cell_id]
+    if row.empty:
+        return None
+    lat, lon = float(row["lat"].iloc[0]), float(row["lon"].iloc[0])
+    if projection != "world" and lat * _HEMISPHERE[projection] <= 0:
+        return None
+    return lat, lon
+
+
 def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: int | None = None,
                  caves: Sequence[Cave] = (), top_cells: Sequence[int] = (), compact: bool = False,
-                 view_rev: int = 0) -> go.Figure:
+                 view_rev: int = 0, focus_cell: int | None = None) -> go.Figure:
     """World: a longitude/latitude Heatmap. Poles: an image with the orthographic projection.
 
     `caves`: the caves and lava tubes layer (TAI-53); if empty, the map does not draw it.
     `top_cells`: cell_ids in ranking order; they are drawn as numbered dots you can tap to open the card.
     `compact`: the phone layout: a shorter figure, the color bar below the map and the legend below that.
-    `view_rev`: changing it resets the zoom (the "Back to full view" button)."""
+    `view_rev`: changing it resets the zoom (the "Back to full view" button).
+    `focus_cell`: zoom the view on that cell (the list of the best 20); going to another cell, or back, resets the view."""
     if projection not in PROJECTIONS:
         raise ValueError(f"projection must be one of {list(PROJECTIONS)}, not {projection!r}")
     fig = go.Figure()
@@ -599,6 +636,11 @@ def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: i
         unselected=dict(marker=dict(opacity=1)), selected=dict(marker=dict(opacity=1)),
         selector=lambda t: t.type in ("scatter", "scattergl"),
     )
+    focus = _focus_of(layer.cells, focus_cell, projection)
+    if focus is not None:
+        (x0, x1), (y0, y1) = focus_view(projection, *focus)
+        fig.update_xaxes(range=[x0, x1])
+        fig.update_yaxes(range=[y0, y1])
     fig.update_layout(
         height=(COMPACT_HEIGHT if compact else HEIGHT)[projection],
         margin=dict(l=0, r=0, t=34 if compact else 28, b=0),
@@ -609,14 +651,14 @@ def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: i
         # On a phone one finger scrolls the page; panning is a button in the toolbar (pan2d).
         dragmode=False if compact else "pan",
         meta=dict(tai_limits=dict(x=list(VIEW_LIMITS[projection][0]), y=list(VIEW_LIMITS[projection][1]))),
-        uirevision=f"{projection}-{view_rev}",  # keeps the zoom when moving weights; the view resets when changing projection
+        uirevision=f"{projection}-{view_rev}-{focus_cell if focus is not None else 'all'}",  # keeps the zoom when moving weights; the view resets when changing projection
     )
     return fig
 
 
 def render_map(layer: MapLayer, projection: str, selected_cell_id: int | None, caves: Sequence[Cave] = (),
                top_cells: Sequence[int] = (), compact: bool = False, view_rev: int = 0,
-               on_pick: Callable[[int], None] | None = None) -> None:
+               on_pick: Callable[[int], None] | None = None, focus_cell: int | None = None) -> None:
     """Draws the map. With `on_pick`, tapping a numbered dot calls it with that cell's id.
 
     Not on a phone: Streamlit forces drag-to-pan on a chart that can be selected, and a map that pans under one finger
@@ -624,7 +666,7 @@ def render_map(layer: MapLayer, projection: str, selected_cell_id: int | None, c
     import streamlit as st
 
     render_view_guard()
-    fig = build_figure(layer, projection, selected_cell_id, caves, top_cells, compact, view_rev)
+    fig = build_figure(layer, projection, selected_cell_id, caves, top_cells, compact, view_rev, focus_cell)
     remove = ["select2d", "lasso2d"] + (["toImage", "zoom2d", "autoScale2d"] if compact else [])
     config = {"displaylogo": False, "scrollZoom": not compact, "modeBarButtonsToRemove": remove}
     if on_pick is None or compact:

@@ -74,12 +74,14 @@ def render_copy_button() -> None:
           color: inherit; background: transparent; border: 1px solid rgba(128,128,128,0.5); border-radius: 0.5rem;">
           {COPY_LABEL}</button>
         <script>
-          const button = document.getElementById("tai-copy");
-          if (button) button.onclick = async () => {{
-            try {{ await navigator.clipboard.writeText(window.location.href); button.textContent = "Link copied"; }}
-            catch (e) {{ button.textContent = "Copy it from the address bar"; }}
-            setTimeout(() => {{ button.textContent = {COPY_LABEL!r}; }}, 2200);
-          }};
+          (() => {{  // in its own scope: Streamlit runs this script again on every rerun
+            const button = document.getElementById("tai-copy");
+            if (button) button.onclick = async () => {{
+              try {{ await navigator.clipboard.writeText(window.location.href); button.textContent = "Link copied"; }}
+              catch (e) {{ button.textContent = "Copy it from the address bar"; }}
+              setTimeout(() => {{ button.textContent = {COPY_LABEL!r}; }}, 2200);
+            }};
+          }})();
         </script>
         """,
         unsafe_allow_javascript=True,
