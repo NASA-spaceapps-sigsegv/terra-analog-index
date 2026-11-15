@@ -101,95 +101,266 @@ def trace(fig, name):
     return found[0]
 
 
-def fills(fig):
-    """Las trazas que dibujan los cuadrados de las celdas (todas menos el contorno de la elegida)."""
-    return [t for t in fig.data if t.fill == "toself"]
+def heat(fig, name):
+    """El Heatmap de ese nombre (la capa gris tiene además una entrada en la leyenda con el mismo nombre)."""
+    found = [t for t in fig.data if t.name == name and t.type == "heatmap"]
+    assert len(found) == 1, f"debería haber un heatmap llamado {name!r}, hay {len(found)}"
+    return found[0]
 
 
-def n_squares(t) -> int:
-    return int(np.isnan(np.asarray(t.lat, dtype=float)).sum())  # un NaN cierra cada cuadrado
+def cell_pos(lat, lon) -> tuple[int, int]:
+    li, lj = map_view._index([lat], [lon])
+    return int(li[0]), int(lj[0])
 
 
-def test_cells_are_one_degree_squares_not_points(bundle):
-    fig = map_view.build_figure(layer_of(bundle), "world", None)
-    painted = sum(n_squares(t) for t in fills(fig) if t.name != "Datos insuficientes")
-    assert painted == 5 and n_squares(trace(fig, "Datos insuficientes")) == 1  # la 103 en gris, las otras cinco con color
-    one = next(t for t in fills(fig) if t.name != "Datos insuficientes")
-    lats, lons = np.asarray(one.lat, float)[:5], np.asarray(one.lon, float)[:5]
-    # un grado más un pequeño solape con las vecinas (map_view.OVERLAP_DEG), para que no queden costuras
-    assert 1.0 <= lats.max() - lats.min() <= 1.0 + 2 * map_view.OVERLAP_DEG
-    assert 1.0 <= lons.max() - lons.min() <= 1.0 + 2 * map_view.MAX_LON_OVERLAP_DEG
+def decode_png(uri: str) -> np.ndarray:
+    """Decodifica el PNG RGBA (filtro 0 por fila) que arma map_view, para mirar píxeles."""
+    import base64
+    import struct
+    import zlib
+
+    assert uri.startswith("data:image/png;base64,")
+    raw = base64.b64decode(uri.split(",", 1)[1])
+    assert raw[:8] == b"\x89PNG\r\n\x1a\n"
+    pos, idat, w, h = 8, b"", 0, 0
+    while pos < len(raw):
+        n, tag = struct.unpack(">I4s", raw[pos : pos + 8])
+        body = raw[pos + 8 : pos + 8 + n]
+        if tag == b"IHDR":
+            w, h = struct.unpack(">II", body[:8])
+        elif tag == b"IDAT":
+            idat += body
+        pos += 12 + n
+    rows = np.frombuffer(zlib.decompress(idat), dtype=np.uint8).reshape(h, w * 4 + 1)
+    assert (rows[:, 0] == 0).all()
+    return rows[:, 1:].reshape(h, w, 4)
 
 
-def test_a_square_at_mid_latitude_is_one_degree_plus_the_overlap():
-    lats, lons = map_view._squares(np.array([10.5]), np.array([20.5]))
-    assert np.nanmax(lats) - np.nanmin(lats) == pytest.approx(1.0 + 2 * map_view.OVERLAP_DEG)
-    expected = 1.0 + 2 * map_view.OVERLAP_DEG / np.cos(np.radians(10.5))
-    assert np.nanmax(lons) - np.nanmin(lons) == pytest.approx(expected)
+def one_cell_layer(lat, lon, total=0.5) -> MapLayer:
+    cells = pd.DataFrame(
+        {
+            "cell_id": np.array([1], dtype="int32"), "lat": [lat], "lon": [lon], "country": ["Chile"], "total": [total],
+            "s_terrain": [0.5], "s_temperature": [0.5], "s_water_ice": [0.5], "bio_score": [0.0], "eligible": [True],
+            "known_analog": [None],
+        }
+    )
+    return MapLayer(target_id=MOON, weights=Weights(**DEFAULT_WEIGHTS), n_cells=1, n_eligible=1, cells=cells)
 
 
-def test_no_vertex_is_exactly_on_a_pole():
-    lats, _ = map_view._squares(np.array([89.5, -89.5, 0.5]), np.array([10.5, 10.5, 10.5]))
-    finite = lats[~np.isnan(lats)]
-    assert finite.max() <= map_view.POLE_LIMIT < 90 and finite.min() >= -map_view.POLE_LIMIT > -90
+def spread_layer(totals) -> MapLayer:
+    """Una celda cada 30° de longitud a 60° de latitud: lejos del polo, donde una celda ocupa varios píxeles."""
+    n = len(totals)
+    total = np.array(totals, dtype="float64")
+    cells = pd.DataFrame(
+        {
+            "cell_id": np.arange(n, dtype="int32"), "lat": np.full(n, -60.5), "lon": 10.5 + 30.0 * np.arange(n), "country": ["Chile"] * n,
+            "total": total, "s_terrain": [0.5] * n, "s_temperature": [0.5] * n, "s_water_ice": [0.5] * n, "bio_score": [0.0] * n,
+            "eligible": ~np.isnan(total), "known_analog": [None] * n,
+        }
+    )
+    return MapLayer(target_id=MOON, weights=Weights(**DEFAULT_WEIGHTS), n_cells=n, n_eligible=int((~np.isnan(total)).sum()), cells=cells)
 
 
-def test_squares_are_wound_clockwise_which_is_what_d3_geo_needs():
-    lats, lons = map_view._squares(np.array([10.5]), np.array([20.5]))
-    x, y = lons[:5], lats[:5]
-    shoelace = 0.5 * np.sum(x[:-1] * y[1:] - x[1:] * y[:-1])
-    assert shoelace < 0  # negativo = sentido horario; el contrario rellena las vistas polares enteras
-    assert (x[0], y[0]) == (x[4], y[4])  # polígono cerrado
+def pixels_of_cells(layer: MapLayer) -> list[tuple]:
+    """El color RGB que tiene la imagen del polo sur en el centro de cada celda."""
+    image = trace(map_view.build_figure(layer, "south_pole"), "Celdas")
+    rgba = decode_png(image.source)
+    x, y = map_view._project(layer.cells["lat"].to_numpy(), layer.cells["lon"].to_numpy(), -1)
+    col = np.floor((x - image.x0) / image.dx).astype(int)
+    row = np.floor((y - image.y0) / image.dy).astype(int)
+    return [tuple(int(v) for v in rgba[r, c, :3]) for r, c in zip(row, col)]
 
 
-def test_cells_are_colored_with_viridis_by_total(bundle):
-    fig = map_view.build_figure(layer_of(bundle))
-    colored = [t for t in fills(fig) if t.name != "Datos insuficientes"]
-    assert 1 <= len(colored) <= map_view.N_BINS and all(t.fillcolor.startswith("rgb") for t in colored)
-    assert len({t.fillcolor for t in colored}) > 1  # no todas del mismo color: los puntajes de prueba difieren
+def figure(bundle, projection="world", weights=DEFAULT_WEIGHTS, selected=None):
+    return map_view.build_figure(layer_of(bundle, weights), projection, selected)
 
 
-def test_color_bar_is_viridis_from_0_to_1(bundle):
-    bar = trace(map_view.build_figure(layer_of(bundle)), "Puntaje total").marker
-    assert bar.showscale is True and bar.cmin == 0 and bar.cmax == 1
-    assert bar.colorscale[0][0] == 0 and bar.colorscale[-1][0] == 1 and len(bar.colorscale) >= 8  # Viridis
-    assert bar.colorbar.title.text == "Puntaje total"
+# Mundo -----------------------------------------------------------------------
 
 
-def test_hover_shows_the_location_the_total_and_the_four_dimensions(bundle):
-    cursor = trace(map_view.build_figure(layer_of(bundle)), "Celdas elegibles")
-    for piece in ("%{lat", "%{lon", "Puntaje total", "Terreno", "Temperatura", "Agua y hielo", "Astrobiología"):
-        assert piece in cursor.hovertemplate
-    assert cursor.customdata.shape == (5, 5) and len(cursor.lat) == 5
-    assert cursor.hovertemplatefallback == "sin dato"  # una dimensión nula se ve como "sin dato"
-    # Transparente del todo: con un alfa pequeño pero no nulo, cerca de los polos se suman cientos de marcadores
-    # superpuestos y oscurecen la vista polar (un agujero negro y anillos concéntricos).
-    assert cursor.marker.color == "rgba(0,0,0,0)" and cursor.marker.size > 0
+def test_world_cells_are_a_one_degree_heatmap_not_points(bundle):
+    cells = by_cell(layer_of(bundle))
+    z = np.asarray(trace(figure(bundle), "Celdas elegibles").z, dtype=float)
+    assert z.shape == (180, 360)  # un píxel por celda de 1°: al ampliar se ven cuadrados exactos
+    assert np.isfinite(z).sum() == 5  # las cinco elegibles; la 103 no
+    for cid in (100, 104):
+        li, lj = cell_pos(cells.loc[cid, "lat"], cells.loc[cid, "lon"])
+        assert z[li, lj] == pytest.approx(cells.loc[cid, "total"])
+    li, lj = cell_pos(cells.loc[103, "lat"], cells.loc[103, "lon"])
+    assert np.isnan(z[li, lj])
 
 
-def test_insufficient_data_cell_says_so_on_hover(bundle):
-    fig = map_view.build_figure(layer_of(bundle))
-    cursor = trace(fig, "Datos insuficientes (cursor)")
-    assert len(cursor.lat) == 1 and "Datos insuficientes" in cursor.hovertemplate
-    assert "Datos insuficientes" not in trace(fig, "Celdas elegibles").hovertemplate
-    assert trace(fig, "Datos insuficientes").fillcolor == map_view.GRAY
+def test_world_without_ineligible_cells_has_no_gray_layer(bundle):
+    full = layer_of(bundle)
+    cells = full.cells.copy()
+    cells.loc[cells["total"].isna(), "total"] = 0.4
+    fig = map_view.build_figure(MapLayer(target_id=MOON, weights=full.weights, n_cells=6, n_eligible=6, cells=cells), "world")
+    assert [t.name for t in fig.data if t.type == "heatmap"] == ["Celdas elegibles"]  # no se manda una capa vacía
 
 
-def test_each_known_analog_is_one_white_ring_and_its_name_is_on_the_cell_hover(bundle):
-    fig = map_view.build_figure(layer_of(bundle))
-    ring = trace(fig, "Análogo conocido")
-    assert len(ring.lat) == 1  # un anillo por análogo, no un borde por celda
-    assert ring.marker.symbol == "circle-open" and ring.marker.color == "#ffffff" and ring.marker.line.width >= 2
-    assert ring.hoverinfo == "skip"  # el texto del cursor sale de las celdas, para no duplicarlo
-    assert any("Atacama" in t for t in trace(fig, "Celdas elegibles").text)
+def test_world_uses_viridis_from_0_to_1_with_a_color_bar(bundle):
+    heat = trace(figure(bundle), "Celdas elegibles")
+    assert heat.zmin == 0 and heat.zmax == 1 and heat.colorscale[0][0] == 0 and heat.colorscale[-1][0] == 1
+    assert len(heat.colorscale) >= 8 and heat.colorbar.title.text == "Puntaje total"  # Viridis
+
+
+def test_world_hover_shows_location_total_and_the_four_dimensions(bundle):
+    heat = trace(figure(bundle), "Celdas elegibles")
+    for piece in ("%{x", "%{y", "Puntaje total", "%{z", "%{text}", "%{customdata}"):
+        assert piece in heat.hovertemplate
+    assert heat.hoverongaps is False  # solo hay cursor donde hay celda
+    cells = by_cell(layer_of(bundle))
+    li, lj = cell_pos(cells.loc[104, "lat"], cells.loc[104, "lon"])  # la 104 no tiene temperatura
+    tail = heat.customdata[li][lj]
+    assert "Terreno: 0.60" in tail and "Temperatura: sin dato" in tail and "Agua y hielo: 0.60" in tail and "Astrobiología: 0.10" in tail
+
+
+def test_world_hover_names_the_analog_and_the_country(bundle):
+    heat = trace(figure(bundle), "Celdas elegibles")
+    cells = by_cell(layer_of(bundle))
+    li, lj = cell_pos(cells.loc[105, "lat"], cells.loc[105, "lon"])
+    assert "Atacama" in heat.text[li][lj] and "Análogo conocido" in heat.text[li][lj]
+    li, lj = cell_pos(cells.loc[100, "lat"], cells.loc[100, "lon"])
+    assert heat.text[li][lj] == "Chile"
+
+
+def test_world_insufficient_data_cell_is_gray_and_says_so_on_hover(bundle):
+    fig = figure(bundle)
+    cells = by_cell(layer_of(bundle))
+    gray = heat(fig, "Datos insuficientes")
+    li, lj = cell_pos(cells.loc[103, "lat"], cells.loc[103, "lon"])
+    z = np.asarray(gray.z, dtype=float)
+    assert np.isfinite(z).sum() == 1 and z[li, lj] == 1.0
+    assert "Datos insuficientes" in gray.hovertemplate and "Datos insuficientes" not in trace(fig, "Celdas elegibles").hovertemplate
+    assert gray.colorscale[0][1] == gray.colorscale[-1][1] == map_view.GRAY
+    assert "Datos insuficientes" in [t.name for t in fig.data if t.showlegend]  # entrada en la leyenda
+
+
+def test_world_all_weights_zero_draws_every_cell_gray(bundle):
+    fig = figure(bundle, weights=dict.fromkeys(DEFAULT_WEIGHTS, 0.0))
+    assert np.isfinite(np.asarray(heat(fig, "Datos insuficientes").z, dtype=float)).sum() == 6
+    assert np.isfinite(np.asarray(trace(fig, "Celdas elegibles").z, dtype=float)).sum() == 0
+
+
+def test_world_axes_are_equal_aspect_and_cover_the_globe(bundle):
+    fig = figure(bundle)
+    assert tuple(fig.layout.xaxis.range) == (-180, 180) and tuple(fig.layout.yaxis.range) == (-90, 90)
+    assert fig.layout.yaxis.scaleanchor == "x" and fig.layout.dragmode == "pan"
+
+
+# Polos -----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("hemisphere,lon,x_sign,y_sign", [(-1, 0.0, 0, 1), (-1, 90.0, 1, 0), (1, 0.0, 0, -1), (1, 90.0, 1, 0)])
+def test_polar_projection_orientation(hemisphere, lon, x_sign, y_sign):
+    x, y = map_view._project(np.array([hemisphere * 45.0]), np.array([lon]), hemisphere)
+    rho = np.cos(np.radians(45.0))
+    assert x[0] == pytest.approx(x_sign * rho, abs=1e-9) and y[0] == pytest.approx(y_sign * rho, abs=1e-9)
+
+
+@pytest.mark.parametrize(
+    "projection,lat,lon",
+    [("south_pole", -45.5, 0.5), ("south_pole", -45.5, 90.5), ("south_pole", -70.5, -135.5), ("north_pole", 45.5, 0.5),
+     ("north_pole", 45.5, 90.5), ("north_pole", 70.5, -135.5)],
+)
+def test_polar_image_puts_each_cell_where_the_projection_says(projection, lat, lon):
+    """Se decodifica el PNG: el centro de lo pintado coincide con el (x, y) de la celda en el eje de la figura."""
+    image = trace(map_view.build_figure(one_cell_layer(lat, lon), projection), "Celdas")
+    rgba = decode_png(image.source)
+    inside_disc = rgba[..., 3] == 255
+    painted = inside_disc & (rgba[..., :3] != map_view._OCEAN_RGB).any(axis=2)
+    rows, cols = np.nonzero(painted)
+    assert len(rows) > 5  # la celda ocupa varios píxeles
+    x = image.x0 + cols.mean() * image.dx  # la fila 0 de la imagen es y0, y crece hacia arriba (dy > 0)
+    y = image.y0 + rows.mean() * image.dy
+    expected_x, expected_y = map_view._project(np.array([lat]), np.array([lon]), -1 if lat < 0 else 1)
+    assert x == pytest.approx(expected_x[0], abs=0.012) and y == pytest.approx(expected_y[0], abs=0.012)
+
+
+def test_polar_image_is_a_png_with_transparent_corners_and_an_ocean_disc(bundle):
+    image = trace(figure(bundle, "south_pole"), "Celdas")
+    rgba = decode_png(image.source)
+    assert rgba.shape == (map_view.POLAR_PX, map_view.POLAR_PX, 4)
+    assert rgba[0, 0, 3] == 0  # fuera del globo: transparente
+    mid = map_view.POLAR_PX // 2
+    assert rgba[mid + 200, mid + 200, 3] == 255 and (rgba[mid + 200, mid + 200, :3] == map_view._OCEAN_RGB).all()  # mar
+
+
+def test_polar_image_scale_is_the_unit_disc(bundle):
+    image = trace(figure(bundle, "south_pole"), "Celdas")
+    assert image.dx == pytest.approx(2 / map_view.POLAR_PX) and image.dy == pytest.approx(2 / map_view.POLAR_PX)
+    assert image.x0 == pytest.approx(-1 + image.dx / 2) and image.y0 == pytest.approx(-1 + image.dy / 2)
+    assert image.dx > 0 and image.dy > 0  # un dy negativo daría vuelta la imagen
+
+
+def test_polar_image_colors_use_viridis_and_gray_for_cells_without_total():
+    low, high, none = pixels_of_cells(spread_layer([0.1, 0.9, np.nan]))
+    assert low == tuple(int(v) for v in map_view._LUT[round(0.1 * 255)])
+    assert high == tuple(int(v) for v in map_view._LUT[round(0.9 * 255)])
+    assert none == tuple(int(v) for v in map_view._GRAY_RGB)  # sin total: gris
+    assert len({low, high, none}) == 3
+
+
+def test_polar_image_is_cached_for_the_same_totals(monkeypatch):
+    calls = []
+    real = map_view._polar_image
+    monkeypatch.setattr(map_view, "_polar_image", lambda *a: calls.append(1) or real(*a))
+    map_view._IMAGE_CACHE.clear()
+    layer = big_layer(n=300, seed=7)
+    first = trace(map_view.build_figure(layer, "south_pole"), "Celdas").source
+    again = trace(map_view.build_figure(layer, "south_pole", 5), "Celdas").source
+    assert first == again and len(calls) == 1  # no se vuelve a calcular al elegir una celda
+    map_view.build_figure(big_layer(n=300, seed=8), "south_pole")
+    assert len(calls) == 2  # otros totales: otra imagen
+
+
+def test_polar_hover_has_one_transparent_webgl_marker_per_visible_cell(bundle):
+    cursor = trace(figure(bundle, "south_pole"), "Celdas elegibles")
+    assert cursor.type == "scattergl" and len(cursor.x) == 6  # las seis celdas de prueba están en el hemisferio sur
+    assert cursor.marker.color == map_view.HOVER_FILL == "rgba(0,0,0,0)" and cursor.hoverinfo == "text"
+    gray = next(t for t in cursor.hovertext if "Datos insuficientes" in t)  # la 103 no es elegible
+    assert "Lat -89.5" in gray and "Puntaje total" not in gray
+    ok = next(t for t in cursor.hovertext if "Terreno: 0.60" in t)  # la 104
+    assert "Puntaje total" in ok and "Temperatura: sin dato" in ok and "Chile" in ok
+    assert any("Atacama" in t for t in cursor.hovertext)
+
+
+def test_north_view_hides_the_cells_of_the_southern_hemisphere(bundle):
+    assert len(trace(figure(bundle, "north_pole"), "Celdas elegibles").x) == 0
+
+
+def test_polar_all_weights_zero_paints_the_cells_gray():
+    gray = tuple(int(v) for v in map_view._GRAY_RGB)
+    assert pixels_of_cells(spread_layer([np.nan, np.nan, np.nan])) == [gray] * 3
+
+
+def test_polar_axes_are_equal_aspect_and_hidden(bundle):
+    fig = figure(bundle, "south_pole")
+    assert fig.layout.yaxis.scaleanchor == "x" and fig.layout.xaxis.visible is False and fig.layout.yaxis.visible is False
+
+
+def test_polar_views_keep_the_color_bar(bundle):
+    for projection in ("south_pole", "north_pole"):
+        bar = trace(figure(bundle, projection), "Puntaje total").marker
+        assert bar.showscale is True and bar.cmin == 0 and bar.cmax == 1 and bar.colorbar.title.text == "Puntaje total"
+
+
+# Anillos y celda elegida (las tres vistas) ------------------------------------
+
+
+@pytest.mark.parametrize("view", ["world", "south_pole"])
+def test_each_known_analog_is_one_white_ring(bundle, view):
+    ring = trace(figure(bundle, view), "Análogo conocido")
+    assert len(ring.x) == 1 and ring.marker.symbol == "circle-open" and ring.marker.color == "#ffffff"
+    assert ring.marker.line.width >= 2 and ring.hoverinfo == "skip"  # el texto del cursor sale de las celdas
 
 
 def test_a_ring_is_centered_on_all_the_cells_of_its_analog():
     layer = big_layer()  # 41 celdas con el mismo análogo
-    ring = trace(map_view.build_figure(layer), "Análogo conocido")
-    assert len(ring.lat) == 1
+    ring = trace(map_view.build_figure(layer, "world"), "Análogo conocido")
+    assert len(ring.y) == 1
     cells = layer.cells[layer.cells["known_analog"].notna()]
-    assert ring.lat[0] == pytest.approx(cells["lat"].mean(), abs=1e-3)
+    assert ring.y[0] == pytest.approx(cells["lat"].mean(), abs=1e-3)
 
 
 def test_the_ring_center_does_not_break_across_the_dateline():
@@ -201,43 +372,33 @@ def test_the_ring_center_does_not_break_across_the_dateline():
 
 def test_figure_without_analogs_has_an_empty_ring_trace():
     layer = big_layer()
-    cells = layer.cells.assign(known_analog=None)
-    empty = MapLayer(target_id=MOON, weights=layer.weights, n_cells=layer.n_cells, n_eligible=layer.n_eligible, cells=cells)
-    assert len(trace(map_view.build_figure(empty), "Análogo conocido").lat) == 0
+    empty = MapLayer(target_id=MOON, weights=layer.weights, n_cells=layer.n_cells, n_eligible=layer.n_eligible,
+                     cells=layer.cells.assign(known_analog=None))
+    assert len(trace(map_view.build_figure(empty, "world"), "Análogo conocido").x) == 0
 
 
-def test_selected_cell_is_an_outline_that_scales_with_zoom_plus_a_bigger_red_marker(bundle):
-    layer = layer_of(bundle)
-    fig = map_view.build_figure(layer, "world", 104)
-    row = by_cell(layer).loc[104]
+@pytest.mark.parametrize("view", ["world", "south_pole"])
+def test_selected_cell_is_an_outline_that_scales_with_zoom_plus_a_bigger_red_marker(bundle, view):
+    fig = figure(bundle, view, selected=104)
     marker = trace(fig, "Celda elegida")
-    assert list(marker.lat) == [pytest.approx(row["lat"])] and list(marker.lon) == [pytest.approx(row["lon"])]
-    assert marker.marker.line.color == map_view.SELECTED_COLOR
+    assert len(marker.x) == 1 and marker.marker.line.color == map_view.SELECTED_COLOR
     assert marker.marker.size > trace(fig, "Análogo conocido").marker.size  # enmarca al anillo
     outline = trace(fig, "Contorno de la celda elegida")
-    assert n_squares(outline) == 1 and outline.line.color == map_view.SELECTED_COLOR
+    assert len(outline.x) >= 5 and outline.x[0] == outline.x[-1] and outline.y[0] == outline.y[-1]  # cerrado
+    assert outline.line.color == map_view.SELECTED_COLOR
 
 
-def test_a_selected_cell_that_is_not_in_the_layer_draws_nothing(bundle):
-    fig = map_view.build_figure(layer_of(bundle), "world", 999999)
-    assert len(trace(fig, "Celda elegida").lat) == 0 and n_squares(trace(fig, "Contorno de la celda elegida")) == 0
+@pytest.mark.parametrize("view", ["world", "south_pole"])
+def test_a_selected_cell_that_is_not_in_the_layer_draws_nothing(bundle, view):
+    fig = figure(bundle, view, selected=999999)
+    assert len(trace(fig, "Celda elegida").x) == 0 and len(trace(fig, "Contorno de la celda elegida").x) == 0
 
 
-def test_all_weights_zero_draws_every_cell_gray(bundle):
-    fig = map_view.build_figure(layer_of(bundle, dict.fromkeys(DEFAULT_WEIGHTS, 0.0)))
-    assert n_squares(trace(fig, "Datos insuficientes")) == 6 and len(trace(fig, "Celdas elegibles").lat) == 0
-    assert all(n_squares(t) == 0 for t in fills(fig) if t.name != "Datos insuficientes")
-
-
-@pytest.mark.parametrize(
-    "projection,kind,lat",
-    [("world", "natural earth", None), ("south_pole", "orthographic", -90), ("north_pole", "orthographic", 90)],
-)
-def test_the_three_projections(bundle, projection, kind, lat):
-    geo = map_view.build_figure(layer_of(bundle), projection).layout.geo
-    assert geo.projection.type == kind
-    if lat is not None:
-        assert geo.projection.rotation.lat == lat  # centrada en el polo: la Antártida entera en la vista polar sur
+def test_cell_outline_is_a_closed_one_degree_square():
+    for steps in (1, 6):
+        lats, lons = map_view._cell_outline(10.5, 20.5, steps)
+        assert len(lats) == len(lons) == 4 * steps + 1 and (lats[0], lons[0]) == (lats[-1], lons[-1])
+        assert lats.max() - lats.min() == pytest.approx(1.0) and lons.max() - lons.min() == pytest.approx(1.0)
 
 
 def test_unknown_projection_is_rejected(bundle):
@@ -271,13 +432,26 @@ def big_layer(n=21_357, seed=0) -> MapLayer:
     return MapLayer(target_id=MOON, weights=Weights(**DEFAULT_WEIGHTS), n_cells=n, n_eligible=int((~np.isnan(total)).sum()), cells=cells)
 
 
-@pytest.mark.parametrize("projection", ["world", "south_pole"])
+@pytest.mark.parametrize("projection", ["world", "south_pole", "north_pole"])
 def test_figure_of_the_whole_grid_is_built_in_well_under_a_second(projection):
     layer = big_layer()
-    assert len(map_view.build_figure(layer, projection, 5).data) <= map_view.N_BINS + 8  # no una traza por celda
     map_view.build_figure(layer, projection, 5)  # calienta
     best = min(_timed(map_view.build_figure, layer, projection, 5) for _ in range(3))
     assert best < 0.5, f"la figura tardó {best * 1000:.0f} ms"
+
+
+@pytest.mark.parametrize("projection", ["south_pole", "north_pole"])
+def test_polar_image_is_computed_in_under_a_second_when_the_totals_change(projection):
+    layer = big_layer()
+    map_view._IMAGE_CACHE.clear()
+    elapsed = _timed(map_view.build_figure, layer, projection)  # sin caché: lo que cuesta mover un slider en los polos
+    assert elapsed < 1.0, f"la imagen polar tardó {elapsed * 1000:.0f} ms"
+
+
+@pytest.mark.parametrize("projection", ["world", "south_pole", "north_pole"])
+def test_the_whole_grid_is_a_handful_of_traces_not_one_per_cell(projection):
+    # Pocas trazas es lo que hace fluido mover y ampliar: el navegador dibuja un raster, no miles de polígonos.
+    assert len(map_view.build_figure(big_layer(), projection, 5).data) <= 10
 
 
 def _timed(fn, *args) -> float:
