@@ -96,7 +96,7 @@ def cell_from_rows(rows: Sequence[int], cell_ids: Sequence[int]) -> int | None:
 
 
 def select_cell(cell_id: int) -> None:
-    """Open this cell's card (from a top card or a numbered dot on the map) and scroll to it."""
+    """Open this cell's card (from a numbered dot on the map) and scroll to it."""
     st.session_state[SELECTED_KEY] = int(cell_id)
     st.session_state[SCROLL_KEY] = True
 
