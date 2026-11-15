@@ -101,10 +101,10 @@ def names(fig):
 
 def test_figure_has_the_four_traces_in_order(bundle):
     fig = map_view.build_figure(layer_of(bundle), "world", None)
-    assert names(fig) == ["Datos insuficientes", "Celdas elegibles", "Análogo conocido", "Análogo conocido", "Celda elegida"]
-    gray, eligible, analog, analog_gray, chosen = fig.data
+    assert names(fig) == ["Datos insuficientes", "Celdas elegibles", "Análogo conocido", "Celda elegida"]
+    gray, eligible, analog, chosen = fig.data
     assert len(gray.lat) == 1 and len(eligible.lat) == 5  # la 103 en gris, las otras cinco con color
-    assert len(analog.lat) == 1 and len(analog_gray.lat) == 0 and len(chosen.lat) == 0
+    assert len(analog.lat) == 1 and len(chosen.lat) == 0
 
 
 def test_eligible_cells_use_viridis_from_0_to_1_with_a_color_bar(bundle):
@@ -130,24 +130,48 @@ def test_hover_shows_the_location_the_total_and_the_four_dimensions(bundle):
     assert eligible.hovertemplatefallback == "sin dato"  # una dimensión nula se ve como "sin dato"
 
 
-def test_known_analogs_have_a_thick_white_border_and_the_name_on_hover(bundle):
+def test_each_known_analog_is_one_white_ring_and_its_name_is_on_the_cell_hover(bundle):
     fig = map_view.build_figure(layer_of(bundle))
-    analog = fig.data[2]
-    assert analog.marker.line.color == "#ffffff" and analog.marker.line.width >= 2
-    assert "Atacama" in analog.text[0]
+    ring, eligible = fig.data[2], fig.data[1]
+    assert len(ring.lat) == 1  # un anillo por análogo, no un borde por celda
+    assert ring.marker.symbol == "circle-open" and ring.marker.color == "#ffffff" and ring.marker.line.width >= 2
+    assert ring.hoverinfo == "skip"  # el texto del cursor sale de la traza de celdas, para no duplicarlo
+    assert any("Atacama" in t for t in eligible.text)
+
+
+def test_a_ring_is_centered_on_all_the_cells_of_its_analog():
+    layer = big_layer()  # 41 celdas con el mismo análogo
+    ring = map_view.build_figure(layer).data[2]
+    assert len(ring.lat) == 1
+    cells = layer.cells[layer.cells["known_analog"].notna()]
+    assert ring.lat[0] == pytest.approx(cells["lat"].mean(), abs=1e-3)
+
+
+def test_the_ring_center_does_not_break_across_the_dateline():
+    lon = np.array([179.5, -179.5, 178.5, -178.5])
+    cells = pd.DataFrame({"lat": [-77.5] * 4, "lon": lon, "known_analog": ["A"] * 4})
+    _, centers = map_view._analog_centers(cells)
+    assert abs(abs(centers[0]) - 180) < 0.6  # cerca de ±180, no en 0
+
+
+def test_figure_without_analogs_has_an_empty_ring_trace():
+    layer = big_layer()
+    cells = layer.cells.assign(known_analog=None)
+    empty = MapLayer(target_id=MOON, weights=layer.weights, n_cells=layer.n_cells, n_eligible=layer.n_eligible, cells=cells)
+    assert len(map_view.build_figure(empty).data[2].lat) == 0
 
 
 def test_selected_cell_is_a_bigger_red_marker(bundle):
     layer = layer_of(bundle)
-    chosen = map_view.build_figure(layer, "world", 104).data[4]
+    chosen = map_view.build_figure(layer, "world", 104).data[3]
     row = by_cell(layer).loc[104]
     assert list(chosen.lat) == [pytest.approx(row["lat"])] and list(chosen.lon) == [pytest.approx(row["lon"])]
     assert chosen.marker.line.color == map_view.SELECTED_COLOR
-    assert chosen.marker.size > map_view.build_figure(layer).data[1].marker.size
+    assert chosen.marker.size > map_view.build_figure(layer).data[1].marker.size and chosen.marker.size > map_view.build_figure(layer).data[2].marker.size
 
 
 def test_a_selected_cell_that_is_not_in_the_layer_draws_nothing(bundle):
-    assert len(map_view.build_figure(layer_of(bundle), "world", 999999).data[4].lat) == 0
+    assert len(map_view.build_figure(layer_of(bundle), "world", 999999).data[3].lat) == 0
 
 
 def test_all_weights_zero_draws_every_cell_gray(bundle):

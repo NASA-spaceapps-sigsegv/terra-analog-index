@@ -71,6 +71,19 @@ def _marker(size: int, **kwargs) -> dict:
     return dict(symbol="square", size=size, **kwargs)
 
 
+def _analog_centers(cells) -> tuple[np.ndarray, np.ndarray]:
+    """Un punto por análogo conocido: el centro de las celdas que caen dentro de su radio.
+
+    La longitud se promedia como ángulo para no fallar cerca de ±180°.
+    """
+    lat, lon = [], []
+    for _, g in cells[cells["known_analog"].notna()].groupby("known_analog"):
+        rad = np.radians(g["lon"].to_numpy(dtype="float64"))
+        lat.append(float(g["lat"].mean()))
+        lon.append(float(np.degrees(np.arctan2(np.sin(rad).mean(), np.cos(rad).mean()))))
+    return np.array(lat), np.array(lon)
+
+
 def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: int | None = None) -> go.Figure:
     """Cuatro trazas: sin datos (gris), elegibles (Viridis de 0 a 1), análogos conocidos y la celda elegida."""
     if projection not in _GEO_BY_PROJECTION:
@@ -78,7 +91,6 @@ def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: i
     cells = layer.cells
     size = MARKER_SIZE[projection]
     has_total = cells["total"].notna().to_numpy()
-    analog = cells["known_analog"].notna().to_numpy()
     place = _place_text(cells)
     scores = _scores(cells)
 
@@ -122,34 +134,20 @@ def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: i
         )
     )
 
-    ring = dict(color=ANALOG_BORDER, width=2.5)
-    with_data = analog & has_total
+    # Un anillo blanco por análogo, centrado en sus celdas, en vez de un borde en cada celda: cerca de
+    # los polos las celdas vecinas se superponen y sus bordes se fundían en una mancha blanca que
+    # tapaba el puntaje. En un símbolo "open" el trazo toma `marker.color`. El texto del cursor del
+    # análogo ya sale de la traza de celdas, que lleva su nombre en todas las celdas de su radio.
+    a_lat, a_lon = _analog_centers(cells)
     fig.add_trace(
         go.Scattergeo(
             name="Análogo conocido",
             mode="markers",
-            **rows(with_data),
-            text=place[with_data],
-            customdata=scores[with_data],
-            marker=_marker(
-                size + 2, color=scores[with_data, 0], colorscale=COLORSCALE, cmin=0, cmax=1, showscale=False, line=ring
-            ),
-            hovertemplate=_HOVER_LOCATION + _HOVER_SCORES + "<extra></extra>",
-            hovertemplatefallback=NO_DATA,
+            lat=a_lat,
+            lon=a_lon,
+            marker=dict(symbol="circle-open", size=size * 3 + 3, color=ANALOG_BORDER, line=dict(width=2.5)),
+            hoverinfo="skip",
             showlegend=True,
-        )
-    )
-    no_data = analog & ~has_total  # un análogo sin datos suficientes: gris con el mismo borde
-    fig.add_trace(
-        go.Scattergeo(
-            name="Análogo conocido",
-            mode="markers",
-            **rows(no_data),
-            text=place[no_data],
-            marker=_marker(size + 2, color=GRAY, line=ring),
-            hovertemplate=_HOVER_LOCATION + f"<br>{INSUFFICIENT}<extra></extra>",
-            showlegend=False,
-            legendgroup="analog",
         )
     )
 
@@ -159,7 +157,7 @@ def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: i
             name="Celda elegida",
             mode="markers",
             **rows(chosen),
-            marker=dict(symbol="square-open", size=size * 2 + 6, color=SELECTED_COLOR, line=dict(width=3, color=SELECTED_COLOR)),
+            marker=dict(symbol="square-open", size=size * 3 + 7, color=SELECTED_COLOR, line=dict(width=3, color=SELECTED_COLOR)),
             hoverinfo="skip",
             showlegend=False,
         )
@@ -168,9 +166,9 @@ def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: i
     fig.update_geos(**_GEO_BASE, **_GEO_BY_PROJECTION[projection])
     fig.update_layout(
         height=520,
-        margin=dict(l=0, r=0, t=0, b=0),
+        margin=dict(l=0, r=0, t=28, b=0),
         paper_bgcolor="rgba(0,0,0,0)",
-        legend=dict(orientation="h", yanchor="bottom", y=0.0, xanchor="left", x=0.0),
+        legend=dict(orientation="h", yanchor="bottom", y=1.0, xanchor="left", x=0.0),  # sobre el mapa, no sobre la Antártida
         uirevision=projection,  # conserva el zoom al mover pesos; la vista se reinicia al cambiar de proyección
     )
     return fig
