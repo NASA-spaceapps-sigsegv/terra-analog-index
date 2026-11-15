@@ -1,4 +1,4 @@
-"""TAI-40: the phone layout, the best cells beside the map, presets, the comparison and the shareable link."""
+"""TAI-40: the phone layout, the full-width map with the ranking under it, presets, the comparison and the shareable link."""
 
 import json
 from pathlib import Path
@@ -25,10 +25,6 @@ def make(data_dir, monkeypatch):
 @pytest.fixture
 def app(make):
     return make().run()
-
-
-def top_buttons(at):
-    return [b for b in at.button if b.key and b.key.startswith("top_")]
 
 
 def text(at) -> str:
@@ -61,14 +57,14 @@ def test_desktop_layout_by_default(app):
     assert len(app.tabs[0].dataframe) == 1  # the ranking table is there, not folded (the Method tab has its own)
 
 
-def test_phone_layout_is_shorter_scrolls_with_one_finger_and_folds_the_table(make):
+def test_phone_layout_is_shorter_and_scrolls_with_one_finger(make):
     at = make()
     at.query_params["view"] = "phone"
     at.run()
     assert not at.exception and not at.error
     spec = json.loads(at.get("plotly_chart")[0].proto.spec)["layout"]
     assert spec["height"] == map_view.COMPACT_HEIGHT["world"] and spec["dragmode"] is False and spec["showlegend"] is False
-    assert [e.label for e in at.expander if e.label == "Full table, top 20"] and len(top_buttons(at)) == 5
+    assert len(at.tabs[0].dataframe) == 1  # the ranking table, unfolded, as on a wide screen
     assert at.query_params["view"] == "phone"  # the forced layout survives the address rewrite
 
 
@@ -82,22 +78,18 @@ def test_the_view_parameter_can_force_the_desktop_layout(make):
 # --- the best cells and the card -----------------------------------------------------------------------------------------
 
 
-def test_the_five_best_cells_are_cards_and_opening_one_shows_its_card(app):
-    buttons = top_buttons(app)
-    assert len(buttons) == 5 and "Top 5 cells" in text(app)
-    cell = int(buttons[0].key.rsplit("_", 1)[1])
-    buttons[0].click().run()
-    assert not app.exception and app.session_state[SELECTED_KEY] == cell
-    assert "Limits no site on Earth replicates" in text(app) and "Selected:" in text(app)
-    assert SCROLL_KEY not in app.session_state  # the page scrolled to the card once
-    assert any(b.key == buttons[0].key and b.label == "Shown below" for b in app.button)
+def test_the_map_is_alone_with_no_panels_beside_it(app):
+    assert not app.exception and not app.error
+    assert "Top 5 cells" not in text(app) and not app.get("progress")
+    assert len(app.tabs[0].dataframe) == 1  # the ranking goes right under the map
 
 
-def test_the_selected_cell_has_a_short_summary_with_its_scores_for_the_first_screen(app):
+def test_picking_a_cell_shows_its_card_and_scrolls_to_it(app):
     app.session_state[SELECTED_KEY] = 102
+    app.session_state[SCROLL_KEY] = True
     app.run()
-    assert "Selected:" in text(app) and "Read the full card" in text(app)
-    assert len(app.get("progress")) >= 4  # one bar per dimension of the target
+    assert not app.exception and "Limits no site on Earth replicates" in text(app)
+    assert SCROLL_KEY not in app.session_state  # the page scrolled to the card once
 
 
 def test_the_hint_says_how_to_open_a_card(app):

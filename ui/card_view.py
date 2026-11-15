@@ -145,16 +145,6 @@ def _dimension_list(title: str, items, empty_phrase: str | None) -> None:
         st.caption(empty_phrase)
 
 
-def render_summary(card: SiteCard, anchor: str) -> None:
-    """The selected cell in a few lines for the first screen: its total and its scores as bars. The full card is below."""
-    place = card.header.label + (f" · {card.header.country}" if card.header.country else "")
-    with st.container(border=True):
-        st.markdown(f"**Selected: {place}**  \nTotal vs. {card.target_label}: **{_score_text(card.scores.total)}**")
-        for label, value in zip(*radar_axes(card), strict=True):
-            st.progress(float(value), text=f"{label}: {value:.{SCORE_DECIMALS_UI}f}")
-        st.markdown(f"[Read the full card ↓](#{anchor})")
-
-
 def render_card(card: SiteCard, other: SiteCard | None = None) -> None:
     """`other`: the same cell for the other target; its polygon is drawn over the radar."""
     # 1. Header

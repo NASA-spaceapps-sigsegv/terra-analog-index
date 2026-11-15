@@ -5,7 +5,7 @@ To try it with the test data:
 """
 
 import os
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 from pathlib import Path
 
 import streamlit as st
@@ -20,7 +20,7 @@ from tai.errors import (
     ZeroWeightsError,
 )
 from tai.io import DataBundle, data_signature, load_bundle
-from ui import card_view, caves_view, device, guide, map_view, method_view, ranking_view, share, top_cards
+from ui import card_view, caves_view, device, guide, map_view, method_view, ranking_view, share
 from ui.ranking_view import SCROLL_KEY, SELECTED_KEY, select_cell
 from ui.sidebar import SidebarState, render_sidebar
 
@@ -68,7 +68,7 @@ def handle_tai_errors(fatal: bool = False):
         st.stop()
 
 
-CARD_HINT = "Pick a row in the ranking to see its card. You can also tap a numbered dot on the map or a top card."
+CARD_HINT = "Pick a row in the ranking to see its card. You can also tap a numbered dot on the map."
 CARD_ANCHOR = "card"
 VIEW_REV_KEY = "map_view_rev"  # changing it resets the map's zoom
 COMPARE_KEY = "compare_other"
@@ -80,41 +80,34 @@ def _back_to_full_view() -> None:
 
 
 def explore_tab(bundle: DataBundle, state: SidebarState, compact: bool) -> None:
-    """Guide on top; the map beside the best cells (under it on a phone); then the table, the caves and the card.
+    """Guide on top; the map at full width; then the caves, the table of the best cells and the card.
 
     Each part catches its own errors: with every weight at 0 the ranking warns and the selected
     card is still shown, with a null total. The ranking and the card are computed once and shared by the parts that draw them."""
     guide.render_guide(compact)
-    map_col, side_col = st.columns([3, 2], gap="medium")
 
     ranking = card = None
-    with side_col:
-        with handle_tai_errors():
-            ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)
-        selected = st.session_state.get(SELECTED_KEY)
-        with handle_tai_errors():
-            if selected is not None:
-                card = services.get_site_card(bundle, selected, state.target_id, state.weights)
-        selected = st.session_state.get(SELECTED_KEY)  # a cell that does not exist clears it
-        if card is not None:
-            card_view.render_summary(card, CARD_ANCHOR)
-        if ranking is not None and ranking.items:
-            top_cards.render_top_cards(ranking, selected, select_cell, compact)
+    with handle_tai_errors():
+        ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)
+    selected = st.session_state.get(SELECTED_KEY)
+    with handle_tai_errors():
+        if selected is not None:
+            card = services.get_site_card(bundle, selected, state.target_id, state.weights)
+    selected = st.session_state.get(SELECTED_KEY)  # a cell that does not exist clears it
 
-    with map_col:
-        with handle_tai_errors():
-            layer = services.get_map_layer(bundle, state.target_id, state.weights)
-            caves = services.get_caves(bundle) if state.show_caves else ()
-            top_cells = [item.cell_id for item in ranking.items] if ranking is not None else []
-            map_view.render_map(
-                layer, state.projection, selected, caves, top_cells, compact,
-                st.session_state.get(VIEW_REV_KEY, 0), on_pick=select_cell,
-            )
-        with st.container(horizontal=True):
-            st.button("Back to full view", on_click=_back_to_full_view, icon=":material/zoom_out_map:",
-                      help="Zoom out to the whole map")
-            share.render_copy_button()
-        guide.render_legend(state.show_caves)
+    with handle_tai_errors():
+        layer = services.get_map_layer(bundle, state.target_id, state.weights)
+        caves = services.get_caves(bundle) if state.show_caves else ()
+        top_cells = [item.cell_id for item in ranking.items] if ranking is not None else []
+        map_view.render_map(
+            layer, state.projection, selected, caves, top_cells, compact,
+            st.session_state.get(VIEW_REV_KEY, 0), on_pick=select_cell,
+        )
+    with st.container(horizontal=True):
+        st.button("Back to full view", on_click=_back_to_full_view, icon=":material/zoom_out_map:",
+                  help="Zoom out to the whole map")
+        share.render_copy_button()
+    guide.render_legend(state.show_caves)
 
     if state.show_caves:
         with handle_tai_errors():
@@ -129,9 +122,7 @@ def explore_tab(bundle: DataBundle, state: SidebarState, compact: bool) -> None:
             return services.export_ranking_csv(bundle, state.target_id, state.weights, hide_known=state.hide_known,
                                                limit=CSV_TOP_N)
 
-        # On a phone the wide table is folded away: the top cards above already give the best five.
-        with st.expander("Full table, top 20", expanded=False) if compact else nullcontext():
-            ranking_view.render_ranking(ranking, selected, csv_short, csv_long)
+        ranking_view.render_ranking(ranking, selected, csv_short, csv_long)
     else:
         st.caption("The ranking needs at least one weight above 0.")
     st.subheader("Card", anchor=CARD_ANCHOR)
