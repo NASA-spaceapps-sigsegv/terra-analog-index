@@ -8,7 +8,6 @@ import os
 from contextlib import contextmanager
 from pathlib import Path
 
-import pandas as pd
 import streamlit as st
 
 from tai import services
@@ -20,8 +19,8 @@ from tai.errors import (
     ZeroWeightsError,
 )
 from tai.io import DataBundle, data_signature, load_bundle
-from tai.constants import SCORE_DECIMALS_UI
-from ui import map_view
+from ui import map_view, ranking_view
+from ui.ranking_view import SELECTED_KEY
 from ui.sidebar import SidebarState, render_sidebar
 
 st.set_page_config(page_title="Terra Analog Index", page_icon="🛰️", layout="wide")
@@ -54,7 +53,7 @@ def handle_tai_errors(fatal: bool = False):
             st.stop()
     except CellNotFoundError as err:
         st.warning(err.detail)
-        st.session_state["selected_cell_id"] = None
+        st.session_state[SELECTED_KEY] = None
     except TaiError as err:  # InvalidWeightsError y futuros: error de programación
         st.error(f"{type(err).__name__}: {err.detail}")
         if fatal:
@@ -65,39 +64,33 @@ def handle_tai_errors(fatal: bool = False):
         st.stop()
 
 
-def ranking_table(ranking) -> pd.DataFrame:
-    df = pd.DataFrame([item.model_dump() for item in ranking.items])
-    df["known_analog"] = [a["name"] if a else None for a in df["known_analog"]]
-    df = df.rename(
-        columns={
-            "rank": "Puesto", "lat": "Lat", "lon": "Lon", "country": "País", "total": "Total",
-            "s_terrain": "Terreno", "s_temperature": "Temperatura", "s_water_ice": "Agua y hielo",
-            "bio_score": "Astrobiología", "known_analog": "Análogo conocido",
-        }
-    )
-    return df[["Puesto", "Lat", "Lon", "País", "Total", "Terreno", "Temperatura", "Agua y hielo", "Astrobiología", "Análogo conocido"]]
+def cell_label(bundle: DataBundle, cell_id: int) -> str:
+    """Encabezado de la ficha (design 11.1): "Celda 24,5°S 69,5°O · Chile"."""
+    if cell_id not in bundle.grid.index:
+        raise CellNotFoundError(f"La celda {cell_id} no está en la grilla.")
+    row = bundle.grid.loc[cell_id]
+    lat = f"{abs(row.lat):.1f}°{'S' if row.lat < 0 else 'N'}".replace(".", ",")
+    lon = f"{abs(row.lon):.1f}°{'O' if row.lon < 0 else 'E'}".replace(".", ",")
+    country = row.country if isinstance(row.country, str) else None
+    return f"Celda {lat} {lon}" + (f" · {country}" if country else "")
 
 
 def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
     layer = services.get_map_layer(bundle, state.target_id, state.weights)
-    map_view.render_map(layer, state.projection, st.session_state.get("selected_cell_id"))
+    map_view.render_map(layer, state.projection, st.session_state.get(SELECTED_KEY))
     left, right = st.columns([4, 6])
     with left:
         st.subheader("Mejores celdas")
         ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)
-        if not ranking.items:
-            st.info("No quedan celdas con este filtro.")
-        else:
-            fmt = f"%.{SCORE_DECIMALS_UI}f"
-            scores = ["Total", "Terreno", "Temperatura", "Agua y hielo", "Astrobiología"]
-            st.dataframe(
-                ranking_table(ranking),
-                hide_index=True,
-                column_config={c: st.column_config.NumberColumn(format=fmt) for c in scores},
-            )
+        ranking_view.render_ranking(ranking, st.session_state.get(SELECTED_KEY))
     with right:
         st.subheader("Ficha")
-        st.info("Elegí una fila del ranking para ver su ficha.")
+        selected = st.session_state.get(SELECTED_KEY)
+        if selected is None:
+            st.info("Elegí una fila del ranking para ver su ficha.")
+        else:
+            st.markdown(f"**{cell_label(bundle, selected)}**")
+            st.caption("La ficha completa llega con TAI-32.")
 
 
 def main() -> None:
