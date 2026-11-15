@@ -1,0 +1,9 @@
+[project]
+name = "terra-analog-index"
+version = "0.1.0"
+description = "Earth analogs of the lunar south pole and Jezero crater, NASA Space Apps 2026"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "types": [
+    { "extremophile_type": "halophile", "label": "Halophiles (salt)", "search_by": "environment",
+      "terms": ["hypersaline", "salt lake", "saltern", "salt flat", "salar", "halite"] },
+    { "extremophile_type": "radioresistant", "label": "Radioresistant", "search_by": "organism",
+      "terms": ["Deinococcus", "Rubrobacter", "Chroococcidiopsis"] }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+    "schema_version": 2,
+    "shared": "Bacteria[Organism] NOT metagenome[Organism] AND lat_lon[Attribute Name] AND env_broad_scale[Attribute Name] AND isolation_source[Attribute Name] AND geo_loc_name[Attribute Name]",
+    "types": [
+        {
+            "extremophile_type": "halophile",
+            "label": "Halophiles (salt)",
+            "search_by": "environment",
+            "terms": [
+                "hypersaline",
+                "salt lake",
+                "saltern",
+                "salt flat",
+                "salar",
+                "halite"
+            ]
+        },
+        {
+            "extremophile_type": "psychrophile",
+            "label": "Psychrophiles (cold)",
+            "search_by": "environment",
+            "terms": [
+                "permafrost",
+                "glacier",
+                "cryoconite",
+                "Antarctic soil"
+            ]
+        },
+        {
+            "extremophile_type": "xerophile",
+            "label": "Xerophiles (dryness)",
+            "search_by": "environment",
+            "terms": [
+                "desert soil",
+                "hyperarid",
+                "hypolith",
+                "biological soil crust"
+            ]
+        },
+        {
+            "extremophile_type": "acidophile",
+            "label": "Acidophiles (acid)",
+            "search_by": "environment",
+            "terms": [
+                "acid mine drainage",
+                "acidic hot spring"
+            ]
+        },
+        {
+            "extremophile_type": "thermophile",
+            "label": "Thermophiles (heat)",
+            "search_by": "environment",
+            "terms": [
+                "hot spring",
+                "geothermal",
+                "fumarole"
+            ]
+        },
+        {
+            "extremophile_type": "radioresistant",
+            "label": "Radioresistant",
+            "search_by": "organism",
+            "terms": [
+                "Deinococcus",
+                "Rubrobacter",
+                "Chroococcidiopsis"
+            ]
+        }
+    ]
+}

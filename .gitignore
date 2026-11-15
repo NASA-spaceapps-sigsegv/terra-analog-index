@@ -221,3 +221,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Terra Analog Index data (design 8.1): raw downloads and interim files stay
+# local; data/processed/ is versioned because the app reads it.
+data/raw/*
+!data/raw/README.md
+data/interim/
+*.tmp

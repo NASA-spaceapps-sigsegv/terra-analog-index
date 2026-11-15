@@ -1,0 +1,4 @@
+analog_id,name,lat,lon,radius_km,target_id,basis,covered,source
+atacama_yungay,"Atacama Desert (Yungay)",-24.1,-70.0,150,mars_jezero,"Hyperaridity and nearly lifeless soils",yes,"Fixture: citation or URL for Santino to add"
+rio_tinto,"Río Tinto",37.7,-6.6,50,mars_jezero,"Acidic chemistry and iron minerals",no,"Fixture: citation or URL for Santino to add"
+mcmurdo_dry_valleys,"McMurdo Dry Valleys",-77.5,162.0,150,moon_south_pole,"Extreme cold and dryness",yes,"Fixture: citation or URL for Santino to add"

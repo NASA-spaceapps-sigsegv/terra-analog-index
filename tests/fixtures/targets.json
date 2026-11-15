@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "targets": [
+    {
+      "target_id": "moon_south_pole",
+      "label": "Moon, south pole",
+      "body": "moon",
+      "bounds": { "lat_min": -90.0, "lat_max": -85.0, "lon_min": -180.0, "lon_max": 180.0 },
+      "has_ice": true,
+      "has_ice_source": "Fixture: citation for Santino to add",
+      "summary": "Region south of 85°S, with permanently shadowed craters.",
+      "unreplicable": [
+        "Gravity of 1.62 m/s² (one sixth of Earth's)",
+        "Vacuum: no atmosphere",
+        "Solar and cosmic radiation with no atmosphere or magnetic field to stop it",
+        "Fine, abrasive, electrostatically charged regolith",
+        "Permanently shadowed craters, much colder than anywhere on Earth"
+      ],
+      "notes": ["The lunar day lasts about 29.5 Earth days"],
+      "vars": {
+        "slope_deg":   { "mean": 12.0, "std": 6.0, "unit": "°", "rule": "overlap",
+                         "source": "LOLA, PDS Geosciences", "source_type": "measured",
+                         "earth_p01": 0.1, "earth_p99": 21.0, "earth_std": 5.0 },
+        "roughness_m": { "mean": 120.0, "std": 60.0, "unit": "m", "rule": "overlap",
+                         "source": "LOLA, PDS Geosciences", "source_type": "measured",
+                         "earth_p01": 1.0, "earth_p99": 310.0, "earth_std": 60.0 },
+        "tmin_c":      { "mean": -230.0, "std": 15.0, "unit": "°C", "rule": "directional_low",
+                         "source": "Diviner, LRO", "source_type": "measured",
+                         "earth_p01": -62.0, "earth_p99": 26.0, "earth_std": 19.0 },
+        "trange_c":    { "mean": 100.0, "std": 30.0, "unit": "°C", "rule": "directional_high",
+                         "source": "Diviner, LRO", "source_type": "measured",
+                         "earth_p01": 2.0, "earth_p99": 33.0, "earth_std": 7.0 },
+        "precip_mm":   { "mean": 0.0, "std": 0.0, "unit": "mm/yr", "rule": "directional_low",
+                         "source": "By definition: no rain", "source_type": "definition",
+                         "earth_p01": 4.0, "earth_p99": 3900.0, "earth_std": 780.0 },
+        "ice_frac":    { "mean": 1.0, "std": 0.0, "unit": "fraction", "rule": "presence",
+                         "source": "Derived from has_ice", "source_type": "definition",
+                         "earth_p01": 0.0, "earth_p99": 1.0, "earth_std": 0.3 }
+      }
+    },
+    {
+      "target_id": "mars_jezero",
+      "label": "Mars, Jezero crater",
+      "body": "mars",
+      "bounds": { "lat_min": 17.9, "lat_max": 18.9, "lon_min": 77.0, "lon_max": 78.0 },
+      "has_ice": false,
+      "has_ice_source": "Fixture: citation for Santino to add",
+      "summary": "Ancient lake and delta; Perseverance rover site.",
+      "unreplicable": [
+        "Gravity of 3.71 m/s² (38% of Earth's)",
+        "Carbon dioxide atmosphere with less than 1% of Earth's pressure",
+        "Much higher ultraviolet and cosmic radiation",
+        "Perchlorate-bearing soil",
+        "Global dust storms"
+      ],
+      "notes": [],
+      "vars": {
+        "slope_deg":   { "mean": 4.5, "std": 2.0, "unit": "°", "rule": "overlap",
+                         "source": "MOLA, PDS Geosciences", "source_type": "measured",
+                         "earth_p01": 0.1, "earth_p99": 21.0, "earth_std": 5.0 },
+        "roughness_m": { "mean": 52.0, "std": 30.0, "unit": "m", "rule": "overlap",
+                         "source": "MOLA, PDS Geosciences", "source_type": "measured",
+                         "earth_p01": 1.0, "earth_p99": 310.0, "earth_std": 60.0 },
+        "tmin_c":      { "mean": -83.0, "std": 5.0, "unit": "°C", "rule": "directional_low",
+                         "source": "Fixture: citation for Santino to add", "source_type": "literature",
+                         "earth_p01": -62.0, "earth_p99": 26.0, "earth_std": 19.0 },
+        "trange_c":    { "mean": 60.0, "std": 8.0, "unit": "°C", "rule": "directional_high",
+                         "source": "Fixture: citation for Santino to add", "source_type": "literature",
+                         "earth_p01": 2.0, "earth_p99": 33.0, "earth_std": 7.0 },
+        "precip_mm":   { "mean": 0.0, "std": 0.0, "unit": "mm/yr", "rule": "directional_low",
+                         "source": "By definition: no rain", "source_type": "definition",
+                         "earth_p01": 4.0, "earth_p99": 3900.0, "earth_std": 780.0 },
+        "ice_frac":    { "mean": 0.0, "std": 0.0, "unit": "fraction", "rule": "absence",
+                         "source": "Derived from has_ice", "source_type": "definition",
+                         "earth_p01": 0.0, "earth_p99": 1.0, "earth_std": 0.3 }
+      }
+    }
+  ]
+}

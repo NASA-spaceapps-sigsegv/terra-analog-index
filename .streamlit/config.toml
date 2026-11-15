@@ -1,0 +1,7 @@
+# Placeholder theme; final colors come with the UI tickets (TAI-30+).
+[theme]
+base = "dark"
+primaryColor = "#E07A3F"
+
+[server]
+headless = true

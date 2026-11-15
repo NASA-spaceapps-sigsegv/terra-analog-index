@@ -1,0 +1,3 @@
+cave_id,name,lat,lon,kind,relevance,source
+north_cave,North cave,37.5,-6.5,lava_tube,Moon and Mars: test,test
+south_cave,South cave,-77.52,167.16,ice_cave,Mars: test,test

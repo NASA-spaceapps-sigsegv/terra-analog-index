@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "targets": [
+    {
+      "target_id": "moon_south_pole",
+      "label": "Moon, south pole",
+      "body": "moon",
+      "bounds": {
+        "lat_min": -90.0,
+        "lat_max": -85.0,
+        "lon_min": -180.0,
+        "lon_max": 180.0
+      },
+      "has_ice": true,
+      "has_ice_source": "Li, S. et al. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115(36), 8907-8912. doi:10.1073/pnas.1802345115",
+      "summary": "Lunar south polar region, south of 85° S: permanently shadowed craters with water ice and areas of near-continuous illumination. Destination of the crewed Artemis missions.",
+      "unreplicable": [
+        "Gravity of 1.62 m/s² (one sixth of Earth's)",
+        "Vacuum: no atmosphere",
+        "Solar and cosmic radiation with no atmosphere or magnetic field to stop it",
+        "Fine, abrasive, electrostatically charged regolith",
+        "Permanently shadowed craters, much colder than anywhere on Earth"
+      ],
+      "notes": [
+        "The lunar day lasts about 29.5 Earth days: the temperature range is the cycle's maximum minus its minimum, not an Earth daily range",
+        "The ice fraction is 1 by definition (the target has ice); it is not the fraction of the surface covered"
+      ],
+      "vars": {
+        "slope_deg": {
+          "unit": "°",
+          "source": "LOLA LDEM_80S_80MPP_ADJ (LRO), NASA PGDA, downsampled to 1 km",
+          "source_type": "measured"
+        },
+        "roughness_m": {
+          "unit": "m",
+          "source": "LOLA LDEM_80S_80MPP_ADJ (LRO), NASA PGDA, downsampled to 1 km",
+          "source_type": "measured"
+        },
+        "tmin_c": {
+          "mean": -223.0,
+          "std": 20.0,
+          "unit": "°C",
+          "source": "Williams, J.-P. et al. (2017). The global surface temperatures of the Moon as measured by the Diviner Lunar Radiometer Experiment. Icarus 283, 300-325. doi:10.1016/j.icarus.2016.08.012. Mean minimum poleward of 85°: 50 K. Standard deviation estimated by the team (unpublished)",
+          "source_type": "literature"
+        },
+        "trange_c": {
+          "mean": 152.0,
+          "std": 30.0,
+          "unit": "°C",
+          "source": "Williams, J.-P. et al. (2017), Icarus 283, 300-325. Mean maximum 202 K and mean minimum 50 K poleward of 85°: 152 K. Standard deviation estimated by the team (unpublished)",
+          "source_type": "literature"
+        },
+        "precip_mm": {
+          "mean": 0.0,
+          "std": 0.0,
+          "unit": "mm/yr",
+          "source": "By definition: no atmosphere, no rain",
+          "source_type": "definition"
+        },
+        "ice_frac": {
+          "mean": 1.0,
+          "std": 0.0,
+          "unit": "fraction",
+          "source": "Derived from has_ice",
+          "source_type": "definition"
+        }
+      }
+    },
+    {
+      "target_id": "mars_jezero",
+      "label": "Mars, Jezero crater",
+      "body": "mars",
+      "bounds": {
+        "lat_min": 18.01,
+        "lat_max": 18.81,
+        "lon_min": 77.27,
+        "lon_max": 78.11
+      },
+      "has_ice": false,
+      "has_ice_source": "Morgan, G. A. et al. (2021). Availability of subsurface water-ice resources in the northern mid-latitudes of Mars. Nature Astronomy 5, 230-236. Accessible ice lies north of about 35-40° N; Jezero (18.4° N) is outside",
+      "summary": "Crater about 45 km across with an ancient lake and its delta; landing site of the Perseverance rover (center near 18.38° N, 77.58° E).",
+      "unreplicable": [
+        "Gravity of 3.71 m/s² (38% of Earth's)",
+        "Carbon dioxide atmosphere with less than 1% of Earth's pressure",
+        "Much higher ultraviolet and cosmic radiation",
+        "Perchlorate-bearing soil",
+        "Global dust storms"
+      ],
+      "notes": [],
+      "vars": {
+        "slope_deg": {
+          "mean": 2.79,
+          "std": 3.13,
+          "unit": "°",
+          "source": "Mars MGS MOLA DEM 463m",
+          "source_type": "measured"
+        },
+        "roughness_m": {
+          "mean": 60.6,
+          "std": 51.8,
+          "unit": "m",
+          "source": "Mars MGS MOLA DEM 463m",
+          "source_type": "measured"
+        },
+        "tmin_c": {
+          "mean": -80.0,
+          "std": 5.0,
+          "unit": "°C",
+          "source": "MEDA (Perseverance), ground temperature: minimum of 191 K on sol 189 (Savijärvi, H. et al. 2023, JGR Planets, doi:10.1029/2022JE007438) and about 200 K near aphelion, Ls 66-92 (Atri, D. et al. 2022, MNRAS, arXiv:2204.12850). Mean 193 K; standard deviation estimated by the team",
+          "source_type": "literature"
+        },
+        "trange_c": {
+          "mean": 70.0,
+          "std": 15.0,
+          "unit": "°C",
+          "source": "MEDA (Perseverance): daily amplitude of 86 K on sol 189 (191 to 277 K; Savijärvi et al. 2023) and about 60 K near aphelion (Atri et al. 2022). Standard deviation estimated by the team",
+          "source_type": "literature"
+        },
+        "precip_mm": {
+          "mean": 0.0,
+          "std": 0.0,
+          "unit": "mm/yr",
+          "source": "By definition: no rain",
+          "source_type": "definition"
+        },
+        "ice_frac": {
+          "mean": 0.0,
+          "std": 0.0,
+          "unit": "fraction",
+          "source": "Derived from has_ice",
+          "source_type": "definition"
+        },
+        "dust_aod": {
+          "mean": 0.45,
+          "std": 0.15,
+          "unit": "",
+          "source": "Mastcam-Z and MEDA (Perseverance): dust optical depth of 0.4 to 0.5 outside storms during the first 250 sols (Rodriguez-Manfredi, J. A. et al. 2023, Nature Geoscience 16, 19-28, doi:10.1038/s41561-022-01084-0); up to 1.4 in the January 2022 storm (Lemmon, M. T. et al. 2022, Geophysical Research Letters, doi:10.1029/2022GL100126). Measured at 880 nm; Martian dust changes only a few points between the visible and 880 nm. Standard deviation estimated by the team",
+          "source_type": "literature"
+        },
+        "wind_ms": {
+          "mean": 4.0,
+          "std": 2.0,
+          "unit": "m/s",
+          "source": "MEDA (Perseverance): mean daytime wind of about 4 m/s at 1.5 m height (Newman, C. E. et al. 2022, Science Advances 8, eabn3783, doi:10.1126/sciadv.abn3783). On Earth, MERRA-2 gives the wind at about 10 m. Standard deviation estimated by the team",
+          "source_type": "literature"
+        }
+      }
+    }
+  ]
+}

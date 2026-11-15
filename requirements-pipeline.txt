@@ -1,0 +1,11 @@
+# Offline pipeline + tests. Not installed in the deployment.
+-r requirements.txt
+xarray==2026.9.0
+rioxarray==0.19.0
+rasterio==1.4.4
+geopandas==1.2.0
+shapely==2.2.0
+netCDF4==1.7.5.1.post1
+pyhdf==0.11.7  # HDF4 reader for MODIS (MOD11C3, MOD10CM, MCD12C1): the pip rasterio has no HDF4 driver
+biopython==1.88
+pytest==9.2.0
