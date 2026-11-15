@@ -304,7 +304,7 @@ def _selected_traces(x_outline, y_outline, x, y) -> list[go.Scatter]:
 # Numbered dots closer than this (degrees on the world map, units on the polar disk) are drawn as one: the best rank on
 # the dot, the others in its hover. A dot is about 10 degrees wide when the whole world is on screen, so 20 cells inside
 # Antarctica used to pile up on top of each other and of the rings of the known analogs.
-CLUSTER = {"world": 10.0, "polar": 0.10}
+CLUSTER = {"world": 0.0, "polar": 0.0}  # 0: each of the best cells gets its own dot, all 20 are marked
 CLUSTER_PHONE = 1.6  # the same dots on a narrower map cover more of it
 
 
@@ -348,16 +348,18 @@ def _top_trace(cells, top_cells: Sequence[int], hemisphere: int = 0, pickable: b
     scores = _scores_text(rows)
     keep, owner = _declutter(x, y, (CLUSTER["world"] if hemisphere == 0 else CLUSTER["polar"]) * (1.0 if pickable else CLUSTER_PHONE))
     joined = {j: [ranks[i] for i, o in enumerate(owner) if o == j and i != keep[j]] for j in range(len(keep))}
+    order = [(j, keep[j]) for j in reversed(range(len(keep)))]  # the best rank is drawn last, so it stays on top of the others
+    shown = [i for _, i in order]
     hover = [
         f"<b>#{ranks[i]} · {country.iat[i]}</b>" + (f"<br>Known analog: {analog.iat[i]}" if analog.iat[i] else "")
         + f"<br>Lat {lat[i]:.1f}°, lon {lon[i]:.1f}°<br>Total score: <b>{NO_DATA if np.isnan(total[i]) else f'{total[i]:.2f}'}</b>"
         + scores[i] + (f"<br>Also here: {', '.join(f'#{r}' for r in joined[j])}" if joined[j] else "")
         + f"<br><i>{HINT_PICKABLE if pickable else HINT_LIST}</i>"
-        for j, i in enumerate(keep)
+        for j, i in order
     ]
     return go.Scatter(
-        x=x[keep], y=y[keep], mode="markers+text", name=f"Top {len(top_cells)}", text=[str(ranks[i]) for i in keep],
-        textposition="middle center", textfont=dict(color="#ffffff", size=9), customdata=ids[keep], hovertext=hover, hoverinfo="text",
+        x=x[shown], y=y[shown], mode="markers+text", name=f"Top {len(top_cells)}", text=[str(ranks[i]) for i in shown],
+        textposition="middle center", textfont=dict(color="#ffffff", size=9), customdata=ids[shown], hovertext=hover, hoverinfo="text",
         marker=dict(symbol="circle", size=RANK_SIZE, color=RANK_FILL, line=dict(width=1.5, color="#ffffff")),
         unselected=dict(marker=dict(opacity=1), textfont=dict(color="#ffffff")), showlegend=True,
     )
