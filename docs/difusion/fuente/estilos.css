@@ -1,0 +1,44 @@
+/* Estilos compartidos del póster A3 y del tríptico A4 de Terra Analog Index.
+   Paleta: la del logo. Tipografías: Bahnschrift (títulos) y Segoe UI (texto); el PDF las lleva incrustadas. */
+:root {
+  --navy: #0F1623; --navy2: #172033; --navy3: #212C44;
+  --paper: #F2F0E8; --paper2: #E6E2D4; --ink: #16202E;
+  --soft: #B9C5D8; --softd: #4A566B;
+  --orange: #E8884A; --teal: #1F9E89; --green: #35B779; --red: #C4504A; --gray: #8A93A3;
+  --ramp: linear-gradient(90deg, #440154, #482878, #3E4A89, #31688E, #26828E, #1F9E89, #35B779, #6DCD59, #B4DE2C, #FDE725);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #fff; }
+body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: var(--ink);
+       -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+h1, h2, h3, .display { font-family: 'Bahnschrift', 'Segoe UI', sans-serif; font-weight: 700; }
+b, strong { font-weight: 650; }
+.dark { background: var(--navy); color: var(--paper); }
+.accent { color: var(--orange); }
+
+/* ---------- Mapas ---------- */
+.mapbox { position: relative; }
+.mapbox > img { width: 100%; display: block; border-radius: 1.6mm; }
+.pin { position: absolute; font-family: 'Segoe UI', sans-serif; font-weight: 650; color: #fff; white-space: nowrap;
+       text-shadow: 0 0 1.2mm #0F1623, 0 0 1.2mm #0F1623, 0 0 0.6mm #0F1623; line-height: 1; }
+.pin.o { color: #FFC08F; }
+.legend { display: flex; align-items: center; flex-wrap: wrap; color: var(--soft); }
+.legend .ramp { background: var(--ramp); border-radius: .8mm; }
+.sw { display: inline-block; vertical-align: middle; }
+.sw.ring { border: .5mm solid #fff; border-radius: 50%; }
+.sw.sq { border: .55mm solid var(--orange); }
+.sw.gray { background: #2A3345; border: .2mm solid #55607a; }
+
+/* ---------- Validación ---------- */
+.val { display: grid; row-gap: 1.1mm; align-items: center; }
+.val .row { display: grid; align-items: center; }
+.val .nm { line-height: 1.15; }
+.val .track { position: relative; background: #DAD6C7; border-radius: .8mm; }
+.val .bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: .8mm; }
+.val .cut { position: absolute; top: -1mm; bottom: -1mm; width: .35mm; background: var(--ink); }
+.val .pass { background: var(--teal); } .val .fail { background: var(--red); } .val .info { background: var(--gray); }
+.val .num { font-family: 'Bahnschrift', sans-serif; font-weight: 700; }
+.val .tag { font-weight: 650; letter-spacing: .02em; }
+.val .tag.pass { color: #137766; background: none; } .val .tag.fail { color: var(--red); background: none; } .val .tag.info { color: var(--softd); background: none; }
+.badge { display: inline-block; font-family: 'Bahnschrift', sans-serif; font-weight: 700; border-radius: 10mm; letter-spacing: .04em; }
+.badge.pass { background: var(--teal); color: #fff; }
