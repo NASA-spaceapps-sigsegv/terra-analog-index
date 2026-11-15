@@ -8,7 +8,6 @@ Todos los cálculos terrestres se basan _en registros normalizados del año cale
 
 ## Cómo se calcula
 
-<<<<<<< HEAD
 Cada celda de 1° de la Tierra se compara con el sitio objetivo en estas dimensiones: terreno (pendiente y rugosidad), temperatura (mínima y rango diario), agua y hielo (precipitación y nieve o hielo), polvo y viento (espesor óptico del polvo y viento en superficie) e interés astrobiológico. Polvo y viento solo existe para Marte: la Luna no tiene atmósfera, así que su puntaje total no la incluye.
 
 Cada variable física recibe un puntaje de 0 a 1 con una de tres reglas. La regla se elige sola, según dónde cae el valor del objetivo respecto de la Tierra, y queda escrita en `targets.json` para poder auditarla: la tabla de arriba muestra la que se usó en cada variable.
@@ -51,38 +50,12 @@ TODO (es así?):
 
 ## Créditos
 
-**Equipo sigsegv.** Juanma: repositorio y grilla, terreno, temperatura, agua y hielo, análogos conocidos, similitud, ranking, ficha y despliegue. Alan: capa biológica de NCBI, perfiles de los objetivos, puntaje, validación, mapa y esta pestaña. Santino: criterios científicos, fuentes, valores de los objetivos, términos de búsqueda, textos y pitch. Santiago: esqueleto de la app, mapas de control, README y video.
+**Equipo sigsegv.**:
+- Juan Manuel Hernández: repositorio y grilla, terreno, temperatura, agua y hielo, análogos conocidos, similitud, ranking, ficha y despliegue.
+- Alan Moreno: capa biológica de NCBI, perfiles de los objetivos, puntaje, validación, mapa y esta pestaña.
+- Santino Rimondotto: criterios científicos, fuentes, valores de los objetivos, términos de búsqueda, textos y pitch.
+- Santiago Walter: esqueleto de la app, mapas de control, README y video.
 
 **Datos.** Las fuentes y sus licencias están en la tabla de «Datos usados». Los datos conservan sus propios términos; el código tiene licencia GNU GPL v3.
 
 **Uso de IA.** El equipo usó Claude Code (Anthropic) como asistente de programación. Los commits en los que ayudó llevan una línea `Co-Authored-By` en el historial del repositorio. También se utilizaron Claude y Gemini para redacción y filtración temprana de literatura.
-=======
-Se utilizan distintos métodos para cada variable, incluyendo overlap (cercanía de la celda al objetivo), directional high/low (entre las celdas de la Tierra, qué porcentaje es peor que la celda en la medida) y presence/absense, para el hielo.
-
-El puntaje de cada dimensión física es el promedio simple de sus variables con dato. El puntaje total (que ordena el ranking en vivo) es el promedio ponderado según los pesos elegidos por el usuario, calculado únicamente para celdas con datos válidos en al menos dos de las tres dimensiones físicas.
-
-## Validación
-
-Para comprobar la solidez científica del índice, evaluamos si el modelo logra ubicar de forma automática en el percentil 90% o superior a sitios terrestres ya consagrados por la comunidad científica como análogos lunares o marcianos. Los análogos cuya relevancia depende de variables no incluidas en esta versión (como mineralogía específica o tubos de lava) se muestran a modo informativo:
-
-## Límites
-
-- Condiciones irreplicables en la Tierra: Algunas condiciones marcianas y lunares, como la gravedad reducida, la atmósfera marciana de CO2, o los suelos ricos en percloratos no pueden ser reproducidas en la Tierra. Ningún análogo va a ser perfecto.
-- Alcance de variables en la v1: Esta primera versión no incluye composición mineralógica, química del suelo, polvo en suspensión, dinámica eólica ni estructuras subterráneas como cuevas o tubos de lava.
-- Escala espacial: las celdas promedian los datos y rasgos locales como un pequeño cráter o cueva podrían diluirse.
-
----
-TODO (es así?):
-- escribir sesgo de los datos biológicos: muestras concentradas en China (14.726/19.769 muestras únicas (74,5 %). Por tipo, % de China: acidófilos 97,7, termófilos 93,7, xerófilos 92,1, psicrófilos 49,7, radiorresistentes 27,9, halófilos 12,4) y los sitios famosos (aplicamos un logaritmo para atenuar?). Podrían existir lugares con extremófilos no identificados.
-- sesgo de datos terrestres solo de 2024.
-- datos de temperatura extraterrestres son del aire vs superficial en la Tierra
----
-
-## Créditos
-
-Desarrollado por Juan Martín Hernández, Alan Moreno, Santiago Walter y Santino Rimondotto para el NASA International Space Apps Challenge 2026 (sede Córdoba, Argentina).
-
-Licencia y reproducibilidad: El código fuente y el pipeline de procesamiento se distribuyen bajo licencia GPLv3.
-
-Declaración de uso de IA: Se utilizaron herramientas de inteligencia artificial generativa como asistencia para la estructuración de la documentación técnica, código y redacción editorial, bajo supervisión y validación científica del equipo.
->>>>>>> 28143c7 (midpoint)
