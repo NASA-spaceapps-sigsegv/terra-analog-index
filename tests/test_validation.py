@@ -78,6 +78,15 @@ def test_the_threshold_is_inclusive(i, expected):
     assert validate([analog(i)]).analogs[0].result == expected
 
 
+def test_a_percentile_that_rounds_up_to_the_threshold_still_fails():
+    # puesto 252 de 2500: 89,96, que se escribe 90,0 pero no llega al percentil 90
+    grid, sim = make_world()
+    ranked = sim.reset_index().assign(total=0.5)
+    ranked.index = ranked.index + 251  # la celda 0 queda en el puesto 252
+    a = step09.validate_analog(analog(0), ranked, grid, n_eligible=2500, threshold=90)
+    assert a.best_rank == 252 and a.percentile == 90.0 and a.result == "fail"
+
+
 def test_covered_analog_below_the_threshold_fails():
     a = validate([analog(50)]).analogs[0]
     assert a.result == "fail" and a.percentile == 50.0

@@ -39,6 +39,7 @@ from pipeline.common import (  # noqa: E402
     GRID_PATH,
     INTERIM,
     PROCESSED,
+    OutputValidationError,
     atomic_write_json,
     file_size_mb,
     is_up_to_date,
@@ -73,9 +74,14 @@ PENDING_NOTE = "PENDIENTE: nota de Santino sobre por qué no pasó y qué se rev
 FINALISTS_DEFAULT = 8  # the ticket asks for 6 to 10 per target
 
 
+def raw_percentile(best_rank: int, n_eligible: int) -> float:
+    """Percentile of a rank among the eligible cells (contract 6.1), unrounded."""
+    return 100.0 * (1.0 - (best_rank - 1) / n_eligible)
+
+
 def percentile(best_rank: int, n_eligible: int) -> float:
-    """Percentile of a rank among the eligible cells (contract 6.1), one decimal."""
-    return round(100.0 * (1.0 - (best_rank - 1) / n_eligible), 1)
+    """Percentile as written to validation.json: one decimal."""
+    return round(raw_percentile(best_rank, n_eligible), 1)
 
 
 def cells_within(analog, grid: pd.DataFrame) -> pd.Series:
@@ -98,8 +104,8 @@ def validate_analog(analog: models.KnownAnalog, ranked: pd.DataFrame, grid: pd.D
     pct = percentile(rank, n_eligible)
     if analog.covered != "yes":
         result = "info"
-    else:
-        result = "pass" if pct >= threshold else "fail"
+    else:  # the unrounded value decides: 89.96 must not pass because it prints as 90.0
+        result = "pass" if raw_percentile(rank, n_eligible) >= threshold - 1e-9 else "fail"
     return models.AnalogValidation(**base, best_cell_id=int(best["cell_id"]),
                                    best_total=round(float(best["total"]), SCORE_DECIMALS_FILE),
                                    best_rank=rank, percentile=pct, result=result)
@@ -173,7 +179,8 @@ def main() -> None:
 
     inputs = [SIMILARITY_PATH, ANALOGS_PATH, GRID_PATH]
     require_inputs(inputs)
-    freshness = [*inputs, NOTES_PATH, Path(__file__), Path(__file__).parents[1] / "tai" / "scoring.py"]
+    tai_dir = Path(__file__).resolve().parents[1] / "tai"
+    freshness = [*inputs, NOTES_PATH, Path(__file__), tai_dir / "scoring.py", tai_dir / "constants.py"]
     if not args.force and is_up_to_date([OUTPUT, FINALISTS_OUT], freshness):
         log.info("al día")
         return
@@ -183,6 +190,13 @@ def main() -> None:
     report = build_report(sim_all, grid, load_analogs(), load_notes())
 
     notes = []
+    missing = [tid for tid in TARGET_IDS if tid not in {t.target_id for t in report.targets}]
+    for tid in missing:
+        line = f"{tid}: sin filas en similarity.parquet, queda fuera de la validación"
+        notes.append(line)
+        log.warning(line)
+    if not report.targets:
+        raise OutputValidationError("similarity.parquet no tiene filas de ningún objetivo")
     frames = []
     for t in report.targets:
         line = (f"{t.target_id}: {t.result} ({t.covered_passed} de {t.covered_total} análogos cubiertos "
