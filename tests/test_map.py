@@ -496,12 +496,14 @@ def apart(monkeypatch):
 @pytest.mark.parametrize("view", ["world", "south_pole"])
 def test_best_cells_are_numbered_dots_with_all_their_scores_on_hover(bundle, apart, view):
     dots = trace(figure(bundle, view, top_cells=[104, 100, 105]), "Top 3")
-    assert list(dots.text) == ["1", "2", "3"] and list(dots.customdata) == [104, 100, 105]
+    assert sorted(dots.text) == ["1", "2", "3"] and sorted(dots.customdata) == [100, 104, 105]  # every one gets its dot
+    assert dots.text[-1] == "1" and dots.customdata[-1] == 104  # the best rank is drawn last: on top of the others
     assert dots.mode == "markers+text" and dots.hoverinfo == "text"
-    first = dots.hovertext[0]  # 104 has no temperature
+    hover = dict(zip(dots.text, dots.hovertext))
+    first = hover["1"]  # 104 has no temperature
     assert "#1" in first and "Total score" in first and "Terrain: 0.60" in first and "Temperature: no data" in first
     assert "Water and ice: 0.60" in first and "Astrobiology: 0.10" in first and "Tap or click" in first
-    assert "Known analog: Atacama" in dots.hovertext[2]
+    assert "Known analog: Atacama" in hover["3"]
 
 
 def test_the_numbers_are_the_rank_even_if_a_cell_is_not_drawn(bundle, apart):
@@ -559,7 +561,13 @@ def test_the_figure_sent_on_every_rerun_stays_light(projection, limit):
     assert len(pio.to_json(fig)) < limit
 
 
-def test_dots_that_would_pile_up_become_one_with_the_others_in_its_hover(bundle):
+def test_all_the_best_cells_are_marked_by_default(bundle):
+    assert len(trace(figure(bundle, "world", top_cells=[104, 100, 105]), "Top 3").x) == 3
+    assert map_view.CLUSTER == {"world": 0.0, "polar": 0.0}
+
+
+def test_dots_that_would_pile_up_can_become_one_with_the_others_in_its_hover(bundle, monkeypatch):
+    monkeypatch.setitem(map_view.CLUSTER, "world", 10.0)  # optional: off by default, every cell is marked
     dots = trace(figure(bundle, "world", top_cells=[104, 100, 105]), "Top 3")
     assert list(dots.text) == ["1"] and list(dots.customdata) == [104]  # the best rank stays on the dot
     assert "Also here: #2, #3" in dots.hovertext[0] and "Terrain: 0.60" in dots.hovertext[0]
