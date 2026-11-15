@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "targets": [
+    {
+      "target_id": "moon_south_pole",
+      "label": "Luna, polo sur",
+      "body": "moon",
+      "bounds": { "lat_min": -90.0, "lat_max": -85.0, "lon_min": -180.0, "lon_max": 180.0 },
+      "has_ice": true,
+      "has_ice_source": "Li, S. et al. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115(36), 8907-8912. doi:10.1073/pnas.1802345115",
+      "summary": "Región del polo sur lunar, al sur de 85° S: cráteres en sombra permanente con hielo de agua y zonas de iluminación casi continua. Destino de las misiones tripuladas Artemis.",
+      "unreplicable": [
+        "Gravedad de 1,62 m/s² (un sexto de la terrestre)",
+        "Vacío: sin atmósfera",
+        "Radiación solar y cósmica sin atmósfera ni campo magnético que la frenen",
+        "Regolito fino, abrasivo y con carga electrostática",
+        "Cráteres en sombra permanente, mucho más fríos que cualquier lugar de la Tierra"
+      ],
+      "notes": [
+        "El día lunar dura unos 29,5 días terrestres: el rango térmico es la máxima menos la mínima del ciclo, no un rango diurno terrestre",
+        "La fracción de hielo vale 1 por definición (el objetivo tiene hielo); no es la fracción de superficie cubierta"
+      ],
+      "vars": {
+        "slope_deg":   { "unit": "°", "source": "LOLA LDEM_80S_80MPP_ADJ (LRO), NASA PGDA, degradado a 1 km", "source_type": "measured" },
+        "roughness_m": { "unit": "m", "source": "LOLA LDEM_80S_80MPP_ADJ (LRO), NASA PGDA, degradado a 1 km", "source_type": "measured" },
+        "tmin_c":      { "mean": -223.0, "std": 20.0, "unit": "°C",
+                         "source": "Williams, J.-P. et al. (2017). The global surface temperatures of the Moon as measured by the Diviner Lunar Radiometer Experiment. Icarus 283, 300-325. doi:10.1016/j.icarus.2016.08.012. Mínima media al norte y sur de 85°: 50 K. Desvío estimado por el equipo (no publicado)",
+                         "source_type": "literature" },
+        "trange_c":    { "mean": 152.0, "std": 30.0, "unit": "°C",
+                         "source": "Williams, J.-P. et al. (2017), Icarus 283, 300-325. Máxima media 202 K y mínima media 50 K al norte y sur de 85°: 152 K. Desvío estimado por el equipo (no publicado)",
+                         "source_type": "literature" },
+        "precip_mm":   { "mean": 0.0, "std": 0.0, "unit": "mm/año",
+                         "source": "Por definición: sin atmósfera, no llueve", "source_type": "definition" },
+        "ice_frac":    { "mean": 1.0, "std": 0.0, "unit": "fracción",
+                         "source": "Derivado de has_ice", "source_type": "definition" }
+      }
+    },
+    {
+      "target_id": "mars_jezero",
+      "label": "Marte, cráter Jezero",
+      "body": "mars",
+      "bounds": { "lat_min": 17.9, "lat_max": 18.9, "lon_min": 77.0, "lon_max": 78.0 },
+      "has_ice": false,
+      "has_ice_source": "Morgan, G. A. et al. (2021). Availability of subsurface water-ice resources in the northern mid-latitudes of Mars. Nature Astronomy 5, 230-236. El hielo accesible está al norte de unos 35-40° N; Jezero (18,4° N) queda fuera",
+      "summary": "Cráter de unos 45 km con un antiguo lago y su delta; sitio de aterrizaje del rover Perseverance (centro cerca de 18,38° N y 77,58° E).",
+      "unreplicable": [
+        "Gravedad de 3,71 m/s² (38% de la terrestre)",
+        "Atmósfera de dióxido de carbono con menos del 1% de la presión terrestre",
+        "Radiación ultravioleta y cósmica mucho mayor",
+        "Suelo con percloratos",
+        "Tormentas de polvo globales"
+      ],
+      "notes": [],
+      "vars": {
+        "slope_deg":   { "unit": "°", "source": "MOLA, mosaico global de 463 m (USGS Astrogeology), degradado a 1 km", "source_type": "measured" },
+        "roughness_m": { "unit": "m", "source": "MOLA, mosaico global de 463 m (USGS Astrogeology), degradado a 1 km", "source_type": "measured" },
+        "tmin_c":      { "mean": -80.0, "std": 5.0, "unit": "°C",
+                         "source": "MEDA (Perseverance), temperatura del suelo: mínima de 191 K en el sol 189 (Savijärvi, H. et al. 2023, JGR Planets, doi:10.1029/2022JE007438) y de unos 200 K cerca del afelio, Ls 66-92 (Atri, D. et al. 2022, MNRAS, arXiv:2204.12850). Media 193 K; desvío estimado por el equipo",
+                         "source_type": "literature" },
+        "trange_c":    { "mean": 70.0, "std": 15.0, "unit": "°C",
+                         "source": "MEDA (Perseverance): amplitud diaria de 86 K en el sol 189 (191 a 277 K; Savijärvi et al. 2023) y de unos 60 K cerca del afelio (Atri et al. 2022). Desvío estimado por el equipo",
+                         "source_type": "literature" },
+        "precip_mm":   { "mean": 0.0, "std": 0.0, "unit": "mm/año",
+                         "source": "Por definición: no llueve", "source_type": "definition" },
+        "ice_frac":    { "mean": 0.0, "std": 0.0, "unit": "fracción",
+                         "source": "Derivado de has_ice", "source_type": "definition" }
+      }
+    }
+  ]
+}
