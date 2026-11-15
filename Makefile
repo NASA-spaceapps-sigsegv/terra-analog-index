@@ -6,7 +6,9 @@
 #
 # Each target is the downloaded file itself, so files already on disk are
 # skipped. Downloads go to <file>.part and are renamed only when complete;
-# an interrupted download resumes on the next run.
+# an interrupted download resumes on the next run. ETOPO is also checked
+# against its exact size: its server sends no Content-Length, so curl
+# cannot tell a dropped connection from the end of the file.
 
 RAW := data/raw
 
@@ -17,6 +19,8 @@ MAPS_ARGS ?= --projection all
 
 NE_BASE := https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson
 ETOPO_URL := https://www.ngdc.noaa.gov/thredds/fileServer/global/ETOPO2022/30s/30s_surface_elev_netcdf/ETOPO_2022_v1_30s_N90W180_surface.nc
+# Exact size from the THREDDS catalog (dataSize of the file).
+ETOPO_BYTES := 1642335281
 
 GRID_FILES := $(RAW)/01_grid/ne_50m_land.geojson $(RAW)/01_grid/ne_50m_admin_0_countries.geojson
 TERRAIN_FILES := $(RAW)/02_terrain/ETOPO_2022_v1_30s_N90W180_surface.nc
@@ -26,6 +30,21 @@ define download
 	@mkdir -p $(dir $@)
 	@echo "downloading $(notdir $@)"
 	curl -L --fail --retry 5 --retry-delay 10 -C - -o $@.part $(1)
+	@mv $@.part $@
+endef
+
+# Same, for a server without Content-Length: resume until the .part file has
+# exactly $(2) bytes (up to 20 attempts), then rename it.
+define download_sized
+	@mkdir -p $(dir $@)
+	@echo "downloading $(notdir $@) ($(2) bytes)"
+	@n=0; while [ $$(( $$(if [ -f $@.part ]; then wc -c < $@.part; else echo 0; fi) )) -lt $(2) ]; do \
+	  n=$$((n + 1)); \
+	  if [ $$n -gt 20 ]; then echo "$(notdir $@): still incomplete after 20 attempts; run make again to resume"; exit 1; fi; \
+	  curl -L --fail --retry 5 --retry-delay 10 -C - -o $@.part $(1) || sleep 10; \
+	done
+	@size=$$(( $$(wc -c < $@.part) )); if [ $$size -ne $(2) ]; then \
+	  echo "$(notdir $@): $$size bytes, expected $(2); delete $@.part and run make again"; exit 1; fi
 	@mv $@.part $@
 endef
 
@@ -46,7 +65,12 @@ data: data-grid data-terrain data-earthdata
 
 data-grid: $(GRID_FILES)
 
+# Also checks a file already on disk: one renamed before the size check
+# existed may be truncated.
 data-terrain: $(TERRAIN_FILES)
+	@size=$$(( $$(wc -c < $<) )); if [ $$size -ne $(ETOPO_BYTES) ]; then \
+	  echo "$<: $$size bytes, expected $(ETOPO_BYTES) (incomplete download)."; \
+	  echo "To resume it: mv $< $<.part && make data-terrain"; exit 1; fi
 
 # Earthdata products: the granule list comes from CMR, so these run the
 # downloader, which skips files already on disk.
@@ -63,7 +87,7 @@ $(RAW)/01_grid/%.geojson:
 	$(call download,$(NE_BASE)/$*.geojson)
 
 $(RAW)/02_terrain/ETOPO_2022_v1_30s_N90W180_surface.nc:
-	$(call download,$(ETOPO_URL))
+	$(call download_sized,$(ETOPO_URL),$(ETOPO_BYTES))
 
 # Control maps (scripts/check_maps.py): one map per variable in three
 # projections, histograms, index.html and informe.md.
