@@ -45,14 +45,14 @@ COLORSCALE = "Viridis"
 INSUFFICIENT = "Insufficient data"
 NO_DATA = "no data"  # what the hover shows if a dimension is null
 HOVER_FILL = "rgba(0,0,0,0)"  # hover markers: the hover uses the data position, not what is visible
-POLAR_PX = 900  # side of the polar views image, in pixels (one cell spans several)
-RING_SIZE = 20
+POLAR_PX = 720  # side of the polar views image, in pixels (one cell spans several). It is computed again for every set of weights: 900 took 5.7 s on the free server
+RING_SIZE = 26
 CAVE_COLOR = "#ff5ec4"  # caves and lava tubes (TAI-53): pink, which appears neither in Viridis nor in the gray
 CAVE_SIZE = 13
 CAVES_NAME = "Caves and lava tubes"
 HOVER_WRAP = 60  # characters per line in a cave's hover
 SELECTED_SIZE = 28
-RANK_SIZE = 17  # numbered dots on the best cells; smaller than the ring (20) so a known analog keeps its ring
+RANK_SIZE = 15  # numbered dots on the best cells; smaller than the ring (RING_SIZE) so a known analog keeps its ring around it
 RANK_FILL = "rgba(16,18,22,0.88)"
 HINT_PICKABLE = "Tap or click to open its card"
 HINT_LIST = "Open its card from the list below"  # the phone: see render_map
@@ -301,6 +301,29 @@ def _selected_traces(x_outline, y_outline, x, y) -> list[go.Scatter]:
     ]
 
 
+# Numbered dots closer than this (degrees on the world map, units on the polar disk) are drawn as one: the best rank on
+# the dot, the others in its hover. A dot is about 10 degrees wide when the whole world is on screen, so 20 cells inside
+# Antarctica used to pile up on top of each other and of the rings of the known analogs.
+CLUSTER = {"world": 10.0, "polar": 0.10}
+CLUSTER_PHONE = 1.6  # the same dots on a narrower map cover more of it
+
+
+def _declutter(x, y, radius: float) -> tuple[list[int], list[int]]:
+    """Greedy, in rank order: the indices that stay, and for every point the position (in that list) of the one it joins."""
+    keep: list[int] = []
+    owner: list[int] = []
+    for i in range(len(x)):
+        for j, k in enumerate(keep):
+            if (x[i] - x[k]) ** 2 + (y[i] - y[k]) ** 2 < radius**2:
+                owner.append(j)
+                break
+        else:
+            keep.append(i)
+            owner.append(len(keep) - 1)
+    return keep, owner
+
+
+
 def _top_trace(cells, top_cells: Sequence[int], hemisphere: int = 0, pickable: bool = True) -> go.Scatter | None:
     """Numbered dots on the best cells: the number is the rank. Each carries its cell_id so a tap can open the card.
 
@@ -323,21 +346,74 @@ def _top_trace(cells, top_cells: Sequence[int], hemisphere: int = 0, pickable: b
     analog = rows["known_analog"].fillna("")
     total = rows["total"].to_numpy(dtype="float64")
     scores = _scores_text(rows)
+    keep, owner = _declutter(x, y, (CLUSTER["world"] if hemisphere == 0 else CLUSTER["polar"]) * (1.0 if pickable else CLUSTER_PHONE))
+    joined = {j: [ranks[i] for i, o in enumerate(owner) if o == j and i != keep[j]] for j in range(len(keep))}
     hover = [
-        f"<b>#{r} · {country.iat[i]}</b>" + (f"<br>Known analog: {analog.iat[i]}" if analog.iat[i] else "")
+        f"<b>#{ranks[i]} · {country.iat[i]}</b>" + (f"<br>Known analog: {analog.iat[i]}" if analog.iat[i] else "")
         + f"<br>Lat {lat[i]:.1f}°, lon {lon[i]:.1f}°<br>Total score: <b>{NO_DATA if np.isnan(total[i]) else f'{total[i]:.2f}'}</b>"
-        + scores[i] + f"<br><i>{HINT_PICKABLE if pickable else HINT_LIST}</i>"
-        for i, r in enumerate(ranks)
+        + scores[i] + (f"<br>Also here: {', '.join(f'#{r}' for r in joined[j])}" if joined[j] else "")
+        + f"<br><i>{HINT_PICKABLE if pickable else HINT_LIST}</i>"
+        for j, i in enumerate(keep)
     ]
     return go.Scatter(
-        x=x, y=y, mode="markers+text", name=f"Top {len(top_cells)}", text=[str(r) for r in ranks], textposition="middle center",
-        textfont=dict(color="#ffffff", size=9), customdata=ids, hovertext=hover, hoverinfo="text",
+        x=x[keep], y=y[keep], mode="markers+text", name=f"Top {len(top_cells)}", text=[str(ranks[i]) for i in keep],
+        textposition="middle center", textfont=dict(color="#ffffff", size=9), customdata=ids[keep], hovertext=hover, hoverinfo="text",
         marker=dict(symbol="circle", size=RANK_SIZE, color=RANK_FILL, line=dict(width=1.5, color="#ffffff")),
         unselected=dict(marker=dict(opacity=1), textfont=dict(color="#ffffff")), showlegend=True,
     )
 
 
 # --- Figure ---------------------------------------------------------------------
+
+# --- The view never leaves the map ------------------------------------------------------------------------------
+# Plotly's minallowed/maxallowed do not move the view back inside: past the edge they cut the range, so dragging a
+# full map "zooms" it into a corner and zooming out afterwards cannot recover the whole map. This script does what a
+# viewer expects: the view can be as large as the whole map and no larger, and it is shifted (never cut) to stay inside.
+# It listens to every relayout of every chart (drag, wheel, toolbar buttons) and reads the limits from layout.meta.
+VIEW_LIMITS = {"world": ((-180.0, 180.0), (-90.0, 90.0)), "south_pole": ((-1.03, 1.03), (-1.03, 1.03)),
+               "north_pole": ((-1.03, 1.03), (-1.03, 1.03))}
+VIEW_GUARD_JS = """
+(() => {
+  if (window.__taiViewGuard) return;
+  window.__taiViewGuard = true;
+  const keep = (gd) => {
+    const lim = gd.layout && gd.layout.meta && gd.layout.meta.tai_limits;
+    const L = gd._fullLayout;
+    if (!lim || !L || !L.xaxis || !L.yaxis || gd.__taiBusy) return;
+    let [x0, x1] = L.xaxis.range, [y0, y1] = L.yaxis.range;
+    const fx = lim.x[1] - lim.x[0], fy = lim.y[1] - lim.y[0];
+    const k = Math.max((x1 - x0) / fx, (y1 - y0) / fy);
+    if (k > 1) {  // zoomed out past the whole map: back to its size, around the same centre
+      const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, hx = (x1 - x0) / (2 * k), hy = (y1 - y0) / (2 * k);
+      x0 = cx - hx; x1 = cx + hx; y0 = cy - hy; y1 = cy + hy;
+    }
+    if (x0 < lim.x[0]) { x1 += lim.x[0] - x0; x0 = lim.x[0]; }
+    if (x1 > lim.x[1]) { x0 -= x1 - lim.x[1]; x1 = lim.x[1]; }
+    if (y0 < lim.y[0]) { y1 += lim.y[0] - y0; y0 = lim.y[0]; }
+    if (y1 > lim.y[1]) { y0 -= y1 - lim.y[1]; y1 = lim.y[1]; }
+    const [a0, a1] = L.xaxis.range, [b0, b1] = L.yaxis.range, tol = 1e-6 * Math.max(fx, fy);
+    if (Math.abs(x0 - a0) < tol && Math.abs(x1 - a1) < tol && Math.abs(y0 - b0) < tol && Math.abs(y1 - b1) < tol) return;
+    gd.__taiBusy = true;
+    Promise.resolve(Plotly.relayout(gd, {"xaxis.range": [x0, x1], "yaxis.range": [y0, y1]}))
+      .finally(() => { gd.__taiBusy = false; });
+  };
+  const attach = () => document.querySelectorAll(".js-plotly-plot").forEach((gd) => {
+    if (gd.__taiGuard || typeof gd.on !== "function") return;
+    gd.__taiGuard = true;
+    gd.on("plotly_relayout", () => keep(gd));
+  });
+  attach();
+  new MutationObserver(attach).observe(document.body, {childList: true, subtree: true});
+})();
+"""
+
+
+def render_view_guard() -> None:
+    import streamlit as st
+
+    st.html(f"<script>{VIEW_GUARD_JS}</script>", unsafe_allow_javascript=True)
+
+
 
 
 def _world(fig: go.Figure, cells, selected_cell_id, caves: Sequence[Cave] = (), top_cells: Sequence[int] = (),
@@ -396,14 +472,14 @@ def _world(fig: go.Figure, cells, selected_cell_id, caves: Sequence[Cave] = (), 
 
     ticks_x = list(range(-180, 181, 60))
     fig.update_xaxes(
-        range=[-180, 180], minallowed=-180, maxallowed=180,  # zooming out stops at the whole world
+        range=[-180, 180],  # the view is kept inside the whole world by VIEW_GUARD_JS
         tickvals=ticks_x, constrain="domain", showgrid=True, gridcolor="rgba(255,255,255,0.07)",
         ticktext=[f"{abs(v)}°{'W' if v < 0 else 'E' if v > 0 else ''}" for v in ticks_x], zeroline=False, showline=False,
         tickfont=dict(size=10, color="#8b929c"),
     )
     ticks_y = [-60, -30, 0, 30, 60]
     fig.update_yaxes(
-        range=[-90, 90], minallowed=-90, maxallowed=90, scaleanchor="x", scaleratio=1, tickvals=ticks_y, constrain="domain",
+        range=[-90, 90], scaleanchor="x", scaleratio=1, tickvals=ticks_y, constrain="domain",
         showgrid=True,
         gridcolor="rgba(255,255,255,0.07)", zeroline=False, showline=False, tickfont=dict(size=10, color="#8b929c"),
         ticktext=[f"{abs(v)}°{'S' if v < 0 else 'N' if v > 0 else ''}" for v in ticks_y],
@@ -481,9 +557,9 @@ def _polar(fig: go.Figure, cells, projection: str, selected_cell_id, caves: Sequ
     for tr in _selected_traces(o_x, o_y, x[chosen], y[chosen]):
         fig.add_trace(tr)
 
-    # minallowed and maxallowed: you can zoom in and pan, but zooming out stops at the whole globe (the map is never lost)
-    fig.update_xaxes(range=[-1.03, 1.03], minallowed=-1.03, maxallowed=1.03, visible=False, constrain="domain")
-    fig.update_yaxes(range=[-1.03, 1.03], minallowed=-1.03, maxallowed=1.03, scaleanchor="x", scaleratio=1, visible=False, constrain="domain")
+    # You can zoom in and pan, but never out of the whole globe: VIEW_GUARD_JS keeps the view inside it.
+    fig.update_xaxes(range=[-1.03, 1.03], visible=False, constrain="domain")
+    fig.update_yaxes(range=[-1.03, 1.03], scaleanchor="x", scaleratio=1, visible=False, constrain="domain")
     fig.update_layout(plot_bgcolor="rgba(0,0,0,0)")
 
 
@@ -530,6 +606,7 @@ def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: i
         hoverlabel=dict(align="left"),
         # On a phone one finger scrolls the page; panning is a button in the toolbar (pan2d).
         dragmode=False if compact else "pan",
+        meta=dict(tai_limits=dict(x=list(VIEW_LIMITS[projection][0]), y=list(VIEW_LIMITS[projection][1]))),
         uirevision=f"{projection}-{view_rev}",  # keeps the zoom when moving weights; the view resets when changing projection
     )
     return fig
@@ -544,6 +621,7 @@ def render_map(layer: MapLayer, projection: str, selected_cell_id: int | None, c
     traps the scroll of the page. There the dots are only a key, and the cards below open the cell."""
     import streamlit as st
 
+    render_view_guard()
     fig = build_figure(layer, projection, selected_cell_id, caves, top_cells, compact, view_rev)
     remove = ["select2d", "lasso2d"] + (["toImage", "zoom2d", "autoScale2d"] if compact else [])
     config = {"displaylogo": False, "scrollZoom": not compact, "modeBarButtonsToRemove": remove}

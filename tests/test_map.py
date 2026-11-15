@@ -466,17 +466,35 @@ def _timed(fn, *args) -> float:
     "projection, x_limits, y_limits",
     [("world", (-180, 180), (-90, 90)), ("south_pole", (-1.03, 1.03), (-1.03, 1.03)), ("north_pole", (-1.03, 1.03), (-1.03, 1.03))],
 )
-def test_zoom_out_stops_at_the_whole_map(bundle, projection, x_limits, y_limits):
+def test_the_view_limits_are_the_whole_map_and_start_there(bundle, projection, x_limits, y_limits):
     fig = figure(bundle, projection)
-    assert (fig.layout.xaxis.minallowed, fig.layout.xaxis.maxallowed) == x_limits
-    assert (fig.layout.yaxis.minallowed, fig.layout.yaxis.maxallowed) == y_limits
+    limits = fig.layout.meta["tai_limits"]
+    assert tuple(limits["x"]) == x_limits and tuple(limits["y"]) == y_limits
+    assert tuple(fig.layout.xaxis.range) == x_limits and tuple(fig.layout.yaxis.range) == y_limits  # it opens on the whole map
+    # minallowed/maxallowed cut the range past the edge instead of shifting it (a drag "zoomed" the map into a corner
+    # and zooming out could not bring it back): the guard script replaces them
+    assert fig.layout.xaxis.minallowed is None and fig.layout.yaxis.maxallowed is None
+
+
+def test_the_guard_script_shifts_the_view_and_caps_its_size_for_every_chart():
+    js = map_view.VIEW_GUARD_JS
+    assert "plotly_relayout" in js and "tai_limits" in js and "Plotly.relayout" in js and "MutationObserver" in js
+    assert "window.__taiViewGuard" in js  # installed once
+    assert "k > 1" in js and "x1 += lim.x[0] - x0" in js  # capped to the whole map, then shifted, never cut
 
 
 # --- numbered dots, selection, phone layout, weight (TAI-40) ---------------------------------------------------------
 
 
+@pytest.fixture
+def apart(monkeypatch):
+    """The six test cells sit within a few degrees of each other: without clustering they stay separate dots."""
+    monkeypatch.setitem(map_view.CLUSTER, "world", 0.0)
+    monkeypatch.setitem(map_view.CLUSTER, "polar", 0.0)
+
+
 @pytest.mark.parametrize("view", ["world", "south_pole"])
-def test_best_cells_are_numbered_dots_with_all_their_scores_on_hover(bundle, view):
+def test_best_cells_are_numbered_dots_with_all_their_scores_on_hover(bundle, apart, view):
     dots = trace(figure(bundle, view, top_cells=[104, 100, 105]), "Top 3")
     assert list(dots.text) == ["1", "2", "3"] and list(dots.customdata) == [104, 100, 105]
     assert dots.mode == "markers+text" and dots.hoverinfo == "text"
@@ -486,7 +504,7 @@ def test_best_cells_are_numbered_dots_with_all_their_scores_on_hover(bundle, vie
     assert "Known analog: Atacama" in dots.hovertext[2]
 
 
-def test_the_numbers_are_the_rank_even_if_a_cell_is_not_drawn(bundle):
+def test_the_numbers_are_the_rank_even_if_a_cell_is_not_drawn(bundle, apart):
     dots = trace(figure(bundle, "world", top_cells=[999999, 104]), "Top 2")  # the first one is not in the layer
     assert list(dots.text) == ["2"] and list(dots.customdata) == [104]
 
@@ -539,3 +557,19 @@ def test_the_figure_sent_on_every_rerun_stays_light(projection, limit):
     layer = MapLayer(target_id=MOON, weights=layer.weights, n_cells=layer.n_cells, n_eligible=layer.n_cells, cells=cells)
     fig = map_view.build_figure(layer, projection, 5, top_cells=range(20))
     assert len(pio.to_json(fig)) < limit
+
+
+def test_dots_that_would_pile_up_become_one_with_the_others_in_its_hover(bundle):
+    dots = trace(figure(bundle, "world", top_cells=[104, 100, 105]), "Top 3")
+    assert list(dots.text) == ["1"] and list(dots.customdata) == [104]  # the best rank stays on the dot
+    assert "Also here: #2, #3" in dots.hovertext[0] and "Terrain: 0.60" in dots.hovertext[0]
+
+
+def test_declutter_keeps_the_best_of_each_neighbourhood_in_rank_order():
+    keep, owner = map_view._declutter([0.0, 1.0, 50.0, 51.0, 3.0], [0.0, 0.0, 0.0, 0.0, 0.0], 6.0)
+    assert keep == [0, 2] and owner == [0, 0, 1, 1, 0]
+    assert map_view._declutter([0.0, 1.0], [0.0, 0.0], 0.0) == ([0, 1], [0, 1])  # radius 0: nothing joins
+
+
+def test_a_known_analog_keeps_its_ring_around_the_numbered_dot():
+    assert map_view.RING_SIZE > map_view.RANK_SIZE and map_view.SELECTED_SIZE > map_view.RING_SIZE
