@@ -4,7 +4,7 @@ _Terra Analog Index_ es un buscador global que compara la Tierra celda por celda
 
 ## Datos usados
 
-Todos los cálculos terrestres se basan *en registros normalizados del año calendario 2024, abarcando modelos de elevación global a 1 km, temperaturas superficiales mensuales de MODIS, precipitaciones de GPM IMERG y registros de biodiversidad extrema extraídos de NCBI BioSample*. Los datos correspondientes a la Luna y a Marte se obtuvieron de misiones oficiales como LRO (LOLA y Diviner), MOLA y MEDA, complementados cuando fue necesario con valores de literatura científica citados en el lugar.
+Todos los cálculos terrestres se basan _en registros normalizados del año calendario 2024, abarcando modelos de elevación global a 1 km, temperaturas superficiales mensuales de MODIS, precipitaciones de GPM IMERG_ --- (Necesito la lista de fuentes terrestres) --- y registros de biodiversidad extrema extraídos de NCBI BioSample. Los datos correspondientes a la Luna y a Marte se obtuvieron de misiones oficiales como LRO (LOLA y Diviner), MOLA y MEDA, complementados cuando fue necesario con valores de literatura científica citados en el lugar.
 
 ## Cómo se calcula
 
@@ -32,6 +32,7 @@ Si un objetivo no pasa, se revisan en este orden los datos y las unidades, el re
 
 Estos son los límites que el método declara y que conviene tener presentes al leer un puntaje.
 
+- **Condiciones irreplicables en la Tierra**: Algunas condiciones marcianas y lunares, como la gravedad reducida, la atmósfera marciana de CO2, o los suelos ricos en percloratos no pueden ser reproducidas en la Tierra. Ningún análogo va a ser perfecto.
 - **Los puntajes direccionales no miden distancia al objetivo.** Un 0,95 en temperatura dice «entre lo más frío de la Tierra», no «95 % igual a la Luna»: la Tierra nunca llega a esos valores. La ficha de cada sitio siempre muestra el valor real del objetivo.
 - **El interés astrobiológico refleja dónde se investigó.** Los sitios famosos suben y los inexplorados quedan en 0. Un lago hipersalino cuenta como evidencia de halófilos sin verificar qué se secuenció, y si un tipo supera los 5 000 registros se toman los primeros que devuelve NCBI (el manifiesto guarda el total real). Por eso el peso inicial es 0,5 y cada ficha lo aclara.
 - **Los análogos «nuevos» pueden no serlo.** Una celda que no está en la lista del equipo puede estar estudiada igual; por eso se presentan como candidatos poco documentados.
@@ -42,10 +43,15 @@ Estos son los límites que el método declara y que conviene tener presentes al 
 - **Se usa la temperatura de superficie, no la del aire,** y el rango térmico lunar, de un ciclo de unos 29,5 días, no equivale al diurno terrestre.
 - **Nieve y precipitación en los polos.** Sin luz no hay dato óptico de nieve en la noche polar, y el producto de precipitación puede ser poco fiable sobre la Antártida.
 
+---
+TODO (es así?):
+- escribir sesgo de los datos biológicos: muestras concentradas en China (14.726/19.769 muestras únicas (74,5 %). Por tipo, % de China: acidófilos 97,7, termófilos 93,7, xerófilos 92,1, psicrófilos 49,7, radiorresistentes 27,9, halófilos 12,4) y los sitios famosos (aplicamos un logaritmo para atenuar?). Podrían existir lugares con extremófilos no identificados.
+---
+
 ## Créditos
 
 **Equipo sigsegv.** Juanma: repositorio y grilla, terreno, temperatura, agua y hielo, análogos conocidos, similitud, ranking, ficha y despliegue. Alan: capa biológica de NCBI, perfiles de los objetivos, puntaje, validación, mapa y esta pestaña. Santino: criterios científicos, fuentes, valores de los objetivos, términos de búsqueda, textos y pitch. Santiago: esqueleto de la app, mapas de control, README y video.
 
 **Datos.** Las fuentes y sus licencias están en la tabla de «Datos usados». Los datos conservan sus propios términos; el código tiene licencia GNU GPL v3.
 
-**Uso de IA.** El equipo usó Claude Code (Anthropic) como asistente de programación. Los commits en los que ayudó llevan una línea `Co-Authored-By` en el historial del repositorio.
+**Uso de IA.** El equipo usó Claude Code (Anthropic) como asistente de programación. Los commits en los que ayudó llevan una línea `Co-Authored-By` en el historial del repositorio. También se utilizaron Claude y Gemini para redacción y filtración temprana de literatura.
