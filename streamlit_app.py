@@ -75,7 +75,8 @@ def explore_tab(bundle: DataBundle, state: SidebarState) -> None:
     elegida se sigue viendo, con el total nulo."""
     with handle_tai_errors():
         layer = services.get_map_layer(bundle, state.target_id, state.weights)
-        map_view.render_map(layer, state.projection, st.session_state.get(SELECTED_KEY))
+        caves = services.get_caves(bundle) if state.show_caves else ()
+        map_view.render_map(layer, state.projection, st.session_state.get(SELECTED_KEY), caves)
     st.subheader("Mejores celdas")
     with handle_tai_errors():
         ranking = services.get_ranking(bundle, state.target_id, state.weights, hide_known=state.hide_known)

@@ -19,6 +19,7 @@ WEIGHT_LABELS = {
     "biology": "Interés astrobiológico",
 }
 BIOLOGY_NOTE = "No mide parecido con el objetivo: mide registros de vida en ambientes extremos."
+CAVES_HELP = "Sitios subterráneos estudiados como análogos de los tubos de lava de la Luna y Marte. Solo informativos: no cambian los puntajes."
 DUST_WIND_NOTE = "Solo Marte: la Luna no tiene atmósfera, ni viento ni polvo en suspensión."
 
 
@@ -31,6 +32,7 @@ class SidebarState:
     target_id: str
     weights: dict[str, float]
     hide_known: bool
+    show_caves: bool  # capa de cuevas y tubos de lava (TAI-53), apagada al abrir
     projection: str  # world, south_pole, north_pole
 
 
@@ -41,6 +43,7 @@ def _init_session(target_ids: list[str]) -> None:
     for dim in DIMENSIONS:
         ss.setdefault(weight_key(dim), DEFAULT_WEIGHTS[dim])
     ss.setdefault("hide_known", False)
+    ss.setdefault("show_caves", False)
     ss.setdefault("projection", "world")
     ss.setdefault("selected_cell_id", None)
 
@@ -78,6 +81,7 @@ def render_sidebar(targets: list[TargetSummary]) -> SidebarState:
         st.button("Restablecer pesos", on_click=_reset_weights)
 
         st.checkbox("Ocultar análogos conocidos", key="hide_known")
+        st.checkbox("Mostrar cuevas y tubos de lava", key="show_caves", help=CAVES_HELP)
         st.radio("Vista del mapa", options=list(PROJECTIONS), format_func=PROJECTIONS.get, key="projection")
 
     ss = st.session_state
@@ -85,5 +89,6 @@ def render_sidebar(targets: list[TargetSummary]) -> SidebarState:
         target_id=ss["target_id"],
         weights={dim: round(float(ss[weight_key(dim)]), 2) for dim in DIMENSIONS},
         hide_known=bool(ss["hide_known"]),
+        show_caves=bool(ss["show_caves"]),
         projection=ss["projection"],
     )

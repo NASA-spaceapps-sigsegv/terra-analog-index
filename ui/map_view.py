@@ -19,8 +19,11 @@ La selección se hace desde el ranking, no con clic en el mapa.
 from __future__ import annotations
 
 import base64
+import html
 import struct
+import textwrap
 import zlib
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -30,7 +33,7 @@ import plotly.graph_objects as go
 from tai.constants import GRID_RES_DEG, N_LAT, N_LON
 
 if TYPE_CHECKING:
-    from tai.models import MapLayer
+    from tai.models import Cave, MapLayer
 
 GRAY = "#c8c8c8"  # celdas sin datos suficientes
 OCEAN = "#14171c"
@@ -42,6 +45,11 @@ NO_DATA = "sin dato"  # lo que se ve en el cursor si una dimensión es nula
 HOVER_FILL = "rgba(0,0,0,0)"  # marcadores del cursor: el cursor usa la posición de los datos, no lo que se ve
 POLAR_PX = 900  # lado de la imagen de las vistas polares, en píxeles (una celda ocupa varios)
 RING_SIZE = 20
+CAVE_COLOR = "#ff5ec4"  # cuevas y tubos de lava (TAI-53): rosa, que no aparece en Viridis ni en el gris
+CAVE_SIZE = 13
+CAVES_NAME = "Cuevas y tubos de lava"
+CAVE_KINDS = {"lava_tube": "Tubo de lava", "ice_cave": "Cueva de hielo"}
+HOVER_WRAP = 60  # caracteres por renglón en el cursor de una cueva
 SELECTED_SIZE = 28
 
 PROJECTIONS = ("world", "south_pole", "north_pole")
@@ -240,6 +248,24 @@ def _rings_trace(x, y) -> go.Scatter:
     )
 
 
+def _cave_hover(cave: Cave) -> str:
+    """Nombre, tipo, por qué interesa y fuente, en renglones cortos (el cursor de Plotly no corta líneas)."""
+    def wrap(text: str) -> str:
+        return "<br>".join(html.escape(line) for line in textwrap.wrap(text, HOVER_WRAP))
+
+    return (f"<b>{html.escape(cave.name)}</b><br>{CAVE_KINDS[cave.kind]}<br>{wrap(cave.relevance)}"
+            f"<br><i>Fuente: {wrap(cave.source)}</i>")
+
+
+def _caves_trace(x, y, caves: Sequence[Cave]) -> go.Scatter:
+    """Capa informativa: un triángulo por cueva, con su propio texto de cursor. No es una celda ni tiene puntaje."""
+    return go.Scatter(
+        x=x, y=y, mode="markers", name=CAVES_NAME,
+        marker=dict(symbol="triangle-up", size=CAVE_SIZE, color=CAVE_COLOR, line=dict(width=1, color="#000000")),
+        hovertext=[_cave_hover(c) for c in caves], hoverinfo="text", showlegend=True,
+    )
+
+
 def _selected_traces(x_outline, y_outline, x, y) -> list[go.Scatter]:
     """La celda elegida: su contorno, que escala con el zoom, y un marcador más grande que el anillo."""
     return [
@@ -258,7 +284,7 @@ def _selected_traces(x_outline, y_outline, x, y) -> list[go.Scatter]:
 # --- Figura ---------------------------------------------------------------------
 
 
-def _world(fig: go.Figure, cells, selected_cell_id) -> None:
+def _world(fig: go.Figure, cells, selected_cell_id, caves: Sequence[Cave] = ()) -> None:
     lat = cells["lat"].to_numpy(dtype="float64")
     lon = cells["lon"].to_numpy(dtype="float64")
     total = cells["total"].to_numpy(dtype="float64")
@@ -296,6 +322,8 @@ def _world(fig: go.Figure, cells, selected_cell_id) -> None:
 
     a_lat, a_lon = _analog_centers(cells)
     fig.add_trace(_rings_trace(a_lon, a_lat))
+    if caves:
+        fig.add_trace(_caves_trace([c.lon for c in caves], [c.lat for c in caves], caves))
 
     chosen = cells["cell_id"].to_numpy() == selected_cell_id if selected_cell_id is not None else np.zeros(len(cells), bool)
     if chosen.any():
@@ -320,7 +348,7 @@ def _world(fig: go.Figure, cells, selected_cell_id) -> None:
     fig.update_layout(plot_bgcolor=OCEAN)
 
 
-def _polar(fig: go.Figure, cells, projection: str, selected_cell_id) -> None:
+def _polar(fig: go.Figure, cells, projection: str, selected_cell_id, caves: Sequence[Cave] = ()) -> None:
     hemi = _HEMISPHERE[projection]
     lat = cells["lat"].to_numpy(dtype="float64")
     lon = cells["lon"].to_numpy(dtype="float64")
@@ -365,6 +393,10 @@ def _polar(fig: go.Figure, cells, projection: str, selected_cell_id) -> None:
     keep = a_lat * hemi > 0
     ax, ay = _project(a_lat[keep], a_lon[keep], hemi)
     fig.add_trace(_rings_trace(ax, ay))
+    shown = [c for c in caves if c.lat * hemi > 0]  # solo las del hemisferio visible
+    if shown:
+        cx, cy = _project(np.array([c.lat for c in shown]), np.array([c.lon for c in shown]), hemi)
+        fig.add_trace(_caves_trace(cx, cy, shown))
 
     chosen = (cells["cell_id"].to_numpy() == selected_cell_id) & visible if selected_cell_id is not None else np.zeros(len(cells), bool)
     if chosen.any():
@@ -393,15 +425,18 @@ def _png_uri_cached(total_grid, painted, hemisphere) -> str:
     return _IMAGE_CACHE[key]
 
 
-def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: int | None = None) -> go.Figure:
-    """Mundo: un Heatmap de longitud y latitud. Polos: una imagen con la proyección ortográfica."""
+def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: int | None = None,
+                 caves: Sequence[Cave] = ()) -> go.Figure:
+    """Mundo: un Heatmap de longitud y latitud. Polos: una imagen con la proyección ortográfica.
+
+    `caves`: la capa de cuevas y tubos de lava (TAI-53); vacía, el mapa no la dibuja."""
     if projection not in PROJECTIONS:
         raise ValueError(f"projection debe ser una de {list(PROJECTIONS)}, no {projection!r}")
     fig = go.Figure()
     if projection == "world":
-        _world(fig, layer.cells, selected_cell_id)
+        _world(fig, layer.cells, selected_cell_id, caves)
     else:
-        _polar(fig, layer.cells, projection, selected_cell_id)
+        _polar(fig, layer.cells, projection, selected_cell_id, caves)
     fig.update_layout(
         height=520,
         margin=dict(l=0, r=0, t=28, b=0),
@@ -414,11 +449,11 @@ def build_figure(layer: MapLayer, projection: str = "world", selected_cell_id: i
     return fig
 
 
-def render_map(layer: MapLayer, projection: str, selected_cell_id: int | None) -> None:
+def render_map(layer: MapLayer, projection: str, selected_cell_id: int | None, caves: Sequence[Cave] = ()) -> None:
     import streamlit as st
 
     st.plotly_chart(
-        build_figure(layer, projection, selected_cell_id),
+        build_figure(layer, projection, selected_cell_id, caves),
         width="stretch",
         config={"displaylogo": False, "scrollZoom": True, "modeBarButtonsToRemove": ["select2d", "lasso2d"]},
     )

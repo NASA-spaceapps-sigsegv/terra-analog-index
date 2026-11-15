@@ -4,8 +4,12 @@ Reads:  data/processed/features.parquet  (step 06)
         data/processed/targets.json      (step 07: mean, std, rule and earth_std of each variable)
         data/processed/grid.parquet      (step 01: area and center of each cell)
         config/known_analogs.csv         (hand-edited by Santino, TAI-17)
+        config/caves.csv                 (hand-edited, TAI-53)
 Writes: data/processed/similarity.parquet  one row per cell and target (contract 3.4)
         data/processed/known_analogs.csv   the validated config file, as the app reads it
+        data/processed/caves.csv           the same for the caves and lava tubes map layer
+
+The caves are an informative map layer: they take no part in any score.
 
 For each target, each physical variable gets a 0..1 score with the rule that
 step 07 wrote (tai.rules): overlap against the target's mean and std,
@@ -61,7 +65,7 @@ from tai.constants import (  # noqa: E402
     SCORE_DECIMALS_FILE,
     TARGET_IDS,
 )
-from tai.schemas import KNOWN_ANALOGS_COLUMNS, SIMILARITY  # noqa: E402
+from tai.schemas import CAVES_COLUMNS, KNOWN_ANALOGS_COLUMNS, SIMILARITY  # noqa: E402
 
 STEP = "08_similarity"
 FEATURES_PATH = PROCESSED / "features.parquet"
@@ -69,6 +73,8 @@ TARGETS_PATH = PROCESSED / "targets.json"
 ANALOGS_IN = CONFIG / "known_analogs.csv"
 OUTPUT = PROCESSED / "similarity.parquet"
 ANALOGS_OUT = PROCESSED / "known_analogs.csv"
+CAVES_IN = CONFIG / "caves.csv"
+CAVES_OUT = PROCESSED / "caves.csv"
 
 DIM_COLUMN = {d: f"s_{d}" for d in PHYSICAL_DIMENSIONS}
 SCORE_COLUMNS = [f"sv_{v}" for v in PHYSICAL_VARS] + list(DIM_COLUMN.values()) + ["bio_score"]
@@ -87,6 +93,19 @@ def load_analogs(path: Path = ANALOGS_IN, target_ids=TARGET_IDS) -> list[models.
     if df.duplicated(subset=["analog_id", "target_id"]).any():
         raise OutputValidationError("known_analogs.csv: filas repetidas (analog_id, target_id)")
     return analogs
+
+
+def load_caves(path: Path = CAVES_IN) -> list[models.Cave]:
+    """Rows of caves.csv, validated; cave_id must not repeat."""
+    require_inputs([path])
+    df = pd.read_csv(path, dtype={"cave_id": str})
+    if list(df.columns) != list(CAVES_COLUMNS):
+        raise OutputValidationError(f"caves.csv: columnas {list(df.columns)}, se esperan {list(CAVES_COLUMNS)}")
+    caves = [models.Cave.model_validate(r) for r in df.to_dict(orient="records")]
+    repeated = sorted(df.loc[df["cave_id"].duplicated(), "cave_id"])
+    if repeated:
+        raise OutputValidationError(f"caves.csv: cave_id repetidos {repeated}")
+    return caves
 
 
 def nearest_analog(lat, lon, analogs: list[models.KnownAnalog]) -> tuple[pd.Series, np.ndarray]:
@@ -155,11 +174,11 @@ def main() -> None:
     log = setup_logging(STEP)
     started = time.monotonic()
 
-    inputs = [FEATURES_PATH, TARGETS_PATH, GRID_PATH, ANALOGS_IN]
+    inputs = [FEATURES_PATH, TARGETS_PATH, GRID_PATH, ANALOGS_IN, CAVES_IN]
     require_inputs(inputs)
     code = [Path(__file__), ROOT / "pipeline" / "common.py", ROOT / "tai" / "rules.py",
             ROOT / "tai" / "scoring.py", ROOT / "tai" / "constants.py"]
-    if (not args.force and is_up_to_date([OUTPUT, ANALOGS_OUT], [*inputs, *code])
+    if (not args.force and is_up_to_date([OUTPUT, ANALOGS_OUT, CAVES_OUT], [*inputs, *code])
             and not last_run_partial(STEP)):
         log.info("al día")
         return
@@ -168,6 +187,7 @@ def main() -> None:
     features = pd.read_parquet(FEATURES_PATH)
     targets = models.TargetsFile.model_validate_json(TARGETS_PATH.read_text(encoding="utf-8"))
     analogs = load_analogs(target_ids=[t.target_id for t in targets.targets])
+    caves = load_caves()
     sim, n_max = build_similarity(features, grid, targets, analogs)
 
     notes = []
@@ -191,23 +211,26 @@ def main() -> None:
     check_scores(sim)
     analogs_df = pd.DataFrame([a.model_dump() for a in analogs], columns=list(KNOWN_ANALOGS_COLUMNS))
     atomic_write_parquet(sim, OUTPUT)
+    caves_df = pd.DataFrame([c.model_dump() for c in caves], columns=list(CAVES_COLUMNS))
     atomic_write_csv(analogs_df, ANALOGS_OUT)
+    atomic_write_csv(caves_df, CAVES_OUT)
     write_step_manifest(
         step_entry(
             STEP,
             started,
-            inputs=[{"name": "Variables por celda, perfiles objetivo y análogos conocidos",
-                     "product": "features.parquet, targets.json, known_analogs.csv",
-                     "portal": "Pipeline del proyecto (pasos 06 y 07; config de TAI-17)",
+            inputs=[{"name": "Variables por celda, perfiles objetivo, análogos conocidos y cuevas",
+                     "product": "features.parquet, targets.json, known_analogs.csv, caves.csv",
+                     "portal": "Pipeline del proyecto (pasos 06 y 07; config de TAI-17 y TAI-53)",
                      "url": "https://github.com/NASA-spaceapps-sigsegv/terra-analog-index",
                      "files": len(inputs), "size_mb": round(sum(file_size_mb(p) for p in inputs), 1),
                      "license_note": "Datos derivados del proyecto"}],
-            outputs=[(OUTPUT, len(sim)), (ANALOGS_OUT, len(analogs_df))],
+            outputs=[(OUTPUT, len(sim)), (ANALOGS_OUT, len(analogs_df)), (CAVES_OUT, len(caves_df))],
             columns=column_stats(sim, SCORE_COLUMNS),
             notes=notes,
         )
     )
-    log.info("wrote %s (%d rows) and %s (%d analogs)", OUTPUT.name, len(sim), ANALOGS_OUT.name, len(analogs_df))
+    log.info("wrote %s (%d rows), %s (%d analogs) and %s (%d caves)", OUTPUT.name, len(sim), ANALOGS_OUT.name,
+             len(analogs_df), CAVES_OUT.name, len(caves_df))
 
 
 if __name__ == "__main__":

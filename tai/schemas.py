@@ -80,6 +80,8 @@ KNOWN_ANALOGS_COLUMNS = (
     "source",
 )
 
+CAVES_COLUMNS = ("cave_id", "name", "lat", "lon", "kind", "relevance", "source")
+
 PRIMARY_KEYS = MappingProxyType(
     {
         "grid": ("cell_id",),

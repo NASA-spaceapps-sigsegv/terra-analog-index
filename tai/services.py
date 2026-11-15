@@ -17,6 +17,7 @@ from tai.io import DataBundle
 from tai.models import (
     MAP_CELL_COLUMNS,
     AnalogRef,
+    Cave,
     Manifest,
     MapLayer,
     Ranking,
@@ -46,6 +47,12 @@ def list_targets(bundle: DataBundle) -> list[TargetSummary]:
         TargetSummary(target_id=t.target_id, label=t.label, body=t.body, summary=t.summary)
         for t in bundle.targets.targets
     ]
+
+
+def get_caves(bundle: DataBundle) -> tuple[Cave, ...]:
+    """Cuevas y tubos de lava estudiados como análogos (TAI-53). Son los mismos para todos los objetivos y no
+    tienen puntaje: el mapa los dibuja como capa informativa."""
+    return bundle.caves
 
 
 def get_ranking(

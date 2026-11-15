@@ -114,6 +114,10 @@ def write_bundle(path) -> None:
     (path / "known_analogs.csv").write_text(
         "analog_id,name,lat,lon,radius_km,target_id,basis,covered,source\n"
         "atacama_yungay,Atacama,-24.1,-69.3,150,mars_jezero,hiperaridez,yes,prueba\n", encoding="utf-8")
+    (path / "caves.csv").write_text(
+        "cave_id,name,lat,lon,kind,relevance,source\n"
+        "cueva_norte,Cueva del norte,29.16,-13.44,lava_tube,Luna y Marte: prueba,prueba\n"
+        "cueva_sur,Cueva del sur,-77.52,167.16,ice_cave,Marte: prueba,prueba\n", encoding="utf-8")
     validation = {"schema_version": 1, "generated_at": "2026-11-14T15:30:00Z",
                   "weights": {"terrain": 1, "temperature": 1, "water_ice": 1, "biology": 0.5},
                   "percentile_threshold": 90,

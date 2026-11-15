@@ -1,0 +1,3 @@
+cave_id,name,lat,lon,kind,relevance,source
+cueva_norte,Cueva del norte,29.16,-13.44,lava_tube,Luna y Marte: prueba,prueba
+cueva_sur,Cueva del sur,-77.52,167.16,ice_cave,Marte: prueba,prueba
