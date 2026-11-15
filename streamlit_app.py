@@ -24,7 +24,10 @@ from ui import card_view, caves_view, map_view, method_view, ranking_view
 from ui.ranking_view import SCROLL_KEY, SELECTED_KEY
 from ui.sidebar import SidebarState, render_sidebar
 
-st.set_page_config(page_title="Terra Analog Index", page_icon="🛰️", layout="wide")
+ICON_PATH = Path(__file__).parent / "docs" / "img" / "logo" / "favicon.png"
+st.set_page_config(
+    page_title="Terra Analog Index", page_icon=str(ICON_PATH) if ICON_PATH.is_file() else "🛰️", layout="wide"
+)
 
 DATA_DIR = Path(os.environ.get("TAI_DATA_DIR") or Path(__file__).parent / "data" / "processed")
 
