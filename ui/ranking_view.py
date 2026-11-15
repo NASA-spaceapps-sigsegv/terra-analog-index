@@ -34,6 +34,16 @@ SELECTED_KEY = "selected_cell_id"
 NO_DATA = "sin dato"
 EMPTY_FILTER = "No quedan celdas con este filtro."
 
+# Anchos en px. Los puntajes alcanzan con la barra corta y el número; lo que sobra va al análogo,
+# para que entre el nombre más largo de known_analogs.csv (57 caracteres, Licancabur).
+SCORE_WIDTH = 110
+TOTAL_WIDTH = 150
+KNOWN_ANALOG_WIDTH = 420
+
+# Elegir una fila lleva la página hasta la ficha. Es de una sola vez: la próxima corrida (un slider,
+# por ejemplo) no vuelve a desplazar.
+SCROLL_KEY = "scroll_to_card"
+
 
 def csv_filename(ranking: Ranking) -> str:
     """ranking_mars_jezero.csv; con el filtro de análogos conocidos, ranking_mars_jezero_sin_conocidos.csv."""
@@ -43,10 +53,15 @@ def csv_filename(ranking: Ranking) -> str:
 def column_config() -> dict:
     fmt = f"%.{SCORE_DECIMALS_UI}f"
     config = {
-        c: st.column_config.ProgressColumn(c, format=fmt, min_value=0.0, max_value=1.0) for c in SCORE_COLUMNS
+        c: st.column_config.ProgressColumn(c, format=fmt, min_value=0.0, max_value=1.0, width=SCORE_WIDTH)
+        for c in SCORE_COLUMNS
     }
+    config["Total"] = st.column_config.ProgressColumn(
+        "Total", format=fmt, min_value=0.0, max_value=1.0, width=TOTAL_WIDTH
+    )
     config["Lat"] = st.column_config.NumberColumn("Lat", format="%.1f°")
     config["Lon"] = st.column_config.NumberColumn("Lon", format="%.1f°")
+    config["Análogo conocido"] = st.column_config.TextColumn("Análogo conocido", width=KNOWN_ANALOG_WIDTH)
     return config
 
 
@@ -74,6 +89,7 @@ def _on_select(key: str, cell_ids: tuple[int, ...]) -> None:
     state = st.session_state.get(key)
     rows = state["selection"]["rows"] if state else []
     st.session_state[SELECTED_KEY] = cell_from_rows(rows, cell_ids)
+    st.session_state[SCROLL_KEY] = st.session_state[SELECTED_KEY] is not None
 
 
 def render_ranking(ranking: Ranking, selected_cell_id: int | None, csv_text: str | None = None) -> None:
