@@ -47,3 +47,22 @@ python scripts/e2e_local.py     # los ítems 2 a 9, con AppTest y los datos real
 El resto (tiempos de carga, pantallas, wifi apagado) se mide a mano, como arriba. Conviene repetir todo después de
 cualquier cambio de último momento, por ejemplo la dimensión de polvo y viento (TAI-52), que toca el mapa, los pesos y
 los textos del método.
+
+## Parte desplegada (Render, plan gratis)
+
+Medida el 15 de noviembre de 2026 entre las 09:35 y las 09:50 (hora de Argentina) sobre
+<https://terra-analog-index.onrender.com>, que despliega la rama `develop` en el commit `37bf193`. Servidor en Oregón con
+el plan gratis de Render (0,1 CPU, 512 MB), cliente en Argentina, navegador Chromium del panel de la herramienta.
+
+| # | Ítem | Resultado | Medida |
+|---|------|-----------|--------|
+| 1 | La app abre en menos de 10 s | **No pasa en frío, pasa en caliente** | Primera visita después de crear el servicio: unos 28 s hasta ver el mapa. Con la app despierta, la página carga en 4,1 s. No se midió el despertar tras 15 minutos sin visitas; Render avisa que puede tardar 50 s o más |
+| 3 | Cada slider recalcula en menos de 1 s | **No pasa en el plan gratis** | Se midió el caso más pesado, cambiar de objetivo, que rehace el mapa: 4,1 s, 2,7 s y 3,4 s (en local, 0,33 s). No se midió arrastrar un slider |
+| 7 | La ficha de una finalista muestra su texto manual | Pasa | La celda 46351 (Dalangtan) abre su ficha con el texto y las fuentes, y el 0,86 del texto coincide con el del ranking |
+
+Sin comprobar todavía en la app desplegada: el ítem 4 (todos los pesos en 0), un slider real, el wifi apagado (el despliegue
+necesita internet; para eso queda el modo local) y un proyector real.
+
+**Qué hacer con esto.** El plan gratis alcanza para que el jurado entre y mire, pero se siente lento y se duerme. Para la
+demostración conviene: abrir el enlace 5 minutos antes para despertarlo, o mostrar la app en local (`make app`, 0,33 s al
+cambiar de objetivo), o pasar el servicio al plan Starter de Render (unos 7 USD por mes, 0,5 CPU, no se duerme).
