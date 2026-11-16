@@ -1,4 +1,8 @@
 <p align="center">
+  <b>▶ Demo video:</b> <a href="https://www.youtube.com/watch?v=nt2bvB_2FGo">https://www.youtube.com/watch?v=nt2bvB_2FGo</a>
+</p>
+
+<p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/img/logo/logo-dark.svg">
     <img alt="Terra Analog Index: terrestrial analogs of the Moon and Mars" src="docs/img/logo/logo-light.svg" width="520">
