@@ -545,8 +545,8 @@ def test_the_phone_layout_is_shorter_with_the_color_bar_below_and_one_finger_scr
 
 
 def test_changing_view_rev_resets_the_zoom(bundle):
-    assert figure(bundle).layout.uirevision == "world-0" and figure(bundle, view_rev=2).layout.uirevision == "world-2"
-    assert figure(bundle, "south_pole", view_rev=2).layout.uirevision == "south_pole-2"
+    assert figure(bundle).layout.uirevision == "world-0-all" and figure(bundle, view_rev=2).layout.uirevision == "world-2-all"
+    assert figure(bundle, "south_pole", view_rev=2).layout.uirevision == "south_pole-2-all"
 
 
 @pytest.mark.parametrize("projection, limit", [("world", 1_200_000), ("south_pole", 900_000), ("north_pole", 900_000)])
@@ -581,3 +581,46 @@ def test_declutter_keeps_the_best_of_each_neighbourhood_in_rank_order():
 
 def test_a_known_analog_keeps_its_ring_around_the_numbered_dot():
     assert map_view.RING_SIZE > map_view.RANK_SIZE and map_view.SELECTED_SIZE > map_view.RING_SIZE
+
+
+# --- zoom on a cell (the list of the best 20) ----------------------------------------------------------------------------
+
+
+def test_focus_frames_the_cell_with_a_window_that_keeps_the_map_proportions():
+    (x0, x1), (y0, y1) = map_view.focus_view("world", 10.0, 20.0)
+    assert (x0, x1) == (2.0, 38.0) and (y0, y1) == (1.0, 19.0)  # 36 x 18 degrees around (lat 10, lon 20): 2:1 like the map
+
+
+@pytest.mark.parametrize("lat, lon", [(85.0, 175.0), (-85.0, -175.0), (89.5, 0.0), (0.0, -179.5)])
+def test_focus_near_an_edge_shifts_the_window_instead_of_cutting_it(lat, lon):
+    (x0, x1), (y0, y1) = map_view.focus_view("world", lat, lon)
+    assert -180 <= x0 and x1 <= 180 and -90 <= y0 and y1 <= 90
+    assert x1 - x0 == pytest.approx(36.0) and y1 - y0 == pytest.approx(18.0)  # same zoom everywhere
+
+
+@pytest.mark.parametrize("projection, lat", [("south_pole", -80.0), ("north_pole", 80.0), ("south_pole", -60.0)])
+def test_focus_on_the_poles_stays_inside_the_disk(projection, lat):
+    for lon in (0.0, 90.0, 180.0, -135.0):
+        (x0, x1), (y0, y1) = map_view.focus_view(projection, lat, lon)
+        assert -1.03 <= x0 and x1 <= 1.03 and -1.03 <= y0 and y1 <= 1.03
+        assert x1 - x0 == pytest.approx(0.36) and y1 - y0 == pytest.approx(0.36)
+
+
+def test_the_figure_zooms_on_the_focus_cell_and_resets_when_it_changes(bundle):
+    cells = by_cell(layer_of(bundle))
+    fig = figure(bundle, focus_cell=104)
+    lat, lon = float(cells.loc[104, "lat"]), float(cells.loc[104, "lon"])
+    (x0, x1), (y0, y1) = map_view.focus_view("world", lat, lon)
+    assert tuple(fig.layout.xaxis.range) == (x0, x1) and tuple(fig.layout.yaxis.range) == (y0, y1)
+    assert fig.layout.uirevision == "world-0-104" != figure(bundle, focus_cell=105).layout.uirevision  # another cell: a new view
+
+
+def test_an_unknown_cell_or_one_the_pole_view_does_not_show_leaves_the_whole_map(bundle):
+    assert tuple(figure(bundle, focus_cell=999999).layout.xaxis.range) == (-180, 180)
+    assert figure(bundle, focus_cell=999999).layout.uirevision == "world-0-all"
+    north = figure(bundle, "north_pole", focus_cell=104)  # the test cells are all in the south
+    assert tuple(north.layout.xaxis.range) == (-1.03, 1.03) and north.layout.uirevision.endswith("-all")
+
+
+def test_the_map_is_big():
+    assert map_view.HEIGHT["world"] >= 600 and map_view.HEIGHT["south_pole"] >= 600

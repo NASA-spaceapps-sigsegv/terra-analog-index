@@ -14,6 +14,7 @@ import streamlit as st
 from tai.constants import DEFAULT_WEIGHTS, DIMENSIONS, WEIGHT_STEP
 from tai.models import TargetSummary
 from ui import share
+from ui.map_view import FOCUS_KEY
 
 PROJECTIONS = {"world": "World", "south_pole": "South pole", "north_pole": "North pole"}
 WEIGHT_LABELS = {
@@ -84,6 +85,7 @@ def _apply_preset(preset: str) -> None:
 
 def _clear_selection() -> None:
     st.session_state["selected_cell_id"] = None
+    st.session_state.pop(FOCUS_KEY, None)  # and the map goes back to the whole world
 
 
 def render_sidebar(targets: list[TargetSummary]) -> SidebarState:

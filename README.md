@@ -1,4 +1,8 @@
 <p align="center">
+  <b>▶ Demo video:</b> <a href="https://www.youtube.com/watch?v=nt2bvB_2FGo">https://www.youtube.com/watch?v=nt2bvB_2FGo</a>
+</p>
+
+<p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/img/logo/logo-dark.svg">
     <img alt="Terra Analog Index: terrestrial analogs of the Moon and Mars" src="docs/img/logo/logo-light.svg" width="520">
@@ -36,8 +40,9 @@ make app           # opens http://localhost:8501
 `make app-demo` runs the app on the small hand-made test data in `tests/fixtures/` instead.
 
 In the sidebar you pick the *Target site* and the weights (or one of three presets: *Default*, *Physical*
-and *Biology*); the map colors every cell by its total score and marks the best 20 with numbered dots.
-Tapping a numbered dot, a *Top 5 cells* card or a row of the ranking (*Best cells*) opens that cell's *Card*, with a radar of its
+and *Biology*); the map colors every cell by its total score and marks the best 20 with numbered dots. Above the map, a row of
+small numbers (1 to 20) zooms it straight onto that cell, wherever it is; tapping a numbered dot does the same on a computer.
+That cell's *Card*, which you open from there or from a row of the ranking (*Best cells*), has a radar of its
 dimensions, Earth against target for each variable, the sources, and the limits that no place on Earth
 can replicate. *Download CSV*, under the ranking, saves the table as it is shown (same rows and
 columns); *Download top 2,000 (CSV)*, next to it, saves the best 2,000 eligible cells with the same
@@ -51,7 +56,7 @@ what is on screen (target, weights, map view, filters and the open cell), so a v
 
 On a phone the layout changes by itself: a shorter map with the color bar below it, one finger scrolls the page
 instead of moving the map (the toolbar has zoom and a pan button), the sidebar starts closed (open it with the
-**»** at the top left) and the best cells are vertical cards. Adding `?view=phone` or `?view=desktop` to the address forces one layout.
+**»** at the top left) and the 1 to 20 numbers wrap into rows above the map (they are how you reach a cell, since a dot cannot be tapped there). Adding `?view=phone` or `?view=desktop` to the address forces one layout.
 
 The *Method* tab shows how the numbers are made: what the tool does, the variables of each target with
 their sources, the data and its licenses, the scoring rules, the validation table (every known analog

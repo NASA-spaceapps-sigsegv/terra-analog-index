@@ -77,10 +77,44 @@ RANKING_HEADING = "Best cells"
 
 def _back_to_full_view() -> None:
     st.session_state[VIEW_REV_KEY] = st.session_state.get(VIEW_REV_KEY, 0) + 1
+    st.session_state.pop(map_view.FOCUS_KEY, None)
+
+
+def focus_on(cell_id: int) -> None:
+    """Zoom the map on this cell and open its card below (no scroll: the map stays in front)."""
+    st.session_state[SELECTED_KEY] = int(cell_id)
+    st.session_state[map_view.FOCUS_KEY] = int(cell_id)
+
+
+def _pick_from_list(key: str, cell_of_rank: dict[int, int]) -> None:
+    rank = st.session_state.get(key)
+    if rank is None:  # tapping the open number again: back to the whole map
+        st.session_state.pop(map_view.FOCUS_KEY, None)
+    elif rank in cell_of_rank:
+        focus_on(cell_of_rank[rank])
+
+
+def render_best_list(ranking, selected: int | None) -> None:
+    """The best 20 as a row of small numbers: tapping one zooms the map on that cell, wherever it is."""
+    if ranking is None or not ranking.items:
+        return
+    by_rank = {item.rank: item for item in ranking.items}
+    rank_of = {item.cell_id: item.rank for item in ranking.items}
+    cell_of_rank = {rank: item.cell_id for rank, item in by_rank.items()}
+    key = f"best_list_{ranking.target_id}_{selected}"  # a new key when the cell changes: the open number follows it
+    st.caption(f"The best {len(by_rank)} cells: tap a number to zoom the map on that cell")
+    st.pills(
+        "Best cells", list(by_rank), selection_mode="single", default=rank_of.get(selected), key=key,
+        label_visibility="collapsed", on_change=_pick_from_list, args=(key, cell_of_rank),
+    )
+    chosen = by_rank.get(rank_of.get(selected))
+    if chosen is not None:
+        st.caption(f"**#{chosen.rank} · {chosen.country or 'No country'}** · total {chosen.total:.2f} · "
+                   f"[Open its card ↓](#{CARD_ANCHOR})")
 
 
 def explore_tab(bundle: DataBundle, state: SidebarState, compact: bool) -> None:
-    """Guide on top; the map at full width; then the caves, the table of the best cells and the card.
+    """Guide on top; the best 20 as small numbers; the map at full width; then the caves, the table of the best cells and the card.
 
     Each part catches its own errors: with every weight at 0 the ranking warns and the selected
     card is still shown, with a null total. The ranking and the card are computed once and shared by the parts that draw them."""
@@ -95,13 +129,14 @@ def explore_tab(bundle: DataBundle, state: SidebarState, compact: bool) -> None:
             card = services.get_site_card(bundle, selected, state.target_id, state.weights)
     selected = st.session_state.get(SELECTED_KEY)  # a cell that does not exist clears it
 
+    render_best_list(ranking, selected)  # above the map: the numbers are the controls, so they are always in view
     with handle_tai_errors():
         layer = services.get_map_layer(bundle, state.target_id, state.weights)
         caves = services.get_caves(bundle) if state.show_caves else ()
         top_cells = [item.cell_id for item in ranking.items] if ranking is not None else []
         map_view.render_map(
             layer, state.projection, selected, caves, top_cells, compact,
-            st.session_state.get(VIEW_REV_KEY, 0), on_pick=select_cell,
+            st.session_state.get(VIEW_REV_KEY, 0), on_pick=focus_on, focus_cell=st.session_state.get(map_view.FOCUS_KEY),
         )
     with st.container(horizontal=True):
         st.button("Back to full view", on_click=_back_to_full_view, icon=":material/zoom_out_map:",
